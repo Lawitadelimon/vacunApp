@@ -3,7 +3,7 @@ export default function HomePage() {
         <section className="bg-blue-100 py-16 px-6 md:px-20">
             <div className="max-w-4xl mx-auto text-center">
                 <h1 className="text-5xl font-bold text-blue-800 mb-6">
-                    Bienvenido a InnovaSystem
+                    Bienvenido a Innova System
                 </h1>
                 <p className="text-lg text-blue-700 mb-8">
                     Descubre lo que tenemos para ofrecerte. Explora nuestras secciones, conoce más sobre nosotros y empieza a disfrutar de todas las funcionalidades que hemos creado especialmente para ti.

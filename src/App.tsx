@@ -20,7 +20,7 @@ export default function App() {
         <Route path="/contact" element={<Contact />} />
       </Routes>
 
-      <footer className="mt-10 border-t pt-4 text-sm text-gray-500">
+      <footer className="mt-auto border-t pt-4 text-sm text-gray-500">
         <p>&copy; 2025 Innova System. Todos los derechos reservados.</p>
         <p>
           <a href="mailto:innovaSystem@company.com" className="text-blue-600 hover:underline">Contacto</a>

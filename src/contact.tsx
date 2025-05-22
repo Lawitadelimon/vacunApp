@@ -3,7 +3,7 @@ import { Mail, Phone, MapPin } from 'lucide-react';
 export default function Contact() {
 return (
     <div className="max-w-md mx-auto p-6 bg-white rounded-lg shadow-md mt-8">
-    <h1 className="text-3xl font-extrabold mb-4 text-blue-700">Acerca de Nosotros</h1>
+    <h1 className="text-3xl font-extrabold mb-4 text-blue-700">Contactanos</h1>
     <p className="text-gray-700 mb-4">
         Innova System es una empresa dedicada a la innovación tecnológica.
     </p>
