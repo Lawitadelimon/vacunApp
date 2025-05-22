@@ -10,7 +10,7 @@ export default function App() {
 
       <nav className="space-x-4 mb-6">
         <Link to="/" className="text-blue-600 hover:underline">Inicio</Link>
-        <Link to="/about" className="text-blue-600 hover:underline">Acerca</Link>
+        <Link to="/about" className="text-blue-600 hover:underline">Acerca De</Link>
         <Link to="/contact" className="text-blue-600 hover:underline">Contacto</Link>
       </nav>
 
