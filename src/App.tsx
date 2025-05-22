@@ -1,6 +1,7 @@
 import { Routes, Route, Link } from 'react-router-dom';
 import Contact from './contact';
 import About from './About';
+import HomePage from './HomePage';
 
 export default function App() {
   return (
@@ -14,9 +15,17 @@ export default function App() {
       </nav>
 
       <Routes>
+        <Route path="/" element={<HomePage />} />
         <Route path="/about" element={<About />} />
         <Route path="/contact" element={<Contact />} />
       </Routes>
+
+      <footer className="mt-10 border-t pt-4 text-sm text-gray-500">
+        <p>&copy; 2025 Innova System. Todos los derechos reservados.</p>
+        <p>
+          <a href="mailto:innovaSystem@company.com" className="text-blue-600 hover:underline">Contacto</a>
+        </p>
+      </footer>
     </div>
   );
 }
