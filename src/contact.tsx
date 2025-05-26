@@ -7,6 +7,9 @@ return (
     <p className="text-gray-700 mb-4">
         Innova System es una empresa dedicada a la innovación tecnológica.
     </p>
+    <p className="text-gray-700 mb-4">
+        Que esperas para contactarnos !!!
+    </p>
     <div className="space-y-3 text-gray-700">
         <div className="flex items-center gap-2">
         <Mail className="w-5 h-5 text-blue-500" />
