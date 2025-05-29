@@ -5,13 +5,13 @@ export default function HomePage() {
                 <h1 className="text-5xl font-bold text-blue-800 mb-6">
                     Bienvenido a Innova System
                 </h1>
-                <p className="text-lg text-red-700 mb-8">
+                <p className="text-lg text-gray-500 mb-8">
                     Descubre lo que tenemos para ofrecerte. Explora nuestras secciones, conoce más sobre nosotros y empieza a disfrutar de todas las funcionalidades que hemos creado especialmente para ti.
                 </p>
                 <div className="mt-10">
                     <a
                         href="#servicios"
-                        className="inline-block bg-red-600 text-white px-8 py-3 rounded-lg hover:bg-red-700 transition"
+                        className="inline-block bg-blue-800 text-white px-8 py-3 rounded-lg hover:bg-blue-500 transition"
                     >
                         Conoce nuestros servicios
                     </a>
