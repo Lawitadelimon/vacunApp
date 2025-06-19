@@ -9,9 +9,9 @@ export default function App() {
       <h1 className="font-extrabold text-2xl mb-4">Innova System</h1>
 
       <nav className="space-x-4 mb-6">
-        <Link to="/" className="text-blue-600 hover:underline">Inicio</Link>
-        <Link to="/about" className="text-blue-600 hover:underline">Acerca De</Link>
-        <Link to="/contact" className="text-blue-600 hover:underline">Contacto</Link>
+        <Link to="/" className="text-blue-600 hover:underline">Animales</Link>
+        <Link to="/about" className="text-blue-600 hover:underline">Pendientes</Link>
+        <Link to="/contact" className="text-blue-600 hover:underline">Notificaciones</Link>
       </nav>
 
       <Routes>
@@ -23,7 +23,7 @@ export default function App() {
       <footer className="mt-auto border-t pt-4 text-sm text-gray-500">
         <p>&copy; 2025 Innova System. Todos los derechos reservados.</p>
         <p>
-          <a href="mailto:innovaSystem@company.com" className="text-blue-600 hover:underline">Contacto</a>
+          <a href="mailto:innovaSystem@company.com" className="text-blue-600 hover:underline">Animales</a>
         </p>
       </footer>
     </div>
