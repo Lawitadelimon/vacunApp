@@ -1,22 +1,54 @@
+import { Link } from 'react-router-dom';
+import { FaBell, FaClipboardList, FaPaw } from 'react-icons/fa';
+import cowImage from './assets/cows.jpg';
+
 export default function HomePage() {
-    return (
-        <section className="bg-blue-100 py-16 px-6 md:px-20">
-            <div className="max-w-4xl mx-auto text-center">
-                <h1 className="text-5xl font-bold text-blue-800 mb-6">
-                    Bienvenido a Innova System
-                </h1>
-                <p className="text-lg text-gray-500 mb-8">
-                    Descubre lo que tenemos para ofrecerte. Explora nuestras secciones, conoce más sobre nosotros y empieza a disfrutar de todas las funcionalidades que hemos creado especialmente para ti.
-                </p>
-                <div className="mt-10">
-                    <a
-                        href="#servicios"
-                        className="inline-block bg-blue-800 text-white px-8 py-3 rounded-lg hover:bg-blue-500 transition"
-                    >
-                        Conoce nuestros servicios
-                    </a>
-                </div>
-            </div>
-        </section>
-    );
+  return (
+    <div className="relative min-h-screen flex flex-col items-center">
+      <div
+        className="absolute inset-0 bg-cover bg-center filter blur-xs"
+        style={{ backgroundImage: `url(${cowImage})` }}
+      />
+
+      <div className="absolute inset-0 bg-black/40" />
+
+      {/* Contenido encima */}
+      <div className="relative z-10 flex flex-col items-center w-full">
+        <header className="bg-yellow-600 w-full py-4 text-center shadow-md">
+          <h1 className="text-white text-2xl font-extrabold">VacunApp</h1>
+        </header>
+
+        <div className="text-center mt-6 px-4">
+          <h2 className="text-xl font-bold text-white drop-shadow">
+            Bienvenido a VacunApp
+          </h2>
+          <p className="text-sm font-semibold text-white drop-shadow">
+            Donde el bienestar de tu ganado es lo primero!
+          </p>
+          <hr className="my-4 border-t border-white w-3/4 mx-auto" />
+        </div>
+
+        <div className="w-[300px] h-[400px] bg-yellow-600 rounded-lg shadow-lg flex flex-col items-center justify-center gap-4 p-6">
+          <Link
+            to="/animales"
+            className="bg-amber-700 hover:bg-yellow-900 text-white font-bold py-2 px-6 rounded shadow flex items-center justify-center gap-2"
+          >
+            <FaPaw /> Animales
+          </Link>
+          <Link
+            to="/pendientes"
+            className="bg-amber-700 hover:bg-yellow-900 text-white font-bold py-2 px-6 rounded shadow flex items-center justify-center gap-2"
+          >
+            <FaClipboardList /> Pendientes
+          </Link>
+          <Link
+            to="/notificaciones"
+            className="bg-amber-700 hover:bg-yellow-900 text-white font-bold py-2 px-6 rounded shadow flex items-center justify-center gap-2"
+          >
+            <FaBell /> Notificaciones
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
 }
