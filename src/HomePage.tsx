@@ -28,22 +28,22 @@ export default function HomePage() {
           <hr className="my-4 border-t border-white w-3/4 mx-auto" />
         </div>
 
-        <div className="w-[300px] h-[400px] bg-yellow-600 rounded-lg shadow-lg flex flex-col items-center justify-center gap-4 p-6">
+        <div className="w-[300px] h-[400px] bg-yellow-600 border-2 rounded-xl shadow-lg flex flex-col items-center justify-center gap-4 p-6">
           <Link
             to="/animales"
-            className="bg-amber-700 hover:bg-yellow-900 text-white font-bold py-2 px-6 rounded shadow flex items-center justify-center gap-2"
+            className="bg-amber-700 hover:bg-yellow-900 text-white font-bold py-2 px-6 rounded-xl shadow flex items-center justify-center gap-2"
           >
             <FaPaw /> Animales
           </Link>
           <Link
             to="/pendientes"
-            className="bg-amber-700 hover:bg-yellow-900 text-white font-bold py-2 px-6 rounded shadow flex items-center justify-center gap-2"
+            className="bg-amber-700 hover:bg-yellow-900 text-white font-bold py-2 px-6 rounded-xl shadow flex items-center justify-center gap-2"
           >
             <FaClipboardList /> Pendientes
           </Link>
           <Link
             to="/notificaciones"
-            className="bg-amber-700 hover:bg-yellow-900 text-white font-bold py-2 px-6 rounded shadow flex items-center justify-center gap-2"
+            className="bg-amber-700 hover:bg-yellow-900 text-white font-bold py-2 px-6 rounded-xl shadow flex items-center justify-center gap-2"
           >
             <FaBell /> Notificaciones
           </Link>

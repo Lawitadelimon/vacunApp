@@ -118,11 +118,11 @@ export default function Animales() {
             placeholder="Nueva categoría"
             value={nuevaCategoria}
             onChange={(e) => setNuevaCategoria(e.target.value)}
-            className="bg-gray-200 border px-4 py-2 rounded w-full max-w-xs"
+            className="bg-gray-200 border px-4 py-2 rounded-xl w-full max-w-xs"
           />
           <button
             onClick={agregarCategoria}
-            className="bg-yellow-600 text-white px-4 py-2 rounded"
+            className="bg-yellow-600 text-white px-4 py-2 rounded-xl"
           >
             <FaPlus />
           </button>
@@ -130,7 +130,7 @@ export default function Animales() {
 
         <div className="flex gap-2 mb-6 flex-wrap">
           {categorias.map((cat) => (
-            <div key={cat} className="bg-gray-200 px-4 py-2 rounded flex items-center gap-2">
+            <div key={cat} className="bg-gray-200 px-4 py-2 rounded-xl flex items-center gap-2">
               <button
                 onClick={() => setCategoriaSeleccionada(cat)}
                 className="font-semibold text-black"
@@ -149,9 +149,9 @@ export default function Animales() {
               type="text"
               value={categoriaEditada}
               onChange={(e) => setCategoriaEditada(e.target.value)}
-              className="border px-3 py-2 rounded w-full max-w-sm"
+              className="bg-gray-200 border px-3 py-2 rounded-xl w-full max-w-sm"
             />
-            <button onClick={guardarEdicionCategoria} className="bg-blue-500 text-white px-4 py-2 rounded">
+            <button onClick={guardarEdicionCategoria} className="bg-yellow-700 hover:bg-yellow-800 text-white px-4 py-2 rounded-xl">
               Guardar
             </button>
           </div>
@@ -163,11 +163,11 @@ export default function Animales() {
               <input
                 type="text"
                 placeholder="Buscar..."
-                className="bg-gray-200 border px-4 py-2 rounded w-full max-w-md"
+                className="bg-gray-200 border px-4 py-2 rounded-xl w-full max-w-md"
                 value={filtro}
                 onChange={(e) => setFiltro(e.target.value)}
               />
-              <FaSearch className="text-amber-900" />
+              <FaSearch className="bg-amber-50 text-amber-900" />
             </div>
 
             <div className="min-w-[800px] w-full overflow-x-auto max-w-screen-xl mx-auto">
@@ -215,7 +215,7 @@ export default function Animales() {
               </table>
             </div>
 
-            <button onClick={() => abrirFormulario('crear')} className="bg-yellow-700 hover:bg-yellow-800 text-white px-4 py-2 rounded flex items-center gap-2">
+            <button onClick={() => abrirFormulario('crear')} className="bg-yellow-700 hover:bg-yellow-800 text-white px-4 py-2 rounded-xl flex items-center gap-2">
               <FaPlus /> Añadir Animal
             </button>
           </>
@@ -239,7 +239,7 @@ export default function Animales() {
               </div>
               <div className="flex justify-end gap-4">
                 <button onClick={() => setModo('')} className="text-gray-700 hover:text-gray-900">Cancelar</button>
-                <button onClick={guardarAnimal} className="bg-yellow-700 hover:bg-yellow-800 text-white px-4 py-2 rounded">Guardar</button>
+                <button onClick={guardarAnimal} className="bg-yellow-700 hover:bg-yellow-800 text-white px-4 py-2 rounded-xl">Guardar</button>
               </div>
             </div>
           </div>
