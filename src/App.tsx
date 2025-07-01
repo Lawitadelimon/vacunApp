@@ -1,7 +1,7 @@
 import { Routes, Route } from 'react-router-dom';
 import HomePage from './HomePage';
 import Pendientes from './pendientes';
-import Notificaciones from './notificatciones';
+import Notificaciones from './notificaciones';
 import Animales from './animales';
 
 export default function App() {

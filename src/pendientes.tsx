@@ -1,6 +1,8 @@
 import { FaClipboardList, FaBell } from 'react-icons/fa';
-import { useState } from 'react';
-import Notificaciones from './notificatciones'; // Asegúrate que la ruta sea correcta
+import { useState, useEffect } from 'react';
+import Notificaciones from './notificaciones';
+import { db } from './firebase';
+import { collection, addDoc, getDocs } from 'firebase/firestore';
 
 export default function Pendientes() {
   const [tarea, setTarea] = useState('');
@@ -8,16 +10,25 @@ export default function Pendientes() {
   const [categoria, setCategoria] = useState('');
   const [fecha, setFecha] = useState('');
   const [mostrarNotificaciones, setMostrarNotificaciones] = useState(false);
+  const [tareas, setTareas] = useState([]);
 
-  const [tareas, setTareas] = useState([
-    { titulo: 'Vacunar vaca 001', para: 'Carlos', fecha: 'Hoy' },
-    { titulo: 'Revisión veterinaria', para: 'Lucía', fecha: '28/06/2025' },
-    { titulo: 'Aplicar antiparasitario', para: 'Pedro', fecha: '01/07/2025' },
-  ]);
+  const hoy = new Date().toISOString().split('T')[0];
 
-  const hoy = new Date().toISOString().split('T')[0]; // formato YYYY-MM-DD
+  useEffect(() => {
+    const cargarTareas = async () => {
+      try {
+        const querySnapshot = await getDocs(collection(db, 'tareas'));
+        const tareasFirebase = querySnapshot.docs.map(doc => doc.data());
+        setTareas(tareasFirebase);
+      } catch (error) {
+        console.error("Error al cargar tareas:", error);
+      }
+    };
 
-  const handleSubmit = (e) => {
+    cargarTareas();
+  }, []);
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!tarea || !fecha || !para) return alert('Completa al menos tarea, para y fecha');
 
@@ -28,7 +39,13 @@ export default function Pendientes() {
       fecha,
     };
 
-    setTareas([...tareas, nuevaTarea]);
+    try {
+      await addDoc(collection(db, 'tareas'), nuevaTarea);
+      setTareas([...tareas, nuevaTarea]);
+    } catch (error) {
+      console.error("Error al guardar tarea:", error);
+      alert("Error al guardar tarea en la base de datos.");
+    }
 
     setTarea('');
     setPara('');
@@ -42,7 +59,6 @@ export default function Pendientes() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-yellow-100 to-yellow-300 font-sans">
-    
       <header className="bg-yellow-600 w-full py-4 px-6 shadow-md flex justify-between items-center">
         <h1 className="text-white text-2xl font-extrabold">VacunApp - Pendientes</h1>
         <button onClick={handleNotificaciones} className="text-white text-xl">
@@ -51,7 +67,6 @@ export default function Pendientes() {
       </header>
 
       <main className="flex flex-col md:flex-row justify-center gap-6 p-6">
-        
         <section className="bg-white rounded-xl shadow-md p-6 w-full md:w-1/2">
           <h2 className="text-lg font-bold flex items-center gap-2 text-yellow-800 mb-4">
             <FaClipboardList className="text-yellow-600" />
@@ -71,7 +86,6 @@ export default function Pendientes() {
           </ul>
         </section>
 
-       
         <section className="bg-white rounded-xl shadow-md p-6 w-full md:w-1/2">
           <h2 className="text-lg font-bold text-yellow-800 mb-4">Añadir nueva tarea</h2>
 
@@ -127,7 +141,6 @@ export default function Pendientes() {
         </section>
       </main>
 
-    
       {mostrarNotificaciones && (
         <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center z-50">
           <div className="bg-white rounded-lg p-6 w-11/12 md:w-1/2 shadow-lg relative">
