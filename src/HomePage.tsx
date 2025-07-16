@@ -1,8 +1,32 @@
 import { Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { collection, getDocs } from 'firebase/firestore';
+import { db } from './firebase'; // ajusta la ruta si es necesario
 import { FaBell, FaClipboardList, FaPaw } from 'react-icons/fa';
 import cowImage from './assets/cows.jpg';
 
 export default function HomePage() {
+  const [tareas, setTareas] = useState<any[]>([]);
+
+  useEffect(() => {
+    const cargarTareas = async () => {
+      const querySnapshot = await getDocs(collection(db, 'tareas'));
+      const tareasFirebase = querySnapshot.docs.map(doc => ({
+        ...doc.data(),
+        id: doc.id,
+      }));
+      setTareas(tareasFirebase);
+    };
+
+    cargarTareas();
+  }, []);
+
+  const hoy = new Date().toISOString().split('T')[0];
+
+  const pendientesHoy = tareas.filter(
+    (t) => t.fecha <= hoy && !t.completada
+  );
+
   return (
     <div className="relative min-h-screen flex flex-col items-center">
       <div
@@ -23,7 +47,7 @@ export default function HomePage() {
             Bienvenido a VacunApp
           </h2>
           <p className="text-sm font-semibold text-white drop-shadow">
-            Donde el bienestar de tu ganado es lo primero!
+            ¡Donde el bienestar de tu ganado es lo primero!
           </p>
           <hr className="my-4 border-t border-white w-3/4 mx-auto" />
         </div>
@@ -41,11 +65,15 @@ export default function HomePage() {
           >
             <FaClipboardList /> Pendientes
           </Link>
+
           <Link
             to="/notificaciones"
-            className="bg-amber-700 hover:bg-yellow-900 text-white font-bold py-2 px-6 rounded-xl shadow flex items-center justify-center gap-2"
+            className="relative bg-amber-700 hover:bg-yellow-900 text-white font-bold py-2 px-6 rounded-xl shadow flex items-center justify-center gap-2"
           >
             <FaBell /> Notificaciones
+            {pendientesHoy.length > 0 && (
+              <span className="absolute top-1 right-1 w-3 h-3 bg-red-500 rounded-full shadow" />
+            )}
           </Link>
         </div>
       </div>

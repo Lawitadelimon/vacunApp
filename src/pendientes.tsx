@@ -2,7 +2,14 @@ import { FaClipboardList, FaBell } from 'react-icons/fa';
 import { useState, useEffect } from 'react';
 import Notificaciones from './notificaciones';
 import { db } from './firebase';
-import { collection, addDoc, getDocs } from 'firebase/firestore';
+import {
+  collection,
+  addDoc,
+  getDocs,
+  deleteDoc,
+  doc,
+  updateDoc,
+} from 'firebase/firestore';
 
 export default function Pendientes() {
   const [tarea, setTarea] = useState('');
@@ -14,14 +21,26 @@ export default function Pendientes() {
 
   const hoy = new Date().toISOString().split('T')[0];
 
+  const categorias = [
+    'Vacunación',
+    'Alimentación',
+    'Revisión veterinaria',
+    'Limpieza corral',
+    'Pesaje',
+    'Otros',
+  ];
+
   useEffect(() => {
     const cargarTareas = async () => {
       try {
         const querySnapshot = await getDocs(collection(db, 'tareas'));
-        const tareasFirebase = querySnapshot.docs.map(doc => doc.data());
+        const tareasFirebase = querySnapshot.docs.map(doc => ({
+          ...doc.data(),
+          id: doc.id,
+        }));
         setTareas(tareasFirebase);
       } catch (error) {
-        console.error("Error al cargar tareas:", error);
+        console.error('Error al cargar tareas:', error);
       }
     };
 
@@ -30,21 +49,22 @@ export default function Pendientes() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!tarea || !fecha || !para) return alert('Completa al menos tarea, para y fecha');
+    if (!tarea || !fecha || !para) return alert('Completa todos los campos');
 
     const nuevaTarea = {
       titulo: tarea,
       para,
       categoria,
       fecha,
+      completada: false,
     };
 
     try {
-      await addDoc(collection(db, 'tareas'), nuevaTarea);
-      setTareas([...tareas, nuevaTarea]);
+      const docRef = await addDoc(collection(db, 'tareas'), nuevaTarea);
+      setTareas([...tareas, { ...nuevaTarea, id: docRef.id }]);
     } catch (error) {
-      console.error("Error al guardar tarea:", error);
-      alert("Error al guardar tarea en la base de datos.");
+      console.error('Error al guardar tarea:', error);
+      alert('Error al guardar tarea en la base de datos.');
     }
 
     setTarea('');
@@ -53,17 +73,44 @@ export default function Pendientes() {
     setFecha('');
   };
 
-  const handleNotificaciones = () => {
-    setMostrarNotificaciones(true);
+  const handleEliminar = async (id) => {
+    try {
+      await deleteDoc(doc(db, 'tareas', id));
+      setTareas(tareas.filter(t => t.id !== id));
+    } catch (error) {
+      console.error('Error al eliminar tarea:', error);
+    }
   };
+
+  const toggleCompletada = async (id, completada) => {
+    try {
+      await updateDoc(doc(db, 'tareas', id), { completada: !completada });
+      setTareas(
+        tareas.map(t =>
+          t.id === id ? { ...t, completada: !completada } : t
+        )
+      );
+    } catch (error) {
+      console.error('Error al actualizar tarea:', error);
+    }
+  };
+
+  const tareasPendientesHoy = tareas.filter(
+    t => t.fecha <= hoy && !t.completada
+  );
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-yellow-100 to-yellow-300 font-sans">
       <header className="bg-yellow-600 w-full py-4 px-6 shadow-md flex justify-between items-center">
         <h1 className="text-white text-2xl font-extrabold">VacunApp - Pendientes</h1>
-        <button onClick={handleNotificaciones} className="text-white text-xl">
-          <FaBell />
-        </button>
+        <div className="relative">
+          <button onClick={() => setMostrarNotificaciones(true)} className="text-white text-xl">
+            <FaBell />
+            {tareasPendientesHoy.length > 0 && (
+              <span className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full"></span>
+            )}
+          </button>
+        </div>
       </header>
 
       <main className="flex flex-col md:flex-row justify-center gap-6 p-6">
@@ -74,13 +121,32 @@ export default function Pendientes() {
           </h2>
 
           <ul className="space-y-4">
-            {tareas.map((t, index) => (
-              <li key={index} className="p-3 bg-yellow-100 rounded shadow space-y-1">
+            {tareas.map((t) => (
+              <li key={t.id} className="p-3 bg-yellow-100 rounded shadow space-y-1">
                 <div className="flex justify-between items-center">
-                  <span className="font-medium">{t.titulo}</span>
-                  <span className="text-sm text-yellow-700">{t.fecha}</span>
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="checkbox"
+                      checked={t.completada}
+                      onChange={() => toggleCompletada(t.id, t.completada)}
+                      className="cursor-pointer"
+                    />
+                    <span className={`font-medium ${t.completada ? 'line-through text-gray-500' : ''}`}>
+                      {t.titulo}
+                    </span>
+                  </div>
+
+                  <button
+                    onClick={() => handleEliminar(t.id)}
+                    className="text-red-500 font-bold text-xl px-2"
+                  >
+                    ×
+                  </button>
                 </div>
+
                 <div className="text-sm text-gray-700 italic">Para: {t.para}</div>
+                <div className="text-sm text-gray-700 italic">Categoría: {t.categoria}</div>
+                <div className="text-sm text-yellow-700 mt-1">Fecha: {t.fecha}</div>
               </li>
             ))}
           </ul>
@@ -96,28 +162,34 @@ export default function Pendientes() {
                 type="text"
                 value={tarea}
                 onChange={(e) => setTarea(e.target.value)}
-                className="w-full mt-1 p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                className="w-full mt-1 p-2 border rounded-md"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-yellow-800">Tarea Asignada Para:</label>
+              <label className="block text-sm font-medium text-yellow-800">Asignada Para:</label>
               <input
                 type="text"
                 value={para}
                 onChange={(e) => setPara(e.target.value)}
-                className="w-full mt-1 p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                className="w-full mt-1 p-2 border rounded-md"
               />
             </div>
 
             <div>
               <label className="block text-sm font-medium text-yellow-800">Categoría:</label>
-              <input
-                type="text"
+              <select
                 value={categoria}
                 onChange={(e) => setCategoria(e.target.value)}
-                className="w-full mt-1 p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-400"
-              />
+                className="w-full mt-1 p-2 border rounded-md"
+              >
+                <option value="">Selecciona una categoría</option>
+                {categorias.map((cat, i) => (
+                  <option key={i} value={cat}>
+                    {cat}
+                  </option>
+                ))}
+              </select>
             </div>
 
             <div>
@@ -127,7 +199,7 @@ export default function Pendientes() {
                 value={fecha}
                 min={hoy}
                 onChange={(e) => setFecha(e.target.value)}
-                className="w-full mt-1 p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                className="w-full mt-1 p-2 border rounded-md"
               />
             </div>
 
