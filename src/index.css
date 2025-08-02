@@ -1,8 +1,11 @@
-@import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
+/* Tus estilos extra */
 footer {
-          background-color: #094297dc;
-          padding: 10px;
-          text-align: center;
-          color: rgb(241, 242, 248);
-        }
+  background-color: #094297dc;
+  padding: 10px;
+  text-align: center;
+  color: rgb(241, 242, 248);
+}
