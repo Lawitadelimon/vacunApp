@@ -40,7 +40,7 @@ export function RegisterForm() {
       />
       <button
         type="submit"
-        className="w-full bg-[#458C74] text-white py-2 rounded hover:bg-[#386C5E]"
+        className="w-full bg-[#be7d27] text-white py-2 rounded hover:bg-[#795c42]"
       >
         REGISTRARSE
       </button>
