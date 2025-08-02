@@ -1,8 +1,5 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
-/* Tus estilos extra */
 footer {
   background-color: #094297dc;
   padding: 10px;
