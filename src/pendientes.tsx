@@ -1,119 +1,117 @@
-import { FaClipboardList, FaBell } from 'react-icons/fa';
+import { Link } from 'react-router-dom';
+import { FaClipboardList, FaBell, FaTrash, FaHome } from 'react-icons/fa';
 import { useState, useEffect } from 'react';
 import Notificaciones from './notificaciones';
 import { db } from './firebase';
-import {
-  collection,
-  addDoc,
-  getDocs,
-  deleteDoc,
-  doc,
-  updateDoc,
-} from 'firebase/firestore';
+import { collection, addDoc, getDocs, deleteDoc, doc } from 'firebase/firestore';
 
 export default function Pendientes() {
   const [tarea, setTarea] = useState('');
+  const [descripcion, setDescripcion] = useState('');
   const [para, setPara] = useState('');
   const [categoria, setCategoria] = useState('');
+  const [animalId, setAnimalId] = useState('');
   const [fecha, setFecha] = useState('');
   const [mostrarNotificaciones, setMostrarNotificaciones] = useState(false);
-  const [tareas, setTareas] = useState([]);
+  const [tareas, setTareas] = useState<any[]>([]);
+  const [animales, setAnimales] = useState<any[]>([]);
 
+  const categoriasGranja = ['Vacunación', 'Alimentación', 'Limpieza', 'Revisión'];
   const hoy = new Date().toISOString().split('T')[0];
 
-  const categorias = [
-    'Vacunación',
-    'Alimentación',
-    'Revisión veterinaria',
-    'Limpieza corral',
-    'Pesaje',
-    'Otros',
-  ];
-
+  // Cargar tareas
   useEffect(() => {
     const cargarTareas = async () => {
-      try {
-        const querySnapshot = await getDocs(collection(db, 'tareas'));
-        const tareasFirebase = querySnapshot.docs.map(doc => ({
-          ...doc.data(),
-          id: doc.id,
-        }));
-        setTareas(tareasFirebase);
-      } catch (error) {
-        console.error('Error al cargar tareas:', error);
-      }
+      const querySnapshot = await getDocs(collection(db, 'tareas'));
+      const lista = querySnapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+      setTareas(lista);
     };
-
     cargarTareas();
   }, []);
 
-  const handleSubmit = async (e) => {
+  // Cargar animales para desplegable
+  useEffect(() => {
+    const cargarAnimales = async () => {
+      const querySnapshot = await getDocs(collection(db, 'categorias'));
+      let lista: any[] = [];
+      for (let cat of querySnapshot.docs) {
+        const animalesSnap = await getDocs(collection(db, 'categorias', cat.id, 'animales'));
+        lista.push(...animalesSnap.docs.map(d => ({ id: d.id, ...d.data() })));
+      }
+      setAnimales(lista);
+    };
+    cargarAnimales();
+  }, []);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!tarea || !fecha || !para) return alert('Completa todos los campos');
+    if (!tarea || !fecha || !para || !categoria) return alert('Completa los campos obligatorios');
+
+    // Buscar el animal seleccionado (si aplica)
+    let animalSeleccionado = null;
+    if (categoria === 'Vacunación' && animalId) {
+      animalSeleccionado = animales.find(a => (a.codigo || a.id) === animalId) || null;
+    }
 
     const nuevaTarea = {
       titulo: tarea,
+      descripcion,
       para,
       categoria,
+      animalId: animalId || '',
+      animalCodigo: animalSeleccionado?.codigo || '',
+      animalRaza: animalSeleccionado?.raza || '',
       fecha,
-      completada: false,
+      completada: false
     };
 
-    try {
-      const docRef = await addDoc(collection(db, 'tareas'), nuevaTarea);
-      setTareas([...tareas, { ...nuevaTarea, id: docRef.id }]);
-    } catch (error) {
-      console.error('Error al guardar tarea:', error);
-      alert('Error al guardar tarea en la base de datos.');
-    }
+    const docRef = await addDoc(collection(db, 'tareas'), nuevaTarea);
+    setTareas([...tareas, { ...nuevaTarea, id: docRef.id }]);
 
     setTarea('');
+    setDescripcion('');
     setPara('');
     setCategoria('');
+    setAnimalId('');
     setFecha('');
   };
 
-  const handleEliminar = async (id) => {
-    try {
-      await deleteDoc(doc(db, 'tareas', id));
-      setTareas(tareas.filter(t => t.id !== id));
-    } catch (error) {
-      console.error('Error al eliminar tarea:', error);
-    }
+  const eliminarTarea = async (id: string) => {
+    await deleteDoc(doc(db, 'tareas', id));
+    setTareas(tareas.filter(t => t.id !== id));
   };
 
-  const toggleCompletada = async (id, completada) => {
-    try {
-      await updateDoc(doc(db, 'tareas', id), { completada: !completada });
-      setTareas(
-        tareas.map(t =>
-          t.id === id ? { ...t, completada: !completada } : t
-        )
-      );
-    } catch (error) {
-      console.error('Error al actualizar tarea:', error);
-    }
+  const marcarCompletada = (id: string) => {
+    setTareas(prev =>
+      prev.map(t => t.id === id ? { ...t, completada: !t.completada } : t)
+    );
   };
-
-  const tareasPendientesHoy = tareas.filter(
-    t => t.fecha <= hoy && !t.completada
-  );
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-yellow-100 to-yellow-300 font-sans">
-      <header className="bg-yellow-600 w-full py-4 px-6 shadow-md flex justify-between items-center">
-        <h1 className="text-white text-2xl font-extrabold">VacunApp - Pendientes</h1>
-        <div className="relative">
-          <button onClick={() => setMostrarNotificaciones(true)} className="text-white text-xl">
-            <FaBell />
-            {tareasPendientesHoy.length > 0 && (
-              <span className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full"></span>
-            )}
-          </button>
-        </div>
+      {/* Header con botón de casita y título centrado */}
+      <header className="bg-yellow-600 w-full py-4 px-6 shadow-md relative flex items-center justify-between">
+        <Link to="/" className="text-white text-2xl hover:text-yellow-200">
+          <FaHome />
+        </Link>
+
+        <h1 className="absolute left-1/2 transform -translate-x-1/2 text-white text-2xl font-extrabold">
+          VacunApp - Pendientes
+        </h1>
+
+        <button
+          onClick={() => setMostrarNotificaciones(true)}
+          className="relative text-white text-xl hover:text-yellow-200"
+        >
+          <FaBell />
+          {tareas.some(t => !t.completada && t.fecha >= hoy) && (
+            <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-600 rounded-full"></span>
+          )}
+        </button>
       </header>
 
       <main className="flex flex-col md:flex-row justify-center gap-6 p-6">
+        {/* Lista de tareas */}
         <section className="bg-white rounded-xl shadow-md p-6 w-full md:w-1/2">
           <h2 className="text-lg font-bold flex items-center gap-2 text-yellow-800 mb-4">
             <FaClipboardList className="text-yellow-600" />
@@ -122,39 +120,38 @@ export default function Pendientes() {
 
           <ul className="space-y-4">
             {tareas.map((t) => (
-              <li key={t.id} className="p-3 bg-yellow-100 rounded shadow space-y-1">
-                <div className="flex justify-between items-center">
-                  <div className="flex items-center gap-3">
+              <li key={t.id} className="p-3 bg-yellow-100 rounded shadow space-y-1 flex justify-between items-start">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
                     <input
                       type="checkbox"
                       checked={t.completada}
-                      onChange={() => toggleCompletada(t.id, t.completada)}
-                      className="cursor-pointer"
+                      onChange={() => marcarCompletada(t.id)}
                     />
                     <span className={`font-medium ${t.completada ? 'line-through text-gray-500' : ''}`}>
-                      {t.titulo}
+                      {t.titulo} {t.animalCodigo && `(Animal: ${t.animalCodigo} - ${t.animalRaza})`}
                     </span>
                   </div>
-
-                  <button
-                    onClick={() => handleEliminar(t.id)}
-                    className="text-red-500 font-bold text-xl px-2"
-                  >
-                    ×
-                  </button>
+                  <div className="text-sm text-gray-700 italic">Para: {t.para}</div>
+                  {t.descripcion && (
+                    <div className="text-xs text-gray-600">{t.descripcion}</div>
+                  )}
+                  <div className="text-xs text-yellow-700 mt-1">{t.fecha}</div>
                 </div>
-
-                <div className="text-sm text-gray-700 italic">Para: {t.para}</div>
-                <div className="text-sm text-gray-700 italic">Categoría: {t.categoria}</div>
-                <div className="text-sm text-yellow-700 mt-1">Fecha: {t.fecha}</div>
+                <button
+                  onClick={() => eliminarTarea(t.id)}
+                  className="text-red-600 hover:text-red-800 ml-2"
+                >
+                  <FaTrash />
+                </button>
               </li>
             ))}
           </ul>
         </section>
 
+        {/* Formulario */}
         <section className="bg-white rounded-xl shadow-md p-6 w-full md:w-1/2">
           <h2 className="text-lg font-bold text-yellow-800 mb-4">Añadir nueva tarea</h2>
-
           <form className="space-y-4" onSubmit={handleSubmit}>
             <div>
               <label className="block text-sm font-medium text-yellow-800">Tarea:</label>
@@ -162,17 +159,27 @@ export default function Pendientes() {
                 type="text"
                 value={tarea}
                 onChange={(e) => setTarea(e.target.value)}
-                className="w-full mt-1 p-2 border rounded-md"
+                className="w-full mt-1 p-2 border rounded-md focus:ring-2 focus:ring-yellow-400"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-yellow-800">Asignada Para:</label>
+              <label className="block text-sm font-medium text-yellow-800">Descripción / Leyenda:</label>
+              <input
+                type="text"
+                value={descripcion}
+                onChange={(e) => setDescripcion(e.target.value)}
+                className="w-full mt-1 p-2 border rounded-md focus:ring-2 focus:ring-yellow-400"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-yellow-800">Tarea asignada para:</label>
               <input
                 type="text"
                 value={para}
                 onChange={(e) => setPara(e.target.value)}
-                className="w-full mt-1 p-2 border rounded-md"
+                className="w-full mt-1 p-2 border rounded-md focus:ring-2 focus:ring-yellow-400"
               />
             </div>
 
@@ -181,16 +188,32 @@ export default function Pendientes() {
               <select
                 value={categoria}
                 onChange={(e) => setCategoria(e.target.value)}
-                className="w-full mt-1 p-2 border rounded-md"
+                className="w-full mt-1 p-2 border rounded-md focus:ring-2 focus:ring-yellow-400"
               >
-                <option value="">Selecciona una categoría</option>
-                {categorias.map((cat, i) => (
-                  <option key={i} value={cat}>
-                    {cat}
-                  </option>
+                <option value="">Seleccionar categoría</option>
+                {categoriasGranja.map((cat) => (
+                  <option key={cat} value={cat}>{cat}</option>
                 ))}
               </select>
             </div>
+
+            {categoria === 'Vacunación' && (
+              <div>
+                <label className="block text-sm font-medium text-yellow-800">Animal:</label>
+                <select
+                  value={animalId}
+                  onChange={(e) => setAnimalId(e.target.value)}
+                  className="w-full mt-1 p-2 border rounded-md focus:ring-2 focus:ring-yellow-400"
+                >
+                  <option value="">Seleccionar animal</option>
+                  {animales.map((a) => (
+                    <option key={a.id} value={a.codigo || a.id}>
+                      {a.codigo || a.id} - {a.raza || 'Sin raza'}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
 
             <div>
               <label className="block text-sm font-medium text-yellow-800">Fecha:</label>
@@ -199,7 +222,7 @@ export default function Pendientes() {
                 value={fecha}
                 min={hoy}
                 onChange={(e) => setFecha(e.target.value)}
-                className="w-full mt-1 p-2 border rounded-md"
+                className="w-full mt-1 p-2 border rounded-md focus:ring-2 focus:ring-yellow-400"
               />
             </div>
 

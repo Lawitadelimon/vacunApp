@@ -4,12 +4,12 @@ import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
 const firebaseConfig = {
-apiKey: "AIzaSyCwp_odCB3DDc2VARqrIhEQLXnnncmRMLU",
-authDomain: "vacunapp-34a5b.firebaseapp.com",
-projectId: "vacunapp-34a5b",
-storageBucket: "vacunapp-34a5b.appspot.com",
-messagingSenderId: "315026388932",
-appId: "1:315026388932:web:3f9b57281811c3ea6d1691"
+  apiKey: "AIzaSyD2XEfx0RHgdpIKvj-xRkUbhgkwF5BuN5o",
+  authDomain: "vacunapp-4c277.firebaseapp.com",
+  projectId: "vacunapp-4c277",
+  storageBucket: "vacunapp-4c277.firebasestorage.app",
+  messagingSenderId: "254568375334",
+  appId: "1:254568375334:web:5ebe81e7ff6a25b83af2e7"
 };
 
 export const app = initializeApp(firebaseConfig);
