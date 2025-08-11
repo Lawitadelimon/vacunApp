@@ -10,7 +10,7 @@ import { useNavigate } from "react-router-dom";
 
 
 
-export default function animales() {
+export default function Animales() {
 
   
   const navigate = useNavigate();
@@ -38,9 +38,9 @@ export default function animales() {
     const años = Math.floor(diffDias / 365.25);
     const meses = Math.floor((diffDias % 365.25) / 30.44);
     const dias = Math.floor((diffDias % 365.25) % 30.44);
-    if (años === 0 && meses === 0) return `${dias} ${dias === 1 ? "día" : "días"}`;
-    if (años === 0) return `${meses} ${meses === 1 ? "mes" : "meses"}`;
-    return `${años} ${años === 1 ? "año" : "años"}`;
+    if (años === 0 && meses === 0) return  `${dias} ${dias === 1 ? "día" : "días"} `;
+    if (años === 0) return  `${meses} ${meses === 1 ? "mes" : "meses"} `;
+    return  `${años} ${años === 1 ? "año" : "años"} `;
   };
 
   useEffect(() => {
@@ -260,7 +260,7 @@ export default function animales() {
 
   const eliminarAnimal = async (idx: number) => {
     const a = animales[categoriaSeleccionada][idx];
-    if (!confirm(`Eliminar ${a.codigo}?`)) return;
+    if (!confirm(`Eliminar  ${a.codigo} ?`)) return;
     await deleteDoc(doc(db, 'categorias', categoriaSeleccionada, 'animales', a.codigo));
     setAnimales(prev => {
       const arr = [...prev[categoriaSeleccionada]];
@@ -323,6 +323,8 @@ export default function animales() {
 
 
 return (
+
+    
   <div className="relative min-h-screen flex flex-col items-center bg-gradient-to-b from-yellow-100 to-yellow-50">
     <div
       className="absolute inset-0 bg-cover bg-center filter blur-sm opacity-100"
@@ -336,7 +338,7 @@ return (
         aria-label="Ir al Home"
         className="text-white hover:text-yellow-200 transition cursor-pointer absolute left-6 "
       >
-    <svg
+         <svg
       xmlns="http://www.w3.org/2000/svg"
       className="h-8 w-8"
       fill="none"
@@ -457,13 +459,19 @@ return (
                     <td className="py-2 px-3">{anim.salud}</td>
                     <td className="py-2 px-3">{anim.peso}</td>
                     <td className="py-2 px-3 text-left text-sm">
+
   <button
     onClick={() => setAnimalVacunasModal(anim)}
-    className="text-yellow-600 hover:text-yellow-800 underline font-medium"
+    className={`underline font-medium ${
+      anim.vacunas?.length > 0 && anim.vacunas.every(v => v.aplicada)
+        ? "text-green-600 hover:text-green-800"
+        : "text-red-600 hover:text-red-800"
+    }`}
   >
     Ver vacunas
   </button>
 </td>
+
 
                     <td className="py-2 px-3 flex justify-center gap-4">
                       <FaEdit
@@ -543,19 +551,21 @@ return (
                       <label className="block text-yellow-800 text-sm font-semibold mb-2">
                         Fecha de Nacimiento
                       </label>
-                      <input
-                        type="date"
-                        value={formData.fecha}
-                        onChange={e =>
-                          setFormData(f => ({
-                            ...f,
-                            fecha: e.target.value,
-                            edad: calcularEdad(e.target.value),
-                          }))
-                        }
-                        required
-                        className="w-full border border-yellow-300 px-4 py-3 rounded-lg bg-white focus:ring-2 focus:ring-yellow-400 focus:border-yellow-500 transition"
-                      />
+                     <input
+  type="date"
+  value={formData.fecha}
+  max={new Date().toISOString().split('T')[0]}  // ← esto es lo nuevo
+  onChange={e =>
+    setFormData(f => ({
+      ...f,
+      fecha: e.target.value,
+      edad: calcularEdad(e.target.value),
+    }))
+  }
+  required
+  className="w-full border border-yellow-300 px-4 py-3 rounded-lg bg-white focus:ring-2 focus:ring-yellow-400 focus:border-yellow-500 transition"
+/>
+
                     </div>
                     {/* Edad */}
                     <div>
@@ -707,7 +717,7 @@ return (
             </div>
           )}
                     
-        {animalVacunasModal && (
+         {animalVacunasModal && (
   <div className="fixed inset-0 bg-black bg-opacity-40 backdrop-blur-sm z-50 flex items-center justify-center p-6">
     <div className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full p-8 overflow-y-auto max-h-[90vh] relative border-2 border-yellow-300 printable">
       {/* ENCABEZADO */}
@@ -752,7 +762,7 @@ return (
         >
           Cerrar
         </button>
-      <button onClick={handlePrint} className="bg-green-600 hover:bg-green-700 text-white font-semibold px-6 py-3 rounded-xl transition shadow-md w-full">
+       <button onClick={handlePrint} className="bg-green-600 hover:bg-green-700 text-white font-semibold px-6 py-3 rounded-xl transition shadow-md w-full">
   Imprimir
 </button>
       </div>
