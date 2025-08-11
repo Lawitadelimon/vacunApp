@@ -1,4 +1,3 @@
-
 export default function Notificaciones({ tareas }) {
   const hoy = new Date().toISOString().split('T')[0];
 

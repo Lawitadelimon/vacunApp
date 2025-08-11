@@ -1,6 +1,6 @@
 import { FaClipboardList, FaBell } from 'react-icons/fa';
 import { useState } from 'react';
-import Notificaciones from './notificatciones'; // Asegúrate que la ruta sea correcta
+import Notificaciones from './notificatciones'; 
 
 export default function Pendientes() {
   const [tarea, setTarea] = useState('');
@@ -15,11 +15,11 @@ export default function Pendientes() {
     { titulo: 'Aplicar antiparasitario', para: 'Pedro', fecha: '01/07/2025' },
   ]);
 
-  const hoy = new Date().toISOString().split('T')[0]; // formato YYYY-MM-DD
+  const hoy = new Date().toISOString().split('T')[0]; 
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!tarea || !fecha || !para) return alert('Completa al menos tarea, para y fecha');
+    if (!tarea || !fecha || !para || !categoria) return alert('Completa todos los campos');
 
     const nuevaTarea = {
       titulo: tarea,
