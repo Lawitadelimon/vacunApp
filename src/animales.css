@@ -1,0 +1,23 @@
+@media print {
+  /* Oculta todo el contenido */
+  body * {
+    visibility: hidden !important;
+  }
+
+  /* Muestra solo lo que tenga clase printable */
+  .printable, .printable * {
+    visibility: visible !important;
+  }
+
+  /* Ajusta la posición para que quede bien en la página */
+  .printable {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    padding: 1rem;
+    background: white !important;
+    color: black !important;
+    font-size: 12pt;
+  }
+}
