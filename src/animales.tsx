@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
-import { FaEdit, FaTrash, FaPlus, FaSearch } from 'react-icons/fa';
+import { FaEdit, FaTrash, FaPlus, FaSearch, FaHome } from 'react-icons/fa';
 import backgroundImage from './assets/cows2.jpg';
 import {
   collection, getDocs, addDoc, doc, updateDoc, deleteDoc, setDoc
 } from 'firebase/firestore';
 import { db } from './firebase';
 import './Animales.css';
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 
 
@@ -331,34 +331,21 @@ return (
       style={{ backgroundImage: `url(${backgroundImage})` }}
     />
     <div className="relative z-10 w-full max-w-7xl flex flex-col items-center px-4 sm:px-0.5">
-      <header className="bg-yellow-500 w-full py-5 text-center shadow-lg rounded-b-lg">
-        
-      <button
-        onClick={() => navigate('/')}
-        aria-label="Ir al Home"
-        className="text-white hover:text-yellow-200 transition cursor-pointer absolute left-6 "
-      >
-         <svg
-      xmlns="http://www.w3.org/2000/svg"
-      className="h-8 w-8"
-      fill="none"
-      viewBox="0 0 24 24"
-      stroke="currentColor"
-      strokeWidth={2}
-    >
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        d="M3 12l9-9 9 9M4 10v10a1 1 0 001 1h3m10-11v10a1 1 0 01-1 1h-3m-6 0h6"
-      />
-    </svg>
-  </button>
-        <h1 className="text-white text-4xl font-extrabold tracking-wide drop-shadow-lg">
-          Animales
-        </h1>
+      <header className="bg-yellow-600 fixed top-0 left-0 right-0 py-4 text-center shadow-md z-20 flex items-center justify-center">
+ 
+       {/* Botón de casita */}
+          <Link
+              to="/"
+              className="absolute left-4 text-white text-2xl hover:text-yellow-200 transition"
+              aria-label="Volver al inicio"
+            >
+            <FaHome />
+         </Link>
+         <h1 className="text-white text-4xl font-extrabold"> Animales </h1>
       </header>
 
-      <div className="mt-8 mb-6 flex gap-3 max-w-md w-full">
+
+      <div className="mt-30 mb-6 flex gap-3 max-w-md w-full">
         <input
           value={nuevaCategoria}
           onChange={e => setNuevaCategoria(e.target.value)}
