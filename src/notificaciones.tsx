@@ -9,8 +9,11 @@ export default function Notificaciones() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Suscripción en tiempo real
-    const unsubscribe = onSnapshot(collection(db, 'tareas'), (snapshot) => {
+    if (!auth.currentUser) return;
+
+    // Suscripción en tiempo real SOLO a las tareas del usuario logueado
+    const q = query(collection(db, 'tareas'), where('uid', '==', auth.currentUser.uid));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
       const tareasFirebase = snapshot.docs.map(doc => ({
         ...doc.data(),
         id: doc.id,
