@@ -9,7 +9,6 @@ export default function Notificaciones() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Suscripción en tiempo real
     const unsubscribe = onSnapshot(collection(db, 'tareas'), (snapshot) => {
       const tareasFirebase = snapshot.docs.map(doc => ({
         ...doc.data(),
@@ -19,13 +18,11 @@ export default function Notificaciones() {
       setLoading(false);
     });
 
-    // Cleanup al desmontar
     return () => unsubscribe();
   }, []);
 
   const hoy = new Date().toISOString().split('T')[0];
 
-  // Mostrar tareas pendientes cuya fecha sea hoy o pasada y que no estén completadas
   const pendientesHoy = tareas.filter(
     (t) => t.fecha && t.fecha <= hoy && !t.completada
   );
@@ -34,7 +31,6 @@ export default function Notificaciones() {
     try {
       const tareaRef = doc(db, 'tareas', id);
       await updateDoc(tareaRef, { completada: true });
-      // Ya no necesitamos recargar manualmente porque onSnapshot actualizará
     } catch (error) {
       console.error("Error al marcar completada:", error);
     }
