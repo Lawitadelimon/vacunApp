@@ -22,7 +22,6 @@ export default function Pendientes() {
   const categoriasGranja = ['Vacunación', 'Alimentación', 'Limpieza', 'Revisión'];
   const hoy = new Date().toISOString().split('T')[0];
 
-  // Detectar usuario logueado
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (user) => {
       if (user) {
@@ -33,8 +32,6 @@ export default function Pendientes() {
     });
     return () => unsub();
   }, []);
-
-  // Cargar tareas solo del usuario
   useEffect(() => {
     if (!userId) return;
     const q = query(collection(db, 'tareas'), where('userId', '==', userId));
@@ -44,8 +41,6 @@ export default function Pendientes() {
     });
     return () => unsub();
   }, [userId]);
-
-  // Cargar animales en tiempo real (no depende del usuario)
   useEffect(() => {
     const unsubCategorias = onSnapshot(collection(db, 'categorias'), (categoriasSnap) => {
       const animalUnsubs: (() => void)[] = [];
@@ -93,7 +88,7 @@ export default function Pendientes() {
       animalRaza: animalSeleccionado?.raza || '',
       fecha,
       completada: false,
-      userId, // Se guarda el dueño de la tarea
+      userId, 
     };
 
     if (editandoId) {
@@ -131,7 +126,6 @@ export default function Pendientes() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-yellow-100 to-yellow-300 font-sans">
-      {/* Header */}
       <header className="bg-yellow-600 w-full py-4 px-6 shadow-md relative flex items-center justify-between">
         <Link to="/" className="text-white text-2xl hover:text-yellow-200">
           <FaHome />
@@ -200,8 +194,6 @@ export default function Pendientes() {
             ))}
           </ul>
         </section>
-
-        {/* Formulario */}
         <section className="bg-white rounded-xl shadow-md p-6 w-full md:w-1/2">
           <h2 className="text-lg font-bold text-yellow-800 mb-4">
             {editandoId ? 'Editar tarea' : 'Añadir nueva tarea'}

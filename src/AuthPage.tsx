@@ -5,7 +5,7 @@ import { auth } from "./firebase";
 import LoginForm from "./LoginForm";
 import { RegisterForm } from "./RegisterForm";
 import { motion } from "framer-motion";
-import goats from "./assets/cabras.jpg";
+import goats from "./assets/pastito.jpg";
 
 export default function AuthPage() {
   const [isLogin, setIsLogin] = useState(true);
