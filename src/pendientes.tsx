@@ -2,8 +2,9 @@ import { Link } from 'react-router-dom';
 import { FaClipboardList, FaBell, FaTrash, FaHome, FaEdit } from 'react-icons/fa';
 import { useState, useEffect } from 'react';
 import Notificaciones from './notificaciones';
-import { db } from './firebase';
-import { collection, addDoc, deleteDoc, doc, updateDoc, onSnapshot } from 'firebase/firestore';
+import { db, auth } from './firebase';
+import { collection, addDoc, deleteDoc, doc, updateDoc, onSnapshot, query, where } from 'firebase/firestore';
+import { onAuthStateChanged } from 'firebase/auth';
 
 export default function Pendientes() {
   const [tarea, setTarea] = useState('');
@@ -16,34 +17,48 @@ export default function Pendientes() {
   const [tareas, setTareas] = useState<any[]>([]);
   const [animales, setAnimales] = useState<any[]>([]);
   const [editandoId, setEditandoId] = useState<string | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
 
   const categoriasGranja = ['Vacunación', 'Alimentación', 'Limpieza', 'Revisión'];
   const hoy = new Date().toISOString().split('T')[0];
 
-  // Cargar tareas en tiempo real
+  // Detectar usuario logueado
   useEffect(() => {
-    const unsub = onSnapshot(collection(db, 'tareas'), (snapshot) => {
-      const lista = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-      setTareas(lista);
+    const unsub = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        setUserId(user.uid);
+      } else {
+        setUserId(null);
+      }
     });
     return () => unsub();
   }, []);
 
-  // Cargar animales en tiempo real (optimizado)
+  // Cargar tareas solo del usuario
+  useEffect(() => {
+    if (!userId) return;
+    const q = query(collection(db, 'tareas'), where('userId', '==', userId));
+    const unsub = onSnapshot(q, (snapshot) => {
+      const lista = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+      setTareas(lista);
+    });
+    return () => unsub();
+  }, [userId]);
+
+  // Cargar animales en tiempo real (no depende del usuario)
   useEffect(() => {
     const unsubCategorias = onSnapshot(collection(db, 'categorias'), (categoriasSnap) => {
       const animalUnsubs: (() => void)[] = [];
-
       categoriasSnap.forEach((cat) => {
         const unsubAnimales = onSnapshot(
           collection(db, 'categorias', cat.id, 'animales'),
           (animalesSnap) => {
             setAnimales((prev) => {
-              const filtrados = prev.filter(a => a.categoriaId !== cat.id);
-              const nuevos = animalesSnap.docs.map(d => ({
+              const filtrados = prev.filter((a) => a.categoriaId !== cat.id);
+              const nuevos = animalesSnap.docs.map((d) => ({
                 id: d.id,
                 categoriaId: cat.id,
-                ...d.data()
+                ...d.data(),
               }));
               return [...filtrados, ...nuevos];
             });
@@ -51,22 +66,21 @@ export default function Pendientes() {
         );
         animalUnsubs.push(unsubAnimales);
       });
-
       return () => {
-        animalUnsubs.forEach(unsub => unsub());
+        animalUnsubs.forEach((unsub) => unsub());
       };
     });
-
     return () => unsubCategorias();
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!tarea || !fecha || !para || !categoria) return alert('Completa los campos obligatorios');
+    if (!userId) return alert('Debes iniciar sesión');
 
     let animalSeleccionado = null;
     if (categoria === 'Vacunación' && animalId) {
-      animalSeleccionado = animales.find(a => (a.codigo || a.id) === animalId) || null;
+      animalSeleccionado = animales.find((a) => (a.codigo || a.id) === animalId) || null;
     }
 
     const datosTarea = {
@@ -78,7 +92,8 @@ export default function Pendientes() {
       animalCodigo: animalSeleccionado?.codigo || '',
       animalRaza: animalSeleccionado?.raza || '',
       fecha,
-      completada: false
+      completada: false,
+      userId, // Se guarda el dueño de la tarea
     };
 
     if (editandoId) {
@@ -129,7 +144,7 @@ export default function Pendientes() {
           className="relative text-white text-xl hover:text-yellow-200"
         >
           <FaBell />
-          {tareas.some(t => !t.completada && t.fecha >= hoy) && (
+          {tareas.some((t) => !t.completada && t.fecha >= hoy) && (
             <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-600 rounded-full"></span>
           )}
         </button>
@@ -139,12 +154,14 @@ export default function Pendientes() {
         {/* Lista de tareas */}
         <section className="bg-white rounded-xl shadow-md p-6 w-full md:w-1/2">
           <h2 className="text-lg font-bold flex items-center gap-2 text-yellow-800 mb-4">
-            <FaClipboardList className="text-yellow-600" />
-            Tareas Registradas
+            <FaClipboardList className="text-yellow-600" /> Tareas Registradas
           </h2>
           <ul className="space-y-4">
             {tareas.map((t) => (
-              <li key={t.id} className="p-3 bg-yellow-100 rounded shadow flex justify-between items-start gap-2">
+              <li
+                key={t.id}
+                className="p-3 bg-yellow-100 rounded shadow flex justify-between items-start gap-2"
+              >
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
                     <input
@@ -152,21 +169,30 @@ export default function Pendientes() {
                       checked={t.completada}
                       onChange={() => marcarCompletada(t.id, t.completada)}
                     />
-                    <span className={`font-medium ${t.completada ? 'line-through text-gray-500' : ''}`}>
-                      {t.titulo} {t.animalCodigo && `(Animal: ${t.animalCodigo} - ${t.animalRaza})`}
+                    <span
+                      className={`font-medium ${
+                        t.completada ? 'line-through text-gray-500' : ''
+                      }`}
+                    >
+                      {t.titulo}{' '}
+                      {t.animalCodigo && `(Animal: ${t.animalCodigo} - ${t.animalRaza})`}
                     </span>
                   </div>
                   <div className="text-sm text-gray-700 italic">Para: {t.para}</div>
-                  {t.descripcion && (
-                    <div className="text-xs text-gray-600">{t.descripcion}</div>
-                  )}
+                  {t.descripcion && <div className="text-xs text-gray-600">{t.descripcion}</div>}
                   <div className="text-xs text-yellow-700 mt-1">{t.fecha}</div>
                 </div>
                 <div className="flex flex-col gap-2">
-                  <button onClick={() => editarTarea(t)} className="text-blue-600 hover:text-blue-800">
+                  <button
+                    onClick={() => editarTarea(t)}
+                    className="text-blue-600 hover:text-blue-800"
+                  >
                     <FaEdit />
                   </button>
-                  <button onClick={() => eliminarTarea(t.id)} className="text-red-600 hover:text-red-800">
+                  <button
+                    onClick={() => eliminarTarea(t.id)}
+                    className="text-red-600 hover:text-red-800"
+                  >
                     <FaTrash />
                   </button>
                 </div>
@@ -217,7 +243,9 @@ export default function Pendientes() {
               >
                 <option value="">Seleccionar categoría</option>
                 {categoriasGranja.map((cat) => (
-                  <option key={cat} value={cat}>{cat}</option>
+                  <option key={cat} value={cat}>
+                    {cat}
+                  </option>
                 ))}
               </select>
             </div>
@@ -254,7 +282,6 @@ export default function Pendientes() {
             >
               {editandoId ? 'Guardar cambios' : 'Añadir tarea'}
             </button>
-
             {editandoId && (
               <button
                 type="button"
