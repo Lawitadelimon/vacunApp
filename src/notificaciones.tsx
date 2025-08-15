@@ -11,10 +11,12 @@ export default function Notificaciones() {
   useEffect(() => {
     if (!auth.currentUser) return;
 
-    // Suscripción en tiempo real SOLO a las tareas del usuario logueado
+    // Query para solo las tareas del usuario actual
     const q = query(collection(db, 'tareas'), where('uid', '==', auth.currentUser.uid));
+
+    // Suscripción en tiempo real
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const tareasFirebase = snapshot.docs.map(doc => ({
+      const tareasFirebase = snapshot.docs.map((doc) => ({
         ...doc.data(),
         id: doc.id,
       }));
@@ -25,18 +27,29 @@ export default function Notificaciones() {
     return () => unsubscribe();
   }, []);
 
+  // Fecha de hoy en formato YYYY-MM-DD
   const hoy = new Date().toISOString().split('T')[0];
 
-  const pendientesHoy = tareas.filter(
-    (t) => t.fecha && t.fecha <= hoy && !t.completada
-  );
+  // Filtro seguro que soporta Timestamp y strings
+  const pendientesHoy = tareas.filter((t) => {
+    let fechaStr = '';
+
+    if (t.fecha?.toDate) {
+      // Si Firestore devuelve un Timestamp
+      fechaStr = t.fecha.toDate().toISOString().split('T')[0];
+    } else if (typeof t.fecha === 'string') {
+      fechaStr = t.fecha;
+    }
+
+    return fechaStr && fechaStr <= hoy && !t.completada;
+  });
 
   const marcarCompletada = async (id: string) => {
     try {
       const tareaRef = doc(db, 'tareas', id);
       await updateDoc(tareaRef, { completada: true });
     } catch (error) {
-      console.error("Error al marcar completada:", error);
+      console.error('Error al marcar completada:', error);
     }
   };
 
@@ -45,7 +58,7 @@ export default function Notificaciones() {
       const tareaRef = doc(db, 'tareas', id);
       await deleteDoc(tareaRef);
     } catch (error) {
-      console.error("Error al eliminar tarea:", error);
+      console.error('Error al eliminar tarea:', error);
     }
   };
 
@@ -59,7 +72,6 @@ export default function Notificaciones() {
         >
           <FaHome />
         </Link>
-
         <h1 className="text-white text-2xl font-extrabold">Notificaciones</h1>
       </header>
 
@@ -79,30 +91,20 @@ export default function Notificaciones() {
               >
                 <div className="flex flex-col flex-1 pr-2">
                   <p className="font-semibold">{t.titulo || 'Tarea sin título'}</p>
-
-                  {t.descripcion && (
-                    <p className="text-sm text-gray-700">{t.descripcion}</p>
-                  )}
-
-                  {t.categoria && (
-                    <p className="text-sm text-gray-700 italic">Categoría: {t.categoria}</p>
-                  )}
-
+                  {t.descripcion && <p className="text-sm text-gray-700">{t.descripcion}</p>}
+                  {t.categoria && <p className="text-sm text-gray-700 italic">Categoría: {t.categoria}</p>}
                   {(t.animalCodigo || t.animalRaza || t.animalId) && (
                     <p className="text-sm text-gray-700">
                       Animal: {t.animalCodigo || t.animalId} {t.animalRaza && `- ${t.animalRaza}`}
                     </p>
                   )}
-
-                  {t.para && (
-                    <p className="text-sm text-gray-600">Asignada a: {t.para}</p>
-                  )}
-
+                  {t.para && <p className="text-sm text-gray-600">Asignada a: {t.para}</p>}
                   {t.fecha && (
-                    <p className="text-xs text-gray-500 mt-1">Fecha: {t.fecha}</p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Fecha: {t.fecha?.toDate ? t.fecha.toDate().toLocaleDateString() : t.fecha}
+                    </p>
                   )}
                 </div>
-
                 <div className="flex gap-2 ml-2">
                   <button
                     onClick={() => marcarCompletada(t.id)}
