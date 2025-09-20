@@ -9,56 +9,60 @@ interface RegisterFormProps {
 }
 
 export function RegisterForm({ onRegisterSuccess, onValidation }: RegisterFormProps) {
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [name, setName] = useState("");
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!name.trim() || !email.trim() || !password.trim()) {
+      onValidation("❌ Todos los campos son obligatorios");
+      return;
+    }
+
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      const userRef = doc(db, "users", userCredential.user.uid);
+      const user = userCredential.user;
 
-      // Guardar usuario sin role, solo con nombre y email
-      await setDoc(userRef, {
-        name,
-        email,
+      // Guardar en Firestore
+      await setDoc(doc(db, "users", user.uid), {
+        uid: user.uid,
+        email: user.email,
+        role: "worker", // puedes cambiar si quieres rol dinámico
+        name: name.trim(),
       });
 
       onRegisterSuccess();
-      setEmail("");
-      setPassword("");
-      setName("");
-
-    } catch (err: any) {
-      onValidation(`❌ ${err.message}`);
+    } catch (error: any) {
+      onValidation(`❌ ${error.message}`);
     }
   };
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+    <form onSubmit={handleRegister} className="flex flex-col gap-4">
       <input
         type="text"
         placeholder="Nombre"
-        className="border rounded px-3 py-2 focus:outline-none"
         value={name}
         onChange={(e) => setName(e.target.value)}
+        className="px-4 py-2 border rounded"
       />
       <input
         type="email"
         placeholder="Correo electrónico"
-        className="border rounded px-3 py-2 focus:outline-none"
         value={email}
         onChange={(e) => setEmail(e.target.value)}
+        className="px-4 py-2 border rounded"
       />
       <input
         type="password"
         placeholder="Contraseña"
-        className="border rounded px-3 py-2 focus:outline-none"
         value={password}
         onChange={(e) => setPassword(e.target.value)}
+        className="px-4 py-2 border rounded"
       />
-      <button type="submit" className="bg-[#ce8423] hover:bg-[#b0701d] text-white py-2 rounded">
+      <button type="submit" className="bg-blue-500 text-white py-2 rounded hover:bg-blue-600">
         Registrarse
       </button>
     </form>

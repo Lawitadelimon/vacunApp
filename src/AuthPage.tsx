@@ -1,31 +1,35 @@
+// AuthPage.tsx
 import { useState, useEffect } from "react";
-import { useAuthState } from "react-firebase-hooks/auth";
+import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { auth } from "./firebase";
+import goats from "./assets/pastito.jpg";
 import LoginForm from "./LoginForm";
 import { RegisterForm } from "./RegisterForm";
-import { motion } from "framer-motion";
-import goats from "./assets/pastito.jpg";
+import { useUser } from "./UserContext";
 
 export default function AuthPage() {
   const [isLogin, setIsLogin] = useState(true);
-  const [user, loading] = useAuthState(auth);
   const [message, setMessage] = useState("");
+  const { user, loading } = useUser();
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (!loading && user) {
+    // Redirige automáticamente si el usuario ya tiene role asignado
+    if (!loading && user?.role) {
       navigate("/home");
     }
   }, [user, loading, navigate]);
 
+  if (loading) return (
+    <div className="flex justify-center items-center h-screen text-white">
+      Cargando usuario...
+    </div>
+  );
+
   return (
     <div
       className="flex items-center justify-center min-h-screen bg-gradient-to-r from-[#e99f55] to-[#fdd3a3]"
-      style={{
-        backgroundImage: `url(${goats})`,
-        backgroundSize: "cover",
-      }}
+      style={{ backgroundImage: `url(${goats})`, backgroundSize: "cover" }}
     >
       <motion.div
         key={isLogin ? "login" : "register"}
@@ -35,7 +39,7 @@ export default function AuthPage() {
         transition={{ duration: 0.5 }}
         className="bg-white rounded-3xl shadow-lg w-[90%] max-w-4xl flex overflow-hidden"
       >
-        {}
+        {/* Lado izquierdo */}
         <div className="w-1/2 bg-[#ce8423] text-white p-10 flex flex-col justify-center">
           <h2 className="text-3xl font-bold mb-2">
             {isLogin ? "¡Bienvenido a AniManager!" : "¡Hola!"}
@@ -46,23 +50,19 @@ export default function AuthPage() {
               : "Regístrese con sus datos personales para utilizar todas las funciones del sitio"}
           </p>
           <button
-            onClick={() => {
-              setIsLogin(!isLogin);
-              setMessage(""); 
-            }}
+            onClick={() => { setIsLogin(!isLogin); setMessage(""); }}
             className="border border-white py-2 px-4 rounded hover:bg-white hover:text-[#813624] transition"
           >
             {isLogin ? "REGISTRARSE" : "INICIAR SESIÓN"}
           </button>
         </div>
 
-        {}
+        {/* Lado derecho */}
         <div className="w-1/2 p-10">
           <h2 className="text-2xl font-bold mb-6">
             {isLogin ? "Iniciar Sesión" : "Registro"}
           </h2>
 
-          {}
           {message && (
             <div
               className={`mb-4 p-3 rounded text-sm font-medium ${
@@ -81,7 +81,7 @@ export default function AuthPage() {
             <RegisterForm
               onRegisterSuccess={() => {
                 setIsLogin(true);
-                setMessage("✅ Registro exitoso. Ahora puede iniciar sesión.");
+                setMessage("✅ Usuario creado. Ahora pide acceso a tu admin.");
               }}
               onValidation={setMessage}
             />

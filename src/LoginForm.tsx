@@ -1,83 +1,63 @@
 import { useState } from "react";
 import { signInWithEmailAndPassword } from "firebase/auth";
-import { auth } from "./firebase";
+import { auth, db } from "./firebase";
+import { useNavigate } from "react-router-dom";
+import { doc, getDoc } from "firebase/firestore";
 
-export default function LoginForm({ onValidation = () => {} }) {
+interface LoginFormProps {
+  onValidation: (msg: string) => void;
+}
+
+export default function LoginForm({ onValidation }: LoginFormProps) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [errors, setErrors] = useState({}); 
-  const validateFields = () => {
-    let newErrors = {};
+  const navigate = useNavigate();
 
-    if (!email) {
-      newErrors.email = "El correo es obligatorio.";
-    } else if (!/\S+@\S+\.\S+/.test(email)) {
-      newErrors.email = "Formato de correo inválido.";
-    }
-
-    if (!password) {
-      newErrors.password = "La contraseña es obligatoria.";
-    } else if (password.length < 6) {
-      newErrors.password = "Debe tener al menos 6 caracteres.";
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleLogin = async (e) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (!validateFields()) {
-      onValidation("❌ Corrige los errores antes de continuar.");
-      return;
-    }
-
     try {
-      await signInWithEmailAndPassword(auth, email, password);
-      onValidation("✅ Sesión iniciada correctamente.");
-    } catch (error) {
-      onValidation("❌ Contraseña o usuario incorrectos.");
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const userRef = doc(db, "users", userCredential.user.uid);
+      const userSnap = await getDoc(userRef);
+
+      if (!userSnap.exists()) {
+        onValidation("❌ Usuario no encontrado en Firestore.");
+        return;
+      }
+
+      const data = userSnap.data() as any;
+
+      if (!data.role) {
+        onValidation("❌ Usuario creado, espera a que el admin le asigne acceso.");
+        return;
+      }
+
+      onValidation("✅ Inicio de sesión exitoso.");
+      navigate("/home");
+
+    } catch (err: any) {
+      onValidation(`❌ ${err.message}`);
     }
   };
 
   return (
-    <form onSubmit={handleLogin} className="space-y-4">
-      <div>
-        <input
-          type="email"
-          placeholder="Correo"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          className={`w-full border rounded px-3 py-2 ${
-            errors.email ? "border-red-500" : "border-gray-300"
-          }`}
-        />
-        {errors.email && (
-          <p className="text-red-500 text-sm mt-1">{errors.email}</p>
-        )}
-      </div>
-
-      <div>
-        <input
-          type="password"
-          placeholder="Contraseña"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          className={`w-full border rounded px-3 py-2 ${
-            errors.password ? "border-red-500" : "border-gray-300"
-          }`}
-        />
-        {errors.password && (
-          <p className="text-red-500 text-sm mt-1">{errors.password}</p>
-        )}
-      </div>
-
-      <button
-        type="submit"
-        className="w-full bg-[#ce8423] text-white py-2 rounded hover:bg-[#a15d18] transition"
-      >
-        Iniciar Sesión
+    <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+      <input
+        type="email"
+        placeholder="Correo electrónico"
+        className="border rounded px-3 py-2 focus:outline-none"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+      />
+      <input
+        type="password"
+        placeholder="Contraseña"
+        className="border rounded px-3 py-2 focus:outline-none"
+        value={password}
+        onChange={(e) => setPassword(e.target.value)}
+      />
+      <button type="submit" className="bg-[#ce8423] hover:bg-[#b0701d] text-white py-2 rounded">
+        Iniciar sesión
       </button>
     </form>
   );
