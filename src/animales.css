@@ -4,12 +4,12 @@
     visibility: hidden !important;
   }
 
-  /* Muestra solo lo que tenga clase printable */
+  /* Muestra solo lo que tenga clase */
   .printable, .printable * {
     visibility: visible !important;
   }
 
-  /* Ajusta la posición para que quede bien en la página */
+  
   .printable {
     position: absolute;
     left: 0;

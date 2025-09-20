@@ -1,16 +1,19 @@
 import { useEffect, useState } from 'react';
-import { collection, onSnapshot, updateDoc, deleteDoc, doc } from 'firebase/firestore';
+import { collection, onSnapshot, updateDoc, deleteDoc, doc, query, where } from 'firebase/firestore';
 import { Link } from 'react-router-dom';
 import { FaHome } from 'react-icons/fa';
-import { db } from './firebase';
+import { db, auth } from './firebase';
 
 export default function Notificaciones() {
   const [tareas, setTareas] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Suscripción en tiempo real
-    const unsubscribe = onSnapshot(collection(db, 'tareas'), (snapshot) => {
+    if (!auth.currentUser) return;
+
+    // Suscripción en tiempo real SOLO a las tareas del usuario logueado
+    const q = query(collection(db, 'tareas'), where('uid', '==', auth.currentUser.uid));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
       const tareasFirebase = snapshot.docs.map(doc => ({
         ...doc.data(),
         id: doc.id,
@@ -19,7 +22,6 @@ export default function Notificaciones() {
       setLoading(false);
     });
 
-    // Cleanup al desmontar
     return () => unsubscribe();
   }, []);
 
@@ -34,7 +36,6 @@ export default function Notificaciones() {
     try {
       const tareaRef = doc(db, 'tareas', id);
       await updateDoc(tareaRef, { completada: true });
-      // Ya no necesitamos recargar manualmente porque onSnapshot actualizará
     } catch (error) {
       console.error("Error al marcar completada:", error);
     }
@@ -44,7 +45,6 @@ export default function Notificaciones() {
     try {
       const tareaRef = doc(db, 'tareas', id);
       await deleteDoc(tareaRef);
-      // onSnapshot actualizará automáticamente
     } catch (error) {
       console.error("Error al eliminar tarea:", error);
     }
@@ -53,14 +53,13 @@ export default function Notificaciones() {
   return (
     <div className="min-h-screen bg-yellow-100 flex flex-col items-center p-4">
       <header className="bg-yellow-600 w-full py-4 text-center shadow-md mb-4 relative flex items-center justify-center">
-        {/* Botón de casita */}
-          <Link
-              to="/"
-              className="absolute left-4 text-white text-2xl hover:text-yellow-200 transition"
-              aria-label="Volver al inicio"
-            >
-            <FaHome />
-         </Link>
+        <Link
+          to="/"
+          className="absolute left-4 text-white text-2xl hover:text-yellow-200 transition"
+          aria-label="Volver al inicio"
+        >
+          <FaHome />
+        </Link>
 
         <h1 className="text-white text-2xl font-extrabold">Notificaciones</h1>
       </header>
