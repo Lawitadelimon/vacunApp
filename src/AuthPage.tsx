@@ -1,10 +1,9 @@
-// AuthPage.tsx
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { useNavigate } from "react-router-dom";
 import goats from "./assets/pastito.jpg";
 import LoginForm from "./LoginForm";
 import { RegisterForm } from "./RegisterForm";
+import { useNavigate } from "react-router-dom";
 import { useUser } from "./UserContext";
 
 export default function AuthPage() {
@@ -14,17 +13,12 @@ export default function AuthPage() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Redirige automáticamente si el usuario ya tiene role asignado
     if (!loading && user?.role) {
-      navigate("/home");
+      navigate("/home"); // solo redirige si tiene role definido
     }
   }, [user, loading, navigate]);
 
-  if (loading) return (
-    <div className="flex justify-center items-center h-screen text-white">
-      Cargando usuario...
-    </div>
-  );
+  if (loading) return <div className="flex justify-center items-center h-screen">Cargando usuario...</div>;
 
   return (
     <div
@@ -76,12 +70,21 @@ export default function AuthPage() {
           )}
 
           {isLogin ? (
-            <LoginForm onValidation={setMessage} />
+            <LoginForm
+              onValidation={(msg: string) => {
+                // Si el role es null, mostrar mensaje especial
+                if (msg === "✅ Inicio de sesión exitoso" && user?.role === null) {
+                  setMessage("⚠️ Usuario creado, solicita acceso a tu admin.");
+                } else {
+                  setMessage(msg);
+                }
+              }}
+            />
           ) : (
             <RegisterForm
               onRegisterSuccess={() => {
                 setIsLogin(true);
-                setMessage("✅ Usuario creado. Ahora pide acceso a tu admin.");
+                setMessage("✅ Registro exitoso. Ahora pide acceso a tu admin.");
               }}
               onValidation={setMessage}
             />

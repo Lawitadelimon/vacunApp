@@ -34,14 +34,15 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
 
         if (docSnap.exists()) {
           const data = docSnap.data() as any;
+
           setUser({
             uid: firebaseUser.uid,
             email: firebaseUser.email,
             name: data.name || "Usuario",
-            role: data.role || null, // <- ya no se asigna "worker" por default
+            role: data.role ?? null, // conserva role existente
           });
         } else {
-          // Si el documento no existe, solo se crea con nombre y email
+          // Usuario nuevo: role null hasta aprobación del admin
           setUser({
             uid: firebaseUser.uid,
             email: firebaseUser.email,

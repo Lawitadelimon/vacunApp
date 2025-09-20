@@ -1,63 +1,61 @@
 import { useState } from "react";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth, db } from "./firebase";
-import { useNavigate } from "react-router-dom";
 import { doc, getDoc } from "firebase/firestore";
 
-interface LoginFormProps {
+interface Props {
   onValidation: (msg: string) => void;
 }
 
-export default function LoginForm({ onValidation }: LoginFormProps) {
+export default function LoginForm({ onValidation }: Props) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const navigate = useNavigate();
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      const userRef = doc(db, "users", userCredential.user.uid);
-      const userSnap = await getDoc(userRef);
+      const user = userCredential.user;
 
-      if (!userSnap.exists()) {
-        onValidation("❌ Usuario no encontrado en Firestore.");
-        return;
+      // Revisar role
+      const docSnap = await getDoc(doc(db, "users", user.uid));
+      if (docSnap.exists()) {
+        const data = docSnap.data() as any;
+        if (!data.role) {
+          onValidation("❌ Usuario pendiente de aprobación por admin.");
+          return;
+        }
       }
 
-      const data = userSnap.data() as any;
-
-      if (!data.role) {
-        onValidation("❌ Usuario creado, espera a que el admin le asigne acceso.");
-        return;
-      }
-
-      onValidation("✅ Inicio de sesión exitoso.");
-      navigate("/home");
-
+      onValidation("✅ Inicio de sesión exitoso");
     } catch (err: any) {
-      onValidation(`❌ ${err.message}`);
+      onValidation("❌ " + err.message);
     }
   };
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+    <form onSubmit={handleLogin} className="flex flex-col gap-4">
       <input
         type="email"
-        placeholder="Correo electrónico"
-        className="border rounded px-3 py-2 focus:outline-none"
+        placeholder="Correo"
         value={email}
         onChange={(e) => setEmail(e.target.value)}
+        className="p-2 border rounded"
+        required
       />
       <input
         type="password"
         placeholder="Contraseña"
-        className="border rounded px-3 py-2 focus:outline-none"
         value={password}
         onChange={(e) => setPassword(e.target.value)}
+        className="p-2 border rounded"
+        required
       />
-      <button type="submit" className="bg-[#ce8423] hover:bg-[#b0701d] text-white py-2 rounded">
-        Iniciar sesión
+      <button
+        type="submit"
+        className="bg-green-500 hover:bg-green-700 text-white py-2 rounded"
+      >
+        Iniciar Sesión
       </button>
     </form>
   );
