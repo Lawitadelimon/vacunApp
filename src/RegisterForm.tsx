@@ -37,7 +37,7 @@ export function RegisterForm({ onRegisterSuccess, onValidation }: RegisterFormPr
       await setDoc(doc(db, "users", newUser.uid), {
         name,
         email,
-        role: "", // <-- Importante: queda en espera
+        role: "pending", // <-- Importante: queda en espera
         createdAt: new Date().toISOString(),
       });
 

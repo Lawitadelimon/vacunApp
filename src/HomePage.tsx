@@ -5,10 +5,10 @@ import {
   FaBook, FaChevronLeft, FaChevronRight, FaVenusMars, FaUserPlus
 } from "react-icons/fa";
 import { auth, db } from "./firebase";
-import { signOut } from "firebase/auth";
+import { signOut, onAuthStateChanged } from "firebase/auth";
 import {
   collection, query, where, updateDoc, doc,
-  onSnapshot, getDocs
+  onSnapshot, getDocs, setDoc, getDoc
 } from "firebase/firestore";
 import cowImage from "./assets/cows.jpg";
 import { useUser } from "./UserContext";
@@ -28,6 +28,28 @@ export default function HomePage() {
   const navigate = useNavigate();
   const carouselRef = useRef<HTMLDivElement>(null);
   const { user } = useUser();
+
+  // 🔑 Crear usuario en Firestore si no existe
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      if (!currentUser) return;
+
+      const ref = doc(db, "users", currentUser.uid);
+      const snap = await getDoc(ref);
+
+      if (!snap.exists()) {
+        // 📌 Guardar con role: "pending"
+        await setDoc(ref, {
+          name: currentUser.displayName || "Usuario",
+          email: currentUser.email,
+          role: "pending",
+          createdAt: new Date().toISOString(),
+        });
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   // 🔔 Cargar notificaciones
   const cargarNotificaciones = async () => {
@@ -49,7 +71,7 @@ export default function HomePage() {
   useEffect(() => {
     if (user?.role !== "admin") return;
 
-    const q = query(collection(db, "users"), where("role", "==", ""));
+    const q = query(collection(db, "users"), where("role", "==", "pending"));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const lista = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setUsuariosPendientes(lista);
