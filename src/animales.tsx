@@ -723,7 +723,12 @@ export default function Animales() {
             )}
           </>
         )}
-      </div>
+        {/* Footer */}
+        <footer className="w-full bg-[#094297dc] py-4 text-center text-white relative z-10">
+          <p>© 2025 INNOVASYSTEM. Todos los derechos reservados.</p>
+        </footer>
+      </div> 
+        
     </div>
   );
 }
