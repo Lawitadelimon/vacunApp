@@ -17,5 +17,3 @@ export const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app);
 
-// mantiene la sesión aunque se cierre la pestaña o se reinicie el navegador
-setPersistence(auth, browserLocalPersistence);
