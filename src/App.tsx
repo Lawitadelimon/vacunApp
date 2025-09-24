@@ -13,7 +13,7 @@ import ProtectedRoute from "./ProtectedRoute";
 import ErrorPage from "./ErrorPage";
 import { Navigate } from "react-router-dom";
 import { useUser } from "./UserContext";
-import UsuariosPage from "./UsuariosPage";
+import UsuariosPage from "./usuariosPage";
 
 export default function App() {
   

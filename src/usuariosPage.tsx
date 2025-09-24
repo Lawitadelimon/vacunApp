@@ -7,6 +7,7 @@ import { FaHome, FaUserTie, FaEdit, FaTrash, FaPlus, FaBell } from "react-icons/
 import { motion } from "framer-motion";
 
 interface Worker {
+  hireDate: any;
   id?: string;
   name: string;
   email: string;
