@@ -43,3 +43,5 @@ export default function Inicio() {
     </div>
   );
 }
+
+//Ya esta responsivo

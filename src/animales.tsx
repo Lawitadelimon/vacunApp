@@ -238,21 +238,276 @@ export default function AnimalesPorLote() {
             </tbody>
           </table>
 
-          {totalPaginas > 1 && (
-            <div className="flex justify-center mt-4 gap-2">
-              {Array.from({ length: totalPaginas }, (_, i) => (
-                <button
-                  key={i + 1}
-                  className={`px-3 py-1 rounded ${pagina === i + 1 ? "bg-yellow-600 text-white" : "bg-yellow-200"}`}
-                  onClick={() => setPagina(i + 1)}
-                >
-                  {i + 1}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
+            <button
+              onClick={() => abrirFormulario("nuevo")}
+              className="mb-8 bg-yellow-500 hover:bg-yellow-600 active:bg-yellow-700 transition px-12 py-4 rounded-3xl text-white font-extrabold shadow-lg flex items-center justify-center gap-3 max-w-xs mx-auto"
+            >
+              <FaPlus /> Agregar
+            </button>
+
+            {modo && (
+              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-6 z-50 backdrop-blur-sm">
+                <div className="bg-white rounded-2xl max-w-3xl w-full p-10 shadow-2xl overflow-y-auto max-h-[90vh]">
+                  <h2 className="text-3xl font-extrabold mb-6 text-yellow-700 tracking-wide">
+                    {modo === "nuevo" ? "Agregar" : "Editar"}
+                  </h2>
+                  <form
+                    onSubmit={e => {
+                      e.preventDefault();
+                      guardarAnimal();
+                    }}
+                    className="space-y-6 bg-yellow-50 p-8 rounded-xl shadow-inner"
+                  >
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div>
+                        <label className="block text-yellow-800 text-sm font-semibold mb-2">
+                          Código
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="Código"
+                          maxLength={6}
+                          value={formData.codigo}
+                          onChange={e =>
+                            setFormData(f => ({ ...f, codigo: e.target.value }))
+                          }
+                          disabled={modo === "editar"}
+                          required
+                          className="w-full border border-yellow-300 px-4 py-3 rounded-lg bg-white focus:ring-2 focus:ring-yellow-400 focus:border-yellow-500 transition"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-yellow-800 text-sm font-semibold mb-2">
+                          Raza
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="Raza"
+                          value={formData.raza}
+                          onChange={e =>
+                            setFormData(f => ({ ...f, raza: e.target.value }))
+                          }
+                          required
+                          className="w-full border border-yellow-300 px-4 py-3 rounded-lg bg-white focus:ring-2 focus:ring-yellow-400 focus:border-yellow-500 transition"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-yellow-800 text-sm font-semibold mb-2">
+                          Fecha de Nacimiento
+                        </label>
+                        <input
+                          type="date"
+                          value={formData.fecha}
+                          max={new Date().toISOString().split('T')[0]}
+                          onChange={e =>
+                            setFormData(f => ({
+                              ...f,
+                              fecha: e.target.value,
+                              edad: calcularEdad(e.target.value),
+                            }))
+                          }
+                          required
+                          className="w-full border border-yellow-300 px-4 py-3 rounded-lg bg-white focus:ring-2 focus:ring-yellow-400 focus:border-yellow-500 transition"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-yellow-800 text-sm font-semibold mb-2">
+                          Edad
+                        </label>
+                        <input
+                          type="text"
+                          value={formData.edad}
+                          disabled
+                          className="w-full border border-yellow-200 px-4 py-3 rounded-lg bg-yellow-100 text-yellow-900 cursor-not-allowed"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-yellow-800 text-sm font-semibold mb-2">
+                          Sexo
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="macho / hembra"
+                          value={formData.sexo}
+                          onChange={e =>
+                            setFormData(f => ({ ...f, sexo: e.target.value }))
+                          }
+                          required
+                          className="w-full border border-yellow-300 px-4 py-3 rounded-lg bg-white focus:ring-2 focus:ring-yellow-400 focus:border-yellow-500 transition"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-yellow-800 text-sm font-semibold mb-2">
+                          Salud
+                        </label>
+                        <input
+                          type="text"
+                          value={formData.salud}
+                          onChange={e =>
+                            setFormData(f => ({ ...f, salud: e.target.value }))
+                          }
+                          required
+                          className="w-full border border-yellow-300 px-4 py-3 rounded-lg bg-white focus:ring-2 focus:ring-yellow-400 focus:border-yellow-500 transition"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-yellow-800 text-sm font-semibold mb-2">
+                          Peso
+                        </label>
+                        <input
+                          type="text"
+                          value={formData.peso}
+                          onChange={e =>
+                            setFormData(f => ({ ...f, peso: e.target.value }))
+                          }
+                          required
+                          className="w-full border border-yellow-300 px-4 py-3 rounded-lg bg-white focus:ring-2 focus:ring-yellow-400 focus:border-yellow-500 transition"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <h3 className="text-yellow-700 text-xl font-semibold mb-4">
+                        Vacunas
+                      </h3>
+                      <div className="space-y-4">
+                        {vacunas.map((v, i) => (
+                          <div
+                            key={i}
+                            className="flex flex-col md:flex-row gap-3 items-center bg-yellow-100 rounded-lg p-4 border border-yellow-300 shadow-sm"
+                          >
+                            <input
+                              type="text"
+                              placeholder="Nombre vacuna"
+                              value={v.nombre}
+                              onChange={e => {
+                                const nv = [...vacunas];
+                                nv[i].nombre = e.target.value;
+                                setVacunas(nv);
+                              }}
+                              className="flex-1 border border-yellow-400 px-4 py-2 rounded-md bg-white focus:ring-2 focus:ring-yellow-400 focus:border-yellow-500 transition"
+                            />
+                            <input
+                              type="date"
+                              value={v.fecha}
+                              onChange={e => {
+                                const nv = [...vacunas];
+                                nv[i].fecha = e.target.value;
+                                setVacunas(nv);
+                              }}
+                              className="w-44 border border-yellow-400 px-4 py-2 rounded-md bg-white focus:ring-2 focus:ring-yellow-400 focus:border-yellow-500 transition"
+                            />
+                            <label className="inline-flex items-center space-x-2 text-yellow-800 text-sm">
+                              <input
+                                type="checkbox"
+                                checked={v.aplicada}
+                                onChange={e => {
+                                  const nv = [...vacunas];
+                                  nv[i].aplicada = e.target.checked;
+                                  setVacunas(nv);
+                                }}
+                                className="form-checkbox text-yellow-600 w-5 h-5"
+                              />
+                              <span>Aplicada</span>
+                            </label>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setVacunas(vacunas.filter((_, idx) => idx !== i))
+                              }
+                              className="text-red-600 hover:text-red-800 text-xl px-2"
+                              title="Eliminar vacuna"
+                            >
+                              <FaTrash />
+                            </button>
+                          </div>
+                        ))}
+
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setVacunas([...vacunas, { nombre: "", aplicada: false, fecha: "" }])
+                          }
+                          className="mt-3 bg-yellow-500 hover:bg-yellow-600 text-white px-5 py-2 rounded-md shadow-md flex items-center justify-center gap-2 transition"
+                        >
+                          <FaPlus /> Añadir Vacuna
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="flex justify-end gap-5 mt-8">
+                      <button
+                        type="button"
+                        onClick={() => setModo("")}
+                        className="bg-yellow-400 hover:bg-yellow-500 active:bg-yellow-600 transition text-white px-8 py-3 rounded-md font-semibold shadow-md"
+                      >
+                        Cancelar
+                      </button>
+                      <button
+                        type="submit"
+                        className="bg-yellow-600 hover:bg-yellow-700 active:bg-yellow-800 transition text-white px-8 py-3 rounded-md font-semibold shadow-md"
+                      >
+                        Guardar
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            )}
+
+            {animalVacunasModal && (
+              <div className="fixed inset-0 bg-black bg-opacity-40 backdrop-blur-sm z-50 flex items-center justify-center p-6">
+                <div className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full p-8 overflow-y-auto max-h-[90vh] relative border-2 border-yellow-300 printable">
+                  <div className="text-center mb-6 border-b pb-4">
+                    <h2 className="text-3xl font-extrabold text-yellow-700 tracking-wide flex items-center justify-center gap-3">
+                      🩺 Cartilla Oficial de Vacunación
+                    </h2>
+                    <p className="text-sm text-gray-600 mt-1">
+                      Código Animal: <span className="font-bold text-gray-900">{animalVacunasModal.codigo}</span>
+                    </p>
+                  </div>
+
+                  {animalVacunasModal.vacunas && animalVacunasModal.vacunas.length > 0 ? (
+                    <div className="grid gap-3 mt-4">
+                      {animalVacunasModal.vacunas.map((v: any, i: number) => (
+                        <div
+                          key={i}
+                          className={`flex items-center justify-between p-4 rounded-xl border shadow-sm ${
+                            v.aplicada ? "bg-green-50 border-green-300" : "bg-red-50 border-red-300"
+                          }`}
+                        >
+                          <div>
+                            <p className="font-semibold text-gray-800 text-lg">💉 {v.nombre}</p>
+                            <p className="text-sm text-gray-600">Fecha: {v.fecha}</p>
+                          </div>
+                          <div className="text-3xl">
+                            {v.aplicada ? "✅" : "❌"}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-center text-gray-500 italic mt-6">
+                      Este animal no tiene vacunas registradas.
+                    </p>
+                  )}
+
+                  <div className="mt-10 flex justify-between gap-4 no-print">
+                    <button
+                      onClick={() => setAnimalVacunasModal(null)}
+                      className="bg-yellow-400 hover:bg-yellow-500 text-white font-semibold px-6 py-3 rounded-xl transition shadow-md w-full"
+                    >
+                      Cerrar
+                    </button>
+                    <button onClick={handlePrint} className="bg-green-600 hover:bg-green-700 text-white font-semibold px-6 py-3 rounded-xl transition shadow-md w-full">
+                      Imprimir
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </>
+        )}
+      </div>
     </div>
   );
 }

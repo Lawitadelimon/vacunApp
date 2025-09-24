@@ -18,7 +18,12 @@ export default function AuthPage() {
     }
   }, [user, loading, navigate]);
 
-  if (loading) return <div className="flex justify-center items-center h-screen">Cargando usuario...</div>;
+  if (loading)
+    return (
+      <div className="flex justify-center items-center h-screen">
+        Cargando usuario...
+      </div>
+    );
 
   return (
     <div
@@ -31,29 +36,32 @@ export default function AuthPage() {
         animate={{ opacity: 1, x: 0 }}
         exit={{ opacity: 0, x: isLogin ? -100 : 100 }}
         transition={{ duration: 0.5 }}
-        className="bg-white rounded-3xl shadow-lg w-[90%] max-w-4xl flex overflow-hidden"
+        className="bg-white rounded-3xl shadow-lg w-[95%] max-w-4xl flex flex-col md:flex-row overflow-hidden"
       >
         {/* Lado izquierdo */}
-        <div className="w-1/2 bg-[#ce8423] text-white p-10 flex flex-col justify-center">
-          <h2 className="text-3xl font-bold mb-2">
+        <div className="w-full md:w-1/2 bg-[#ce8423] text-white p-8 md:p-10 flex flex-col justify-center items-center text-center md:text-left">
+          <h2 className="text-2xl md:text-3xl font-bold mb-2">
             {isLogin ? "¡Bienvenido a AniManager!" : "¡Hola!"}
           </h2>
-          <p className="mb-6">
+          <p className="mb-6 text-sm md:text-base">
             {isLogin
               ? "Inicie sesión para utilizar todas las funciones del sitio"
               : "Regístrese con sus datos personales para utilizar todas las funciones del sitio"}
           </p>
           <button
-            onClick={() => { setIsLogin(!isLogin); setMessage(""); }}
-            className="border border-white py-2 px-4 rounded hover:bg-white hover:text-[#813624] transition"
+            onClick={() => {
+              setIsLogin(!isLogin);
+              setMessage("");
+            }}
+            className="border border-white py-2 px-4 rounded hover:bg-white hover:text-[#813624] transition text-sm md:text-base"
           >
             {isLogin ? "REGISTRARSE" : "INICIAR SESIÓN"}
           </button>
         </div>
 
         {/* Lado derecho */}
-        <div className="w-1/2 p-10">
-          <h2 className="text-2xl font-bold mb-6">
+        <div className="w-full md:w-1/2 p-6 md:p-10">
+          <h2 className="text-xl md:text-2xl font-bold mb-6">
             {isLogin ? "Iniciar Sesión" : "Registro"}
           </h2>
 
@@ -72,8 +80,10 @@ export default function AuthPage() {
           {isLogin ? (
             <LoginForm
               onValidation={(msg: string) => {
-                // Si el role es null, mostrar mensaje especial
-                if (msg === "✅ Inicio de sesión exitoso" && user?.role === null) {
+                if (
+                  msg === "✅ Inicio de sesión exitoso" &&
+                  user?.role === null
+                ) {
                   setMessage("⚠️ Usuario creado, solicita acceso a tu admin.");
                 } else {
                   setMessage(msg);
@@ -94,3 +104,4 @@ export default function AuthPage() {
     </div>
   );
 }
+// Ya es responsivo

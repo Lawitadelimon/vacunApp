@@ -11,9 +11,14 @@ import Salud from "./salud";
 import Reportes from "./reportes";
 import ProtectedRoute from "./ProtectedRoute";
 import ErrorPage from "./ErrorPage";
+import { Navigate } from "react-router-dom";
+import { useUser } from "./UserContext";
+import UsuariosPage from "./UsuariosPage";
 
 export default function App() {
+  
   return (
+
     <Routes>
       {/* Páginas públicas */}
       <Route path="/" element={<Inicio />} />
@@ -91,10 +96,19 @@ export default function App() {
           </ProtectedRoute>
         }
       />
+      <Route
+          path="/usuarios"
+          element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <UsuariosPage />
+            </ProtectedRoute>
+          }
+        />
 
       {/* Página de error */}
       <Route path="/error" element={<ErrorPage />} />
       <Route path="*" element={<ErrorPage />} />
     </Routes>
+      
   );
 }
