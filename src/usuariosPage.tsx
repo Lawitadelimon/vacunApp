@@ -174,7 +174,6 @@ export default function UsuariosPage() {
     {worker.phone && <p><b>Teléfono:</b> {worker.phone}</p>}
     {worker.position && <p><b>Puesto:</b> {worker.position}</p>}
     {worker.salary && <p><b>Salario:</b> {worker.salary}</p>}
-    {worker.hireDate && <p><b>Ingreso:</b> {worker.hireDate}</p>}
     {worker.emergencyNumber && <p><b>Emergencia:</b> {worker.emergencyNumber}</p>}
   </div>
 
