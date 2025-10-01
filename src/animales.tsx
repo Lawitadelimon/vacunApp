@@ -2,15 +2,19 @@ import { useState, useEffect } from "react";
 import { collection, addDoc, getDocs, doc, setDoc, deleteDoc, query, where } from "firebase/firestore";
 import { db } from "./firebase";
 import { getAuth } from "firebase/auth";
-import { FaTrash, FaEdit, FaPlus, FaSort } from "react-icons/fa";
+import { FaTrash, FaEdit, FaPlus, FaArrowLeft } from "react-icons/fa";
+import { useNavigate } from "react-router-dom";
+import cowsBackground from "./assets/cows2.jpg";
 
 type Animal = {
   id?: string;
+  especie: string;
   codigo: string;
   raza: string;
   sexo: "macho" | "hembra";
   fechaNacimiento: string;
   edad: string;
+  enReproduccion?: boolean;
 };
 
 type Lote = {
@@ -22,12 +26,21 @@ export default function AnimalesPorLote() {
   const [lotes, setLotes] = useState<Lote[]>([]);
   const [loteSeleccionado, setLoteSeleccionado] = useState<Lote | null>(null);
   const [animales, setAnimales] = useState<Animal[]>([]);
-  const [formData, setFormData] = useState<{id?: string, codigo: string, raza: string, sexo: "macho" | "hembra", fechaNacimiento: string}>({ codigo: "", raza: "", sexo: "macho", fechaNacimiento: "" });
+  const [formData, setFormData] = useState<Animal>({
+    especie: "",
+    codigo: "",
+    raza: "",
+    sexo: "macho",
+    fechaNacimiento: "",
+    edad: "",
+  });
+
   const [pagina, setPagina] = useState(1);
   const [busqueda, setBusqueda] = useState("");
   const [orden, setOrden] = useState<{ campo: keyof Animal | null; asc: boolean }>({ campo: null, asc: true });
 
   const auth = getAuth();
+  const navigate = useNavigate();
   const ITEMS_PAGINA = 40;
 
   const calcularEdad = (fecha: string) => {
@@ -42,7 +55,6 @@ export default function AnimalesPorLote() {
     return `${años} años ${meses} meses ${diasRest} días`;
   };
 
-  // Cargar lotes
   const cargarLotes = async () => {
     const user = auth.currentUser;
     if (!user) return;
@@ -53,7 +65,6 @@ export default function AnimalesPorLote() {
     if (lotesDB.length > 0 && !loteSeleccionado) setLoteSeleccionado(lotesDB[0]);
   };
 
-  // Cargar animales
   const cargarAnimales = async () => {
     if (!loteSeleccionado) return;
     const user = auth.currentUser;
@@ -71,39 +82,28 @@ export default function AnimalesPorLote() {
   useEffect(() => { cargarLotes(); }, []);
   useEffect(() => { cargarAnimales(); }, [loteSeleccionado]);
 
-  // Guardar o actualizar animal
   const guardarAnimal = async () => {
     if (!loteSeleccionado) return;
     const user = auth.currentUser;
     if (!user) return;
-    if (!formData.codigo || !formData.raza || !formData.sexo || !formData.fechaNacimiento) return alert("Completa todos los campos");
+    if (!formData.especie || !formData.codigo || !formData.raza || !formData.sexo || !formData.fechaNacimiento)
+      return alert("Completa todos los campos");
     if (new Date(formData.fechaNacimiento) > new Date()) return alert("La fecha no puede ser futura");
 
     const edad = calcularEdad(formData.fechaNacimiento);
     const datos: Animal & { uid: string } = { ...formData, edad, uid: user.uid };
 
     if (formData.id) {
-      // Actualizar registro existente
       await setDoc(doc(db, "lotes", loteSeleccionado.id!, "animales", formData.id), datos);
     } else {
-      // Crear nuevo registro
       await addDoc(collection(db, "lotes", loteSeleccionado.id!, "animales"), datos);
     }
 
-    setFormData({ codigo: "", raza: "", sexo: "macho", fechaNacimiento: "" });
+    setFormData({ especie: "", codigo: "", raza: "", sexo: "macho", fechaNacimiento: "", edad: "" });
     cargarAnimales();
   };
 
-  // Preparar animal para edición
-  const editarAnimal = (animal: Animal) => {
-    setFormData({ 
-      id: animal.id,
-      codigo: animal.codigo, 
-      raza: animal.raza, 
-      sexo: animal.sexo, 
-      fechaNacimiento: animal.fechaNacimiento 
-    });
-  };
+  const editarAnimal = (animal: Animal) => setFormData(animal);
 
   const eliminarAnimal = async (animal: Animal) => {
     if (!loteSeleccionado || !animal.id) return;
@@ -112,38 +112,36 @@ export default function AnimalesPorLote() {
     cargarAnimales();
   };
 
-  const agregarLote = async () => {
-    const nombre = prompt("Nombre del lote");
-    if (!nombre) return;
-    const user = auth.currentUser;
-    if (!user) return;
-    const ref = await addDoc(collection(db, "lotes"), { nombre, uid: user.uid });
-    const nuevoLote = { id: ref.id, nombre };
-    setLotes(prev => [...prev, nuevoLote]);
-    setLoteSeleccionado(nuevoLote);
+  // Calcular fecha probable de parto según especie
+  const calcularFechaParto = (fechaInseminacion: string, especie: string) => {
+    const duraciones: Record<string, number> = {
+      Bovino: 283,
+      Ovino: 147,
+      Caprino: 150,
+      Porcino: 115,
+      Equino: 340,
+    };
+    const diasGestacion = duraciones[especie] || 0;
+    if (!fechaInseminacion || diasGestacion === 0) return "";
+    const fecha = new Date(fechaInseminacion);
+    fecha.setDate(fecha.getDate() + diasGestacion);
+    return fecha.toISOString().split("T")[0];
   };
 
-  const editarLote = async (lote: Lote) => {
-    const nombre = prompt("Nuevo nombre del lote", lote.nombre);
-    if (!nombre || !lote.id) return;
-    const user = auth.currentUser;
-    if (!user) return;
-    await setDoc(doc(db, "lotes", lote.id), { nombre, uid: user.uid });
-    setLotes(prev => prev.map(l => l.id === lote.id ? { ...l, nombre } : l));
-    if (loteSeleccionado?.id === lote.id) setLoteSeleccionado({ ...lote, nombre });
+  const mandarAReproduccion = async (animal: Animal) => {
+    if (!loteSeleccionado || !animal.id) return;
+    const fechaPosibleParto = calcularFechaParto(new Date().toISOString().split("T")[0], animal.especie);
+    await setDoc(
+      doc(db, "lotes", loteSeleccionado.id!, "animales", animal.id),
+      { ...animal, enReproduccion: true, fechaPosibleParto },
+      { merge: true }
+    );
+    cargarAnimales();
   };
 
-  const eliminarLote = async (lote: Lote) => {
-    if (!lote.id) return;
-    if (!confirm(`Eliminar lote ${lote.nombre}?`)) return;
-    await deleteDoc(doc(db, "lotes", lote.id));
-    setLotes(prev => prev.filter(l => l.id !== lote.id));
-    if (loteSeleccionado?.id === lote.id) setLoteSeleccionado(null);
-  };
-
-  // Filtrado y orden
   const animalesFiltrados = animales
     .filter(a =>
+      a.especie.toLowerCase().includes(busqueda.toLowerCase()) ||
       a.codigo.toLowerCase().includes(busqueda.toLowerCase()) ||
       a.raza.toLowerCase().includes(busqueda.toLowerCase()) ||
       a.sexo.toLowerCase().includes(busqueda.toLowerCase()) ||
@@ -162,355 +160,103 @@ export default function AnimalesPorLote() {
   const totalPaginas = Math.ceil(animalesFiltrados.length / ITEMS_PAGINA);
   const toggleOrden = (campo: keyof Animal) => setOrden(prev => ({ campo, asc: prev.campo === campo ? !prev.asc : true }));
 
-  function abrirFormulario(arg0: string): void {
-    throw new Error("Function not implemented.");
-  }
-
   return (
-    <div className="min-h-screen bg-yellow-50 p-6">
-      <h1 className="text-3xl font-bold text-yellow-700 mb-6">Animales por Lote</h1>
+    <div className="relative min-h-screen">
+      <div className="absolute inset-0 bg-cover bg-center blur-[2px]" style={{ backgroundImage: `url(${cowsBackground})` }}></div>
+      <div className="absolute inset-0 bg-white/20"></div>
 
-      <div className="mb-4 flex gap-2 flex-wrap">
-        {lotes.map(lote => (
-          <div key={lote.id} className="flex items-center gap-2">
-            <button
-              className={`px-4 py-2 rounded-lg font-semibold ${loteSeleccionado?.id === lote.id ? "bg-yellow-600 text-white" : "bg-yellow-200"}`}
-              onClick={() => setLoteSeleccionado(lote)}
-            >
-              {lote.nombre}
-            </button>
-            <button onClick={() => editarLote(lote)} className="bg-blue-600 text-white p-2 rounded-full hover:bg-blue-700 transition"><FaEdit /></button>
-            <button onClick={() => eliminarLote(lote)} className="bg-red-600 text-white p-2 rounded-full hover:bg-red-700 transition"><FaTrash /></button>
-          </div>
-        ))}
-        <button onClick={agregarLote} className="bg-green-600 text-white px-4 py-2 rounded-lg flex items-center gap-2">
-          <FaPlus /> Agregar Lote
-        </button>
+      <div className="sticky top-0 z-50 bg-teal-500 text-black p-4 flex items-center gap-4 shadow-md">
+        <button onClick={() => navigate(-1)} className="hover:text-teal-700 transition"><FaArrowLeft size={20} /></button>
+        <h1 className="text-lg font-bold ">Gestión de Animales por Lote</h1>
       </div>
 
-      {loteSeleccionado && (
-        <div className="bg-white p-6 rounded-xl shadow-md mb-6">
-          <h2 className="text-xl font-bold mb-4">Registrar Animal</h2>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <input type="text" placeholder="Código" value={formData.codigo} onChange={e => setFormData(f => ({ ...f, codigo: e.target.value }))} className="border px-4 py-2 rounded-lg" />
-            <input type="text" placeholder="Raza" value={formData.raza} onChange={e => setFormData(f => ({ ...f, raza: e.target.value }))} className="border px-4 py-2 rounded-lg" />
-            <select value={formData.sexo} onChange={e => setFormData(f => ({ ...f, sexo: e.target.value as "macho" | "hembra" }))} className="border px-4 py-2 rounded-lg">
-              <option value="macho">Macho</option>
-              <option value="hembra">Hembra</option>
-            </select>
-            <input type="date" max={new Date().toISOString().split("T")[0]} value={formData.fechaNacimiento} onChange={e => setFormData(f => ({ ...f, fechaNacimiento: e.target.value }))} className="border px-4 py-2 rounded-lg" />
-          </div>
-          <button onClick={guardarAnimal} className="mt-4 bg-yellow-600 text-white px-6 py-2 rounded-xl font-semibold hover:bg-yellow-700 transition">
-            Guardar
-          </button>
-        </div>
-      )}
-
-      {loteSeleccionado && (
-        <div className="bg-white p-6 rounded-xl shadow-md">
-          <h2 className="text-xl font-bold mb-4">Lista de {loteSeleccionado.nombre}</h2>
-
-          <input type="text" placeholder="Buscar..." value={busqueda} onChange={e => setBusqueda(e.target.value)} className="border px-4 py-2 rounded-lg mb-4 w-full" />
-
-          <table className="w-full border-collapse text-left">
-            <thead>
-              <tr className="bg-yellow-200">
-                <th className="p-2 border cursor-pointer" onClick={() => toggleOrden("codigo")}># <FaSort /></th>
-                <th className="p-2 border cursor-pointer" onClick={() => toggleOrden("codigo")}>Código <FaSort /></th>
-                <th className="p-2 border cursor-pointer" onClick={() => toggleOrden("raza")}>Raza <FaSort /></th>
-                <th className="p-2 border cursor-pointer" onClick={() => toggleOrden("sexo")}>Sexo <FaSort /></th>
-                <th className="p-2 border cursor-pointer" onClick={() => toggleOrden("fechaNacimiento")}>Fecha Nac. <FaSort /></th>
-                <th className="p-2 border cursor-pointer" onClick={() => toggleOrden("edad")}>Edad <FaSort /></th>
-                <th className="p-2 border">Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {paginaActual.map((a, idx) => (
-                <tr key={a.id} className="border-b hover:bg-yellow-50">
-                  <td className="p-2 border">{(pagina - 1) * ITEMS_PAGINA + idx + 1}</td>
-                  <td className="p-2 border">{a.codigo}</td>
-                  <td className="p-2 border">{a.raza}</td>
-                  <td className="p-2 border">{a.sexo}</td>
-                  <td className="p-2 border">{a.fechaNacimiento}</td>
-                  <td className="p-2 border">{a.edad}</td>
-                  <td className="p-2 border flex gap-2">
-                    <button onClick={() => editarAnimal(a)} className="bg-blue-600 text-white p-2 rounded-full hover:bg-blue-700 transition"><FaEdit /></button>
-                    <button onClick={() => eliminarAnimal(a)} className="bg-red-600 text-white p-2 rounded-full hover:bg-red-700 transition"><FaTrash /></button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-
-            <button
-              onClick={() => abrirFormulario("nuevo")}
-              className="mb-8 bg-yellow-500 hover:bg-yellow-600 active:bg-yellow-700 transition px-12 py-4 rounded-3xl text-white font-extrabold shadow-lg flex items-center justify-center gap-3 max-w-xs mx-auto"
-            >
-              <FaPlus /> Agregar
+      <div className="relative p-6 md:p-9 flex flex-col md:flex-row gap-6 md:gap-9">
+        {/* Lotes */}
+        <div className="w-full md:w-1/6 bg-white/80 backdrop-blur-md border border-white/50 p-4 rounded-xl shadow-xl h-auto md:h-[calc(100vh-6rem)] sticky top-24 flex flex-col gap-2 overflow-y-auto">
+          <h2 className="text-xl font-bold mb-4">Lotes</h2>
+          {lotes.map(lote => (
+            <button key={lote.id} className={`px-4 py-2 rounded-lg font-semibold text-left ${loteSeleccionado?.id === lote.id ? "bg-teal-700 text-white" : "bg-teal-500 text-white"}`} onClick={() => setLoteSeleccionado(lote)}>
+              {lote.nombre}
             </button>
+          ))}
+          <button onClick={() => {}} className="mt-2 bg-green-600 text-white px-3 py-1 gap-1 rounded-lg flex items-center gap-2"><FaPlus /> Agregar Lote</button>
+        </div>
 
-            {modo && (
-              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-6 z-50 backdrop-blur-sm">
-                <div className="bg-white rounded-2xl max-w-3xl w-full p-10 shadow-2xl overflow-y-auto max-h-[90vh]">
-                  <h2 className="text-3xl font-extrabold mb-6 text-yellow-700 tracking-wide">
-                    {modo === "nuevo" ? "Agregar" : "Editar"}
-                  </h2>
-                  <form
-                    onSubmit={e => {
-                      e.preventDefault();
-                      guardarAnimal();
-                    }}
-                    className="space-y-6 bg-yellow-50 p-8 rounded-xl shadow-inner"
-                  >
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div>
-                        <label className="block text-yellow-800 text-sm font-semibold mb-2">
-                          Código
-                        </label>
-                        <input
-                          type="text"
-                          placeholder="Código"
-                          maxLength={6}
-                          value={formData.codigo}
-                          onChange={e =>
-                            setFormData(f => ({ ...f, codigo: e.target.value }))
-                          }
-                          disabled={modo === "editar"}
-                          required
-                          className="w-full border border-yellow-300 px-4 py-3 rounded-lg bg-white focus:ring-2 focus:ring-yellow-400 focus:border-yellow-500 transition"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-yellow-800 text-sm font-semibold mb-2">
-                          Raza
-                        </label>
-                        <input
-                          type="text"
-                          placeholder="Raza"
-                          value={formData.raza}
-                          onChange={e =>
-                            setFormData(f => ({ ...f, raza: e.target.value }))
-                          }
-                          required
-                          className="w-full border border-yellow-300 px-4 py-3 rounded-lg bg-white focus:ring-2 focus:ring-yellow-400 focus:border-yellow-500 transition"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-yellow-800 text-sm font-semibold mb-2">
-                          Fecha de Nacimiento
-                        </label>
-                        <input
-                          type="date"
-                          value={formData.fecha}
-                          max={new Date().toISOString().split('T')[0]}
-                          onChange={e =>
-                            setFormData(f => ({
-                              ...f,
-                              fecha: e.target.value,
-                              edad: calcularEdad(e.target.value),
-                            }))
-                          }
-                          required
-                          className="w-full border border-yellow-300 px-4 py-3 rounded-lg bg-white focus:ring-2 focus:ring-yellow-400 focus:border-yellow-500 transition"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-yellow-800 text-sm font-semibold mb-2">
-                          Edad
-                        </label>
-                        <input
-                          type="text"
-                          value={formData.edad}
-                          disabled
-                          className="w-full border border-yellow-200 px-4 py-3 rounded-lg bg-yellow-100 text-yellow-900 cursor-not-allowed"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-yellow-800 text-sm font-semibold mb-2">
-                          Sexo
-                        </label>
-                        <input
-                          type="text"
-                          placeholder="macho / hembra"
-                          value={formData.sexo}
-                          onChange={e =>
-                            setFormData(f => ({ ...f, sexo: e.target.value }))
-                          }
-                          required
-                          className="w-full border border-yellow-300 px-4 py-3 rounded-lg bg-white focus:ring-2 focus:ring-yellow-400 focus:border-yellow-500 transition"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-yellow-800 text-sm font-semibold mb-2">
-                          Salud
-                        </label>
-                        <input
-                          type="text"
-                          value={formData.salud}
-                          onChange={e =>
-                            setFormData(f => ({ ...f, salud: e.target.value }))
-                          }
-                          required
-                          className="w-full border border-yellow-300 px-4 py-3 rounded-lg bg-white focus:ring-2 focus:ring-yellow-400 focus:border-yellow-500 transition"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-yellow-800 text-sm font-semibold mb-2">
-                          Peso
-                        </label>
-                        <input
-                          type="text"
-                          value={formData.peso}
-                          onChange={e =>
-                            setFormData(f => ({ ...f, peso: e.target.value }))
-                          }
-                          required
-                          className="w-full border border-yellow-300 px-4 py-3 rounded-lg bg-white focus:ring-2 focus:ring-yellow-400 focus:border-yellow-500 transition"
-                        />
-                      </div>
-                    </div>
-                    <div>
-                      <h3 className="text-yellow-700 text-xl font-semibold mb-4">
-                        Vacunas
-                      </h3>
-                      <div className="space-y-4">
-                        {vacunas.map((v, i) => (
-                          <div
-                            key={i}
-                            className="flex flex-col md:flex-row gap-3 items-center bg-yellow-100 rounded-lg p-4 border border-yellow-300 shadow-sm"
-                          >
-                            <input
-                              type="text"
-                              placeholder="Nombre vacuna"
-                              value={v.nombre}
-                              onChange={e => {
-                                const nv = [...vacunas];
-                                nv[i].nombre = e.target.value;
-                                setVacunas(nv);
-                              }}
-                              className="flex-1 border border-yellow-400 px-4 py-2 rounded-md bg-white focus:ring-2 focus:ring-yellow-400 focus:border-yellow-500 transition"
-                            />
-                            <input
-                              type="date"
-                              value={v.fecha}
-                              onChange={e => {
-                                const nv = [...vacunas];
-                                nv[i].fecha = e.target.value;
-                                setVacunas(nv);
-                              }}
-                              className="w-44 border border-yellow-400 px-4 py-2 rounded-md bg-white focus:ring-2 focus:ring-yellow-400 focus:border-yellow-500 transition"
-                            />
-                            <label className="inline-flex items-center space-x-2 text-yellow-800 text-sm">
-                              <input
-                                type="checkbox"
-                                checked={v.aplicada}
-                                onChange={e => {
-                                  const nv = [...vacunas];
-                                  nv[i].aplicada = e.target.checked;
-                                  setVacunas(nv);
-                                }}
-                                className="form-checkbox text-yellow-600 w-5 h-5"
-                              />
-                              <span>Aplicada</span>
-                            </label>
-                            <button
-                              type="button"
-                              onClick={() =>
-                                setVacunas(vacunas.filter((_, idx) => idx !== i))
-                              }
-                              className="text-red-600 hover:text-red-800 text-xl px-2"
-                              title="Eliminar vacuna"
-                            >
-                              <FaTrash />
-                            </button>
-                          </div>
-                        ))}
-
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setVacunas([...vacunas, { nombre: "", aplicada: false, fecha: "" }])
-                          }
-                          className="mt-3 bg-yellow-500 hover:bg-yellow-600 text-white px-5 py-2 rounded-md shadow-md flex items-center justify-center gap-2 transition"
-                        >
-                          <FaPlus /> Añadir Vacuna
-                        </button>
-                      </div>
-                    </div>
-
-                    <div className="flex justify-end gap-5 mt-8">
-                      <button
-                        type="button"
-                        onClick={() => setModo("")}
-                        className="bg-yellow-400 hover:bg-yellow-500 active:bg-yellow-600 transition text-white px-8 py-3 rounded-md font-semibold shadow-md"
-                      >
-                        Cancelar
-                      </button>
-                      <button
-                        type="submit"
-                        className="bg-yellow-600 hover:bg-yellow-700 active:bg-yellow-800 transition text-white px-8 py-3 rounded-md font-semibold shadow-md"
-                      >
-                        Guardar
-                      </button>
-                    </div>
-                  </form>
-                </div>
+        {/* Contenido principal */}
+        <div className="w-full md:w-3/4 flex flex-col gap-6">
+          {loteSeleccionado && (
+            <div className="bg-white/80 backdrop-blur-md border border-white/50 p-6 rounded-xl shadow-xl">
+              <h2 className="text-xl font-bold mb-4">Registrar Animal</h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4">
+                <select value={formData.especie} onChange={e => setFormData(f => ({ ...f, especie: e.target.value }))} className="border px-4 py-2 rounded-lg">
+                  <option value="">Selecciona especie</option>
+                  <option value="Bovino">Bovino</option>
+                  <option value="Ovino">Ovino</option>
+                  <option value="Caprino">Caprino</option>
+                  <option value="Porcino">Porcino</option>
+                  <option value="Equino">Equino</option>
+                </select>
+                <input type="text" placeholder="Código del animal" value={formData.codigo} onChange={e => setFormData(f => ({ ...f, codigo: e.target.value }))} className="border px-4 py-2 rounded-lg" />
+                <input type="text" placeholder="Raza del animal" value={formData.raza} onChange={e => setFormData(f => ({ ...f, raza: e.target.value }))} className="border px-4 py-2 rounded-lg" />
+                <select value={formData.sexo} onChange={e => setFormData(f => ({ ...f, sexo: e.target.value as "macho" | "hembra" }))} className="border px-4 py-2 rounded-lg">
+                  <option value="macho">Macho</option>
+                  <option value="hembra">Hembra</option>
+                </select>
+                <input type="date" max={new Date().toISOString().split("T")[0]} value={formData.fechaNacimiento} onChange={e => setFormData(f => ({ ...f, fechaNacimiento: e.target.value }))} className="border px-4 py-2 rounded-lg" />
               </div>
-            )}
+              <button onClick={guardarAnimal} className="mt-4 bg-teal-500 text-white px-6 py-2 rounded-xl font-semibold hover:bg-teal-700 transition">Guardar</button>
+            </div>
+          )}
 
-            {animalVacunasModal && (
-              <div className="fixed inset-0 bg-black bg-opacity-40 backdrop-blur-sm z-50 flex items-center justify-center p-6">
-                <div className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full p-8 overflow-y-auto max-h-[90vh] relative border-2 border-yellow-300 printable">
-                  <div className="text-center mb-6 border-b pb-4">
-                    <h2 className="text-3xl font-extrabold text-yellow-700 tracking-wide flex items-center justify-center gap-3">
-                      🩺 Cartilla Oficial de Vacunación
-                    </h2>
-                    <p className="text-sm text-gray-600 mt-1">
-                      Código Animal: <span className="font-bold text-gray-900">{animalVacunasModal.codigo}</span>
-                    </p>
-                  </div>
+          {loteSeleccionado && (
+            <div className="bg-white/80 backdrop-blur-md border border-white/50 p-6 rounded-xl shadow-xl overflow-x-auto">
+              <h2 className="text-xl font-bold mb-4">Lista de {loteSeleccionado.nombre}</h2>
+              <input type="text" placeholder="Buscar..." value={busqueda} onChange={e => setBusqueda(e.target.value)} className="border px-4 py-2 rounded-lg mb-4 w-full" />
 
-                  {animalVacunasModal.vacunas && animalVacunasModal.vacunas.length > 0 ? (
-                    <div className="grid gap-3 mt-4">
-                      {animalVacunasModal.vacunas.map((v: any, i: number) => (
-                        <div
-                          key={i}
-                          className={`flex items-center justify-between p-4 rounded-xl border shadow-sm ${
-                            v.aplicada ? "bg-green-50 border-green-300" : "bg-red-50 border-red-300"
-                          }`}
-                        >
-                          <div>
-                            <p className="font-semibold text-gray-800 text-lg">💉 {v.nombre}</p>
-                            <p className="text-sm text-gray-600">Fecha: {v.fecha}</p>
-                          </div>
-                          <div className="text-3xl">
-                            {v.aplicada ? "✅" : "❌"}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-center text-gray-500 italic mt-6">
-                      Este animal no tiene vacunas registradas.
-                    </p>
-                  )}
-
-                  <div className="mt-10 flex justify-between gap-4 no-print">
-                    <button
-                      onClick={() => setAnimalVacunasModal(null)}
-                      className="bg-yellow-400 hover:bg-yellow-500 text-white font-semibold px-6 py-3 rounded-xl transition shadow-md w-full"
-                    >
-                      Cerrar
-                    </button>
-                    <button onClick={handlePrint} className="bg-green-600 hover:bg-green-700 text-white font-semibold px-6 py-3 rounded-xl transition shadow-md w-full">
-                      Imprimir
-                    </button>
-                  </div>
+              <table className="w-full border-collapse text-left">
+                <thead>
+                  <tr className="bg-teal-500 text-white">
+                    <th className="p-2 border cursor-pointer" onClick={() => toggleOrden("codigo")}>Código</th>
+                    <th className="p-2 border cursor-pointer" onClick={() => toggleOrden("especie")}>Especie</th>
+                    <th className="p-2 border cursor-pointer" onClick={() => toggleOrden("raza")}>Raza</th>
+                    <th className="p-2 border cursor-pointer" onClick={() => toggleOrden("sexo")}>Sexo</th>
+                    <th className="p-2 border cursor-pointer" onClick={() => toggleOrden("fechaNacimiento")}>Fecha Nac.</th>
+                    <th className="p-2 border cursor-pointer" onClick={() => toggleOrden("edad")}>Edad</th>
+                    <th className="p-2 border text-center">Reproducción</th>
+                    <th className="p-2 border">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {paginaActual.map((a, idx) => (
+                    <tr key={a.id} className="border-b hover:bg-yellow-50">
+                      <td className="p-2 border">{a.codigo}</td>
+                      <td className="p-2 border">{a.especie}</td>
+                      <td className="p-2 border">{a.raza}</td>
+                      <td className="p-2 border">{a.sexo}</td>
+                      <td className="p-2 border">{a.fechaNacimiento}</td>
+                      <td className="p-2 border">{a.edad}</td>
+                      <td className="p-2 border text-center">{a.enReproduccion ? "En Reproducción" : "-"}</td>
+                      <td className="p-2 border flex gap-2 flex-wrap">
+                        <button onClick={() => editarAnimal(a)} className="bg-blue-600 text-white p-2 rounded-full hover:bg-blue-700 transition"><FaEdit /></button>
+                        <button onClick={() => eliminarAnimal(a)} className="bg-red-600 text-white p-2 rounded-full hover:bg-red-700 transition"><FaTrash /></button>
+                        {!a.enReproduccion && a.sexo === "hembra" && (
+                          <button onClick={() => mandarAReproduccion(a)} className="bg-green-600 text-white p-2 rounded-full hover:bg-green-700 transition">Mandar a Reproducción</button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {totalPaginas > 1 && (
+                <div className="flex justify-center mt-4 gap-2 flex-wrap">
+                  {Array.from({ length: totalPaginas }, (_, i) => (
+                    <button key={i + 1} className={`px-3 py-1 rounded ${pagina === i + 1 ? "bg-teal-600 text-white" : "bg-teal-400"}`} onClick={() => setPagina(i + 1)}>{i + 1}</button>
+                  ))}
                 </div>
-              </div>
-            )}
-          </>
-        )}
+              )}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

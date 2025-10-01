@@ -14,6 +14,7 @@ import ErrorPage from "./ErrorPage";
 import { Navigate } from "react-router-dom";
 import { useUser } from "./UserContext";
 import UsuariosPage from "./usuariosPage";
+import Nacimientos from "./nacimientos";
 
 export default function App() {
   
@@ -48,6 +49,15 @@ export default function App() {
         element={
           <ProtectedRoute allowedRoles={["admin", "worker"]}>
             <Reproduccion />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/nacimientos"
+        element={
+          <ProtectedRoute allowedRoles={["admin", "worker"]}>
+            <Nacimientos />
           </ProtectedRoute>
         }
       />

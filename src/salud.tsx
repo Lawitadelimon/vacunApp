@@ -234,7 +234,7 @@ export default function Salud() {
               setAnimalSeleccionado(null); // cerrar modal al cambiar lote
             }}
             className={`px-5 py-2 rounded-xl font-semibold ${
-              loteSeleccionado?.id === lote.id ? "bg-yellow-600 text-white" : "bg-yellow-200 text-yellow-800"
+              loteSeleccionado?.id === lote.id ? "bg-yellow-700 text-white" : "bg-yellow-600 text-black"
             }`}
           >
             {lote.nombre.toUpperCase()}
@@ -247,7 +247,7 @@ export default function Salud() {
         <h2 className="text-xl font-bold mb-4">Animales del lote {loteSeleccionado?.nombre}</h2>
         <table className="w-full border-collapse text-left">
           <thead>
-            <tr className="bg-yellow-200">
+            <tr className="bg-yellow-600">
               <th className="p-2 border">Código</th>
               <th className="p-2 border">Raza</th>
               <th className="p-2 border">Sexo</th>

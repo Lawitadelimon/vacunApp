@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import {
   FaHome, FaPaw, FaClipboardList, FaBell, FaLeaf, FaStethoscope,
   FaBook, FaChevronLeft, FaChevronRight, FaVenusMars, FaUserPlus,
-  FaBars, FaTimes
+  FaBars, FaTimes, FaBaby
 } from "react-icons/fa";
 import { auth, db } from "./firebase";
 import { signOut, onAuthStateChanged } from "firebase/auth";
@@ -16,7 +16,11 @@ import { useUser } from "./UserContext";
 
 const cards = [
   { title: "Registros de animales", to: "/animales", icon: FaPaw, color: "bg-teal-500", hover: "hover:bg-teal-600", roles: ["admin"] },
+
+  // 🔄 Reproducción y luego Nacimientos
   { title: "Reproducción", to: "/reproduccion", icon: FaVenusMars, color: "bg-amber-400", hover: "hover:bg-amber-500", roles: ["admin"] },
+  { title: "Nacidos en el rancho", to: "/nacimientos", icon: FaBaby, color: "bg-pink-500", hover: "hover:bg-pink-600", roles: ["admin"] },
+
   { title: "Alimentación", to: "/alimentacion", icon: FaLeaf, color: "bg-green-500", hover: "hover:bg-green-600", roles: ["admin"] },
   { title: "Salud", to: "/salud", icon: FaStethoscope, color: "bg-red-500", hover: "hover:bg-red-600", roles: ["admin"] },
   { title: "Reportes", to: "/reportes", icon: FaClipboardList, color: "bg-indigo-500", hover: "hover:bg-indigo-600", roles: ["admin", "worker"] },
@@ -41,7 +45,6 @@ export default function HomePage() {
       const snap = await getDoc(ref);
 
       if (!snap.exists()) {
-        // 📌 Guardar con role: "pending"
         await setDoc(ref, {
           name: currentUser.displayName || "Usuario",
           email: currentUser.email,
@@ -70,7 +73,7 @@ export default function HomePage() {
     setHayNotificaciones(pendientes.length > 0);
   };
 
-  // 👥 Escuchar usuarios en espera en tiempo real
+  // 👥 Escuchar usuarios en espera
   useEffect(() => {
     if (user?.role !== "admin") return;
 
@@ -124,7 +127,6 @@ export default function HomePage() {
           <header className="w-full py-3 px-4 md:py-4 md:px-6 flex justify-between items-center shadow-md bg-black/5 backdrop-blur-md text-white relative z-20">
             <h1 className="text-lg md:text-2xl font-extrabold">AniManager</h1>
 
-            {}
             <div className="hidden md:flex items-center gap-4">
               <button onClick={() => navigate("/home")} className="text-white hover:text-yellow-400 transition">
                 <FaHome size={22} />
@@ -145,7 +147,6 @@ export default function HomePage() {
               </button>
             </div>
 
-            {}
             <button
               className="md:hidden text-white text-2xl"
               onClick={() => setMenuOpen(!menuOpen)}
@@ -153,7 +154,6 @@ export default function HomePage() {
               {menuOpen ? <FaTimes /> : <FaBars />}
             </button>
 
-            {}
             {menuOpen && (
               <div className="absolute top-full right-2 mt-2 w-48 bg-black/90 backdrop-blur-md rounded-lg shadow-lg flex flex-col p-3 space-y-2 md:hidden">
                 <button
@@ -191,7 +191,6 @@ export default function HomePage() {
 
           {/* Carrusel */}
           <div className="relative w-full max-w-4xl mt-6 md:mt-10 flex-1 px-4 md:px-6">
-            {/* Botón scroll left */}
             <button
               onClick={() => scroll("left")}
               className="absolute -left-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full z-20 hidden md:flex"
@@ -220,7 +219,6 @@ export default function HomePage() {
                   )
               )}
 
-              {/* 👉 Tarjeta de Usuarios solo admin */}
               {user?.role === "admin" && (
                 <Link
                   to="/usuarios"
@@ -232,7 +230,6 @@ export default function HomePage() {
               )}
             </div>
 
-            {/* Botón scroll right */}
             <button
               onClick={() => scroll("right")}
               className="absolute -right-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full z-20 hidden md:flex"
@@ -242,7 +239,6 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* Columna derecha: usuarios pendientes */}
         {user?.role === "admin" && (
           <aside className="w-full md:w-72 bg-white/10 backdrop-blur-md text-white p-4 border-t md:border-t-0 md:border-l border-white/30">
             <h2 className="text-base md:text-lg font-bold mb-3 flex items-center gap-2">
@@ -278,11 +274,9 @@ export default function HomePage() {
         )}
       </div>
 
-      {/* Footer */}
-      <footer className="w-full bg-[#094297dc] py-3 md:py-4 text-center text-xs md:text-sm text-white relative z-10">
+      <footer className="w-full bg-[#099757dc] py-3 md:py-4 text-center text-xs md:text-sm text-white relative z-10">
         <p>© 2025 INNOVASYSTEM. Todos los derechos reservados.</p>
       </footer>
     </div>
   );
 }
-//Ya es responsiv
