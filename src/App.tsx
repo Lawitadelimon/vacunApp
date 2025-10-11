@@ -15,6 +15,7 @@ import { Navigate } from "react-router-dom";
 import { useUser } from "./UserContext";
 import UsuariosPage from "./usuariosPage";
 import Nacimientos from "./nacimientos";
+import HistorialAnimales from "./HistorialAnimales";
 
 export default function App() {
   
@@ -58,6 +59,15 @@ export default function App() {
         element={
           <ProtectedRoute allowedRoles={["admin", "worker"]}>
             <Nacimientos />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/historial"
+        element={
+          <ProtectedRoute allowedRoles={["admin", "worker"]}>
+            <HistorialAnimales />
           </ProtectedRoute>
         }
       />

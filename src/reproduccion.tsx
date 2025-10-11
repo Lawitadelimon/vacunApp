@@ -12,6 +12,7 @@ type Hembra = {
   loteNombre: string;
   especie: "Bovino" | "Ovino" | "Caprino" | "Porcino" | "Equino";
   enReproduccion?: boolean;
+  estado?: "vivo" | "muerto" | "vendido";
 };
 
 type ReproduccionRegistro = {
@@ -29,6 +30,8 @@ type ReproduccionRegistro = {
   fechaPosibleParto: string;
   observaciones: string;
   estado?: "En reproducción" | "Parió" | "Abortó";
+  fechaPartoReal?: string;
+  fechaAbortoReal?: string;
 };
 
 export default function ReproduccionPorHembra() {
@@ -52,18 +55,19 @@ export default function ReproduccionPorHembra() {
   });
   const [busqueda, setBusqueda] = useState("");
   const [pagina, setPagina] = useState(1);
+  const [filtroEstado, setFiltroEstado] = useState<"todas" | "vivo" | "muerto" | "vendido">("todas");
   const ITEMS_PAGINA = 40;
   const navigate = useNavigate();
   const hoy = new Date().toISOString().split("T")[0];
 
-  // --- Función para calcular fecha posible de parto según especie ---
+  // --- Calcular fecha posible de parto según especie ---
   const calcularFechaParto = (fechaInseminacion: string, especie: string) => {
     const diasGestacion: { [key: string]: number } = {
-      "Bovino": 283,
-      "Ovino": 152,
-      "Caprino": 150,
-      "Porcino": 115,
-      "Equino": 340,
+      Bovino: 283,
+      Ovino: 152,
+      Caprino: 150,
+      Porcino: 115,
+      Equino: 340,
     };
     const dias = diasGestacion[especie] || 280;
     const fecha = new Date(fechaInseminacion);
@@ -71,7 +75,7 @@ export default function ReproduccionPorHembra() {
     return fecha.toISOString().split("T")[0];
   };
 
-  // --- Cargar hembras en reproducción ---
+  // --- Cargar hembras ---
   const cargarHembras = async () => {
     const hembrasTemp: Hembra[] = [];
     const colecciones = ["lotes", "lotesnuevos"];
@@ -90,6 +94,7 @@ export default function ReproduccionPorHembra() {
               loteNombre,
               especie: data.especie,
               enReproduccion: data.enReproduccion,
+              estado: data.estado || "vivo",
             });
           }
         }
@@ -98,7 +103,7 @@ export default function ReproduccionPorHembra() {
     setHembras(hembrasTemp);
   };
 
-  // --- Cargar registros de reproducción ---
+  // --- Cargar registros ---
   const cargarRegistros = async () => {
     const snaps = await getDocs(collection(db, "reproduccion"));
     setRegistros(snaps.docs.map((doc) => ({ id: doc.id, ...(doc.data() as ReproduccionRegistro) })));
@@ -109,15 +114,18 @@ export default function ReproduccionPorHembra() {
     cargarRegistros();
   }, []);
 
-  // --- Guardar registro de reproducción ---
+  // --- Guardar nuevo registro ---
   const guardarRegistro = async () => {
     if (!selectedHembra) return alert("Selecciona una hembra");
     if (!formData.fechaInseminacion || !formData.codigoToro || !formData.quienInsemino)
       return alert("Completa todos los campos obligatorios");
-    
     if (formData.fechaInseminacion > hoy) return alert("La fecha de inseminación no puede ser futura");
 
-    // Calcular fecha posible de parto automáticamente
+    const registrosHembra = registros.filter((r) => r.hembraId === selectedHembra.id);
+    const ultimo = registrosHembra.sort(
+      (a, b) => new Date(b.fechaInseminacion).getTime() - new Date(a.fechaInseminacion).getTime()
+    )[0];
+
     const fechaParto = calcularFechaParto(formData.fechaInseminacion, selectedHembra.especie);
 
     await addDoc(collection(db, "reproduccion"), {
@@ -128,12 +136,10 @@ export default function ReproduccionPorHembra() {
       loteNombre: selectedHembra.loteNombre,
       fechaPosibleParto: fechaParto,
       estado: "En reproducción",
+      partosAnteriores: ultimo ? ultimo.partosAnteriores : 0,
+      abortos: ultimo ? ultimo.abortos : 0,
     });
 
-    // Marcar la hembra como en reproducción
-    await setDoc(doc(db, "lotes", selectedHembra.loteId, "animales", selectedHembra.id), { enReproduccion: true }, { merge: true });
-
-    // Limpiar formulario
     setFormData({
       hembraId: "",
       hembraCodigo: "",
@@ -150,8 +156,8 @@ export default function ReproduccionPorHembra() {
       estado: "En reproducción",
     });
 
-    cargarHembras();
     cargarRegistros();
+    cargarHembras();
   };
 
   // --- Editar registro ---
@@ -165,19 +171,45 @@ export default function ReproduccionPorHembra() {
     cargarRegistros();
   };
 
-  // --- Quitar hembra de lista ---
-  const quitarDeReproduccion = async (h: Hembra) => {
-    if (!confirm(`¿Quitar a ${h.codigo} de la reproducción?`)) return;
-    await setDoc(doc(db, "lotes", h.loteId, "animales", h.id), { enReproduccion: false }, { merge: true });
+  // --- Actualizar estado (Parió / Abortó) ---
+  const actualizarEstado = async (r: ReproduccionRegistro, nuevoEstado: "Parió" | "Abortó") => {
+    if (!r.id) return;
+    if (!confirm(`¿Marcar registro como "${nuevoEstado}"?`)) return;
+
+    const hoy = new Date().toISOString().split("T")[0];
+    const nuevosDatos: Partial<ReproduccionRegistro> = { estado: nuevoEstado };
+
+    if (nuevoEstado === "Parió") {
+      nuevosDatos.partosAnteriores = (r.partosAnteriores || 0) + 1;
+      nuevosDatos.fechaPartoReal = hoy;
+    } else {
+      nuevosDatos.abortos = (r.abortos || 0) + 1;
+      nuevosDatos.fechaAbortoReal = hoy;
+    }
+
+    await setDoc(doc(db, "reproduccion", r.id), nuevosDatos, { merge: true });
+    cargarRegistros();
+  };
+
+  // --- Quitar de reproducción ---
+  const quitarDeReproduccion = async (hembra: Hembra) => {
+    if (!confirm(`¿Quitar a ${hembra.codigo} de reproducción?`)) return;
+    const colecciones = ["lotes", "lotesnuevos"];
+    for (const col of colecciones) {
+      const docRef = doc(db, col, hembra.loteId, "animales", hembra.id);
+      await setDoc(docRef, { enReproduccion: false }, { merge: true });
+    }
     cargarHembras();
   };
 
-  const registrosHembra = registros.filter(r => selectedHembra && r.hembraId === selectedHembra.id);
-  const registrosFiltrados = registrosHembra.filter(
-    r => r.hembraCodigo.toLowerCase().includes(busqueda.toLowerCase()) || r.loteNombre.toLowerCase().includes(busqueda.toLowerCase())
-  );
-  const paginaActual = registrosFiltrados.slice((pagina - 1) * ITEMS_PAGINA, pagina * ITEMS_PAGINA);
-  const totalPaginas = Math.ceil(registrosFiltrados.length / ITEMS_PAGINA);
+  // --- Filtrado por estado ---
+  const hembrasFiltradas = hembras.filter(h => {
+    if (filtroEstado === "todas") return true;
+    return h.estado === filtroEstado;
+  });
+
+  const paginaActualHembras = hembrasFiltradas.slice((pagina - 1) * ITEMS_PAGINA, pagina * ITEMS_PAGINA);
+  const totalPaginasHembras = Math.ceil(hembrasFiltradas.length / ITEMS_PAGINA);
 
   return (
     <div className="relative min-h-screen">
@@ -185,23 +217,64 @@ export default function ReproduccionPorHembra() {
       <div className="absolute inset-0 bg-white/20" />
 
       <div className="sticky top-0 z-50 bg-amber-400 text-black p-4 flex items-center gap-4 shadow-md">
-        <button onClick={() => navigate(-1)} className="hover:text-amber-500 transition"><FaArrowLeft size={20} /></button>
+        <button onClick={() => navigate(-1)} className="hover:text-amber-500 transition">
+          <FaArrowLeft size={20} />
+        </button>
         <h1 className="text-lg font-bold">Reproducción por Hembra</h1>
       </div>
 
       <div className="relative flex flex-col md:flex-row p-6 gap-6">
-        {/* Lista de hembras en reproducción */}
-        <div className="w-full md:w-1/6 bg-amber-400 backdrop-blur-md border border-white/50 p-4 rounded-xl shadow-xl h-auto md:h-[calc(100vh-6rem)] sticky top-24 overflow-y-auto">
-          <h2 className="text-xl font-bold mb-4">Hembras en reproducción</h2>
-          {hembras.map(h => (
-            <div key={h.id} className={`w-full text-left px-4 py-2 mb-2 rounded-lg bg-white text-black flex flex-col`}>
-              <span className="font-bold">{h.codigo} - {h.loteNombre} ({h.especie})</span>
-              <div className="flex gap-2 mt-1">
-                <button onClick={() => setSelectedHembra(h)} className="bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-700 transition">Registros</button>
-                <button onClick={() => quitarDeReproduccion(h)} className="bg-red-600 text-white px-2 py-1 rounded hover:bg-red-700 transition">Quitar</button>
+        {/* Lista de hembras */}
+        <div className="w-full md:w-1/6 bg-white/30 backdrop-blur-md border border-white/50 p-4 rounded-xl shadow-xl h-auto md:h-[calc(100vh-6rem)] sticky top-24 overflow-y-auto">
+          <h2 className="text-xl font-bold mb-4">Hembras</h2>
+
+          <div className="mb-4">
+            <select
+              value={filtroEstado}
+              onChange={(e) => { setFiltroEstado(e.target.value as any); setPagina(1); }}
+              className="w-full px-2 py-1 rounded border"
+            >
+              <option value="todas">Todas</option>
+              <option value="vivo">Vivas/Activas</option>
+              <option value="muerto">Muertas</option>
+              <option value="vendido">Vendidas</option>
+            </select>
+          </div>
+
+          {paginaActualHembras.map((h) => {
+            const estaViva = h.estado === "vivo";
+            return (
+              <div
+                key={h.id}
+                className={`w-full text-left px-4 py-2 mb-2 rounded-lg flex flex-col ${!estaViva ? "bg-gray-300 text-gray-700 line-through" : "bg-amber-400 text-black"}`}
+              >
+                <span className="font-bold">{h.codigo} - {h.loteNombre} ({h.especie})</span>
+                <div className="flex gap-2 mt-2">
+                  <button
+                    onClick={() => setSelectedHembra(h)}
+                    className={`bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-700 transition`}
+                  >
+                    Ver registros
+                  </button>
+                  <button
+                    onClick={() => quitarDeReproduccion(h)}
+                    disabled={!estaViva}
+                    className={`px-2 py-1 rounded transition ${estaViva ? "bg-red-600 text-white hover:bg-red-700" : "bg-red-600 text-white opacity-50 cursor-not-allowed"}`}
+                  >
+                    Quitar
+                  </button>
+                </div>
               </div>
+            );
+          })}
+
+          {totalPaginasHembras > 1 && (
+            <div className="flex justify-center mt-4 gap-2 flex-wrap">
+              <button disabled={pagina === 1} onClick={() => setPagina(p => p - 1)} className="px-3 py-1 bg-amber-400 text-white rounded-lg hover:bg-yellow-500 disabled:opacity-50">Anterior</button>
+              <span className="px-3 py-1 bg-white rounded-lg">{pagina} / {totalPaginasHembras}</span>
+              <button disabled={pagina === totalPaginasHembras} onClick={() => setPagina(p => p + 1)} className="px-3 py-1 bg-amber-400 text-white rounded-lg hover:bg-yellow-500 disabled:opacity-50">Siguiente</button>
             </div>
-          ))}
+          )}
         </div>
 
         {/* Contenido principal */}
@@ -209,102 +282,148 @@ export default function ReproduccionPorHembra() {
           {selectedHembra && (
             <>
               {/* Formulario */}
-              <div className="bg-white/80 backdrop-blur-md border border-white/50 p-6 rounded-xl shadow-xl">
-                <h2 className="text-xl font-bold mb-4">Registrar Gestación - {selectedHembra.codigo}</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className={`bg-white/30 backdrop-blur-md border border-white/40 p-8 rounded-3xl shadow-lg ${selectedHembra.estado !== "vivo" ? "opacity-50 pointer-events-none" : ""}`}>
+                <h2 className="text-2xl font-bold mb-6 text-gray-900">Registrar Gestación - {selectedHembra.codigo}</h2>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="flex flex-col">
-                    <label>Método</label>
-                    <select value={formData.metodo} onChange={e => setFormData(f => ({ ...f, metodo: e.target.value as "Monta"|"Inseminación" }))} className="border px-4 py-2 rounded-lg">
+                    <label className="mb-2 font-medium text-gray-800">Método</label>
+                    <select
+                      value={formData.metodo}
+                      onChange={(e) => setFormData(f => ({ ...f, metodo: e.target.value as any }))}
+                      className="border border-white/50 bg-white/50 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-amber-400"
+                    >
                       <option value="Monta">Monta</option>
                       <option value="Inseminación">Inseminación</option>
                     </select>
                   </div>
 
                   <div className="flex flex-col">
-                    <label>Fecha de inseminación</label>
-                    <input type="date" max={hoy} value={formData.fechaInseminacion} onChange={e => setFormData(f => ({ ...f, fechaInseminacion: e.target.value }))} className="border px-4 py-2 rounded-lg" />
+                    <label className="mb-2 font-medium text-gray-800">Fecha de inseminación</label>
+                    <input
+                      type="date"
+                      max={hoy}
+                      value={formData.fechaInseminacion}
+                      onChange={(e) => setFormData(f => ({ ...f, fechaInseminacion: e.target.value }))}
+                      className="border border-white/50 bg-white/50 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-amber-400"
+                    />
                   </div>
 
                   <div className="flex flex-col">
-                    <label>Código del toro</label>
-                    <input type="text" value={formData.codigoToro} onChange={e => setFormData(f => ({ ...f, codigoToro: e.target.value }))} className="border px-4 py-2 rounded-lg" />
+                    <label className="mb-2 font-medium text-gray-800">Código del toro</label>
+                    <input
+                      type="text"
+                      value={formData.codigoToro}
+                      onChange={(e) => setFormData(f => ({ ...f, codigoToro: e.target.value }))}
+                      className="border border-white/50 bg-white/50 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-amber-400"
+                    />
                   </div>
 
                   <div className="flex flex-col">
-                    <label>Quién inseminó</label>
-                    <input type="text" value={formData.quienInsemino} onChange={e => setFormData(f => ({ ...f, quienInsemino: e.target.value }))} className="border px-4 py-2 rounded-lg" />
+                    <label className="mb-2 font-medium text-gray-800">Quién inseminó</label>
+                    <input
+                      type="text"
+                      value={formData.quienInsemino}
+                      onChange={(e) => setFormData(f => ({ ...f, quienInsemino: e.target.value }))}
+                      className="border border-white/50 bg-white/50 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-amber-400"
+                    />
                   </div>
 
-                  <div className="flex flex-col">
-                    <label>Partos anteriores</label>
-                    <input type="number" value={formData.partosAnteriores} onChange={e => setFormData(f => ({ ...f, partosAnteriores: parseInt(e.target.value)||0 }))} className="border px-4 py-2 rounded-lg" />
-                  </div>
-
-                  <div className="flex flex-col">
-                    <label>Abortos</label>
-                    <input type="number" value={formData.abortos} onChange={e => setFormData(f => ({ ...f, abortos: parseInt(e.target.value)||0 }))} className="border px-4 py-2 rounded-lg" />
-                  </div>
-
-                  <div className="flex flex-col">
-                    <label>Observaciones</label>
-                    <input type="text" value={formData.observaciones} onChange={e => setFormData(f => ({ ...f, observaciones: e.target.value }))} className="border px-4 py-2 rounded-lg" />
+                  <div className="flex flex-col md:col-span-2">
+                    <label className="mb-2 font-medium text-gray-800">Observaciones</label>
+                    <textarea
+                      value={formData.observaciones}
+                      onChange={(e) => setFormData(f => ({ ...f, observaciones: e.target.value }))}
+                      className="border border-white/50 bg-white/50 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-amber-400 resize-none h-24"
+                      placeholder="Añadir comentarios o detalles adicionales..."
+                    />
                   </div>
                 </div>
 
-                <button onClick={guardarRegistro} className="mt-4 bg-amber-400 text-white px-6 py-2 rounded-xl font-semibold hover:bg-yellow-500 transition">
-                  Guardar
+                <button
+                  onClick={guardarRegistro}
+                  disabled={selectedHembra.estado !== "vivo"}
+                  className={`mt-6 w-full md:w-auto bg-amber-400 text-white px-6 py-3 rounded-2xl font-semibold hover:bg-yellow-500 transition-shadow shadow-md hover:shadow-xl ${selectedHembra.estado !== "vivo" ? "opacity-50 cursor-not-allowed" : ""}`}
+                >
+                  Guardar Registro
                 </button>
               </div>
 
-              {/* Tabla de historial */}
-              <div className="bg-white/80 backdrop-blur-md border border-white/50 p-6 rounded-xl shadow-xl overflow-x-auto">
+              {/* Historial */}
+              <div className="bg-white/30 backdrop-blur-md border border-white/40 p-6 rounded-xl shadow-xl overflow-x-auto">
                 <h2 className="text-xl font-bold mb-4">Historial de Gestación</h2>
-                <input type="text" placeholder="Buscar..." value={busqueda} onChange={e => setBusqueda(e.target.value)} className="border px-4 py-2 rounded-lg mb-4 w-full" />
+                <input
+                  type="text"
+                  placeholder="Buscar..."
+                  value={busqueda}
+                  onChange={(e) => setBusqueda(e.target.value)}
+                  className="border px-4 py-2 rounded-lg mb-4 w-full"
+                />
                 <table className="w-full border-collapse text-left">
                   <thead>
                     <tr className="bg-amber-400 text-white">
                       <th className="p-2 border">#</th>
                       <th className="p-2 border">Método</th>
-                      <th className="p-2 border">Fecha Inseminación</th>
+                      <th className="p-2 border">Fecha Insem.</th>
                       <th className="p-2 border">Código Toro</th>
-                      <th className="p-2 border">Quién Inseminó</th>
-                      <th className="p-2 border">Partos Ant.</th>
+                      <th className="p-2 border">Partos</th>
                       <th className="p-2 border">Abortos</th>
-                      <th className="p-2 border">Fecha Posible Parto</th>
-                      <th className="p-2 border">Observaciones</th>
+                      <th className="p-2 border">Posible Parto</th>
+                      <th className="p-2 border">Fecha Real</th>
                       <th className="p-2 border">Estado</th>
                       <th className="p-2 border">Acciones</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {paginaActual.map((r, idx) => (
-                      <tr key={r.id} className="border-b hover:bg-yellow-50">
-                        <td className="p-2 border">{(pagina-1)*ITEMS_PAGINA+idx+1}</td>
-                        <td className="p-2 border">{r.metodo}</td>
-                        <td className="p-2 border">{r.fechaInseminacion}</td>
-                        <td className="p-2 border">{r.codigoToro}</td>
-                        <td className="p-2 border">{r.quienInsemino}</td>
-                        <td className="p-2 border">{r.partosAnteriores}</td>
-                        <td className="p-2 border">{r.abortos}</td>
-                        <td className="p-2 border">{r.fechaPosibleParto}</td>
-                        <td className="p-2 border">{r.observaciones}</td>
-                        <td className="p-2 border">{r.estado}</td>
-                        <td className="p-2 border flex gap-2">
-                          <button onClick={() => editarRegistro(r)} className="bg-blue-600 text-white p-2 rounded-full hover:bg-blue-700 transition"><FaEdit /></button>
-                          <button onClick={() => eliminarRegistro(r)} className="bg-red-600 text-white p-2 rounded-full hover:bg-red-700 transition"><FaTrash /></button>
-                        </td>
-                      </tr>
-                    ))}
+                    {registros
+                      .filter(r => r.hembraId === selectedHembra.id && (r.hembraCodigo.toLowerCase().includes(busqueda.toLowerCase()) || r.loteNombre.toLowerCase().includes(busqueda.toLowerCase())))
+                      .map((r, idx) => (
+                        <tr key={r.id} className="border-b hover:bg-yellow-50">
+                          <td className="p-2 border">{idx + 1}</td>
+                          <td className="p-2 border">{r.metodo}</td>
+                          <td className="p-2 border">{r.fechaInseminacion}</td>
+                          <td className="p-2 border">{r.codigoToro}</td>
+                          <td className="p-2 border">{r.partosAnteriores}</td>
+                          <td className="p-2 border">{r.abortos}</td>
+                          <td className="p-2 border">{r.fechaPosibleParto}</td>
+                          <td className="p-2 border">{r.fechaPartoReal || r.fechaAbortoReal || "-"}</td>
+                          <td className="p-2 border">{r.estado}</td>
+                          <td className="p-2 border flex flex-wrap gap-2">
+                            <button
+                              onClick={() => editarRegistro(r)}
+                              disabled={selectedHembra.estado !== "vivo"}
+                              className={`bg-blue-600 text-white p-2 rounded-full hover:bg-blue-700 transition ${selectedHembra.estado !== "vivo" ? "opacity-50 cursor-not-allowed" : ""}`}
+                            >
+                              <FaEdit />
+                            </button>
+                            <button
+                              onClick={() => eliminarRegistro(r)}
+                              disabled={selectedHembra.estado !== "vivo"}
+                              className={`bg-red-600 text-white p-2 rounded-full hover:bg-red-700 transition ${selectedHembra.estado !== "vivo" ? "opacity-50 cursor-not-allowed" : ""}`}
+                            >
+                              <FaTrash />
+                            </button>
+                            {r.estado === "En reproducción" && selectedHembra.estado === "vivo" && (
+                              <>
+                                <button
+                                  onClick={() => actualizarEstado(r, "Parió")}
+                                  className="bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700 text-sm"
+                                >
+                                  Parió
+                                </button>
+                                <button
+                                  onClick={() => actualizarEstado(r, "Abortó")}
+                                  className="bg-orange-600 text-white px-3 py-1 rounded hover:bg-orange-700 text-sm"
+                                >
+                                  Abortó
+                                </button>
+                              </>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
                   </tbody>
                 </table>
-
-                {totalPaginas>1 && (
-                  <div className="flex justify-center mt-4 gap-2">
-                    {Array.from({length:totalPaginas},(_,i)=>(
-                      <button key={i+1} className={`px-3 py-1 rounded ${pagina===i+1?"bg-yellow-600 text-white":"bg-yellow-200"}`} onClick={()=>setPagina(i+1)}>{i+1}</button>
-                    ))}
-                  </div>
-                )}
               </div>
             </>
           )}

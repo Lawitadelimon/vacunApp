@@ -20,7 +20,7 @@ const cards = [
   // 🔄 Reproducción y luego Nacimientos
   { title: "Reproducción", to: "/reproduccion", icon: FaVenusMars, color: "bg-amber-400", hover: "hover:bg-amber-500", roles: ["admin"] },
   { title: "Nacidos en el rancho", to: "/nacimientos", icon: FaBaby, color: "bg-pink-500", hover: "hover:bg-pink-600", roles: ["admin"] },
-
+  { title: "Historial de animales", to: "/historial", icon: FaBook, color: "bg-gray-500", hover: "hover:bg-gray-600", roles: ["admin"] },
   { title: "Alimentación", to: "/alimentacion", icon: FaLeaf, color: "bg-green-500", hover: "hover:bg-green-600", roles: ["admin"] },
   { title: "Salud", to: "/salud", icon: FaStethoscope, color: "bg-red-500", hover: "hover:bg-red-600", roles: ["admin"] },
   { title: "Reportes", to: "/reportes", icon: FaClipboardList, color: "bg-indigo-500", hover: "hover:bg-indigo-600", roles: ["admin", "worker"] },
