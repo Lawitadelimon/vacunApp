@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { collection, addDoc, getDocs, doc, setDoc, deleteDoc, query, where } from "firebase/firestore";
 import { db } from "./firebase";
 import { getAuth } from "firebase/auth";
-import { FaTrash, FaEdit, FaPlus, FaArrowLeft } from "react-icons/fa";
+import { FaTrash, FaEdit, FaPlus, FaArrowLeft, FaAppleAlt, FaHeart, FaSkull, FaMoneyBillWave } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import cowsBackground from "./assets/cows2.jpg";
 
@@ -15,7 +15,7 @@ type Animal = {
   fechaNacimiento: string;
   edad: string;
   enReproduccion?: boolean;
-  estado?: "vivo" | "muerto" | "vendido";
+  estado?: "vivo" | "muerto" | "vendido" | "en nutricion";
   precio?: number;
 };
 
@@ -31,7 +31,7 @@ export default function AnimalesPorLote() {
   const [pagina, setPagina] = useState(1);
   const [busqueda, setBusqueda] = useState("");
   const [orden, setOrden] = useState<{ campo: keyof Animal | null; asc: boolean }>({ campo: null, asc: true });
-  const [filtroEstado, setFiltroEstado] = useState<"todos" | "vivo" | "muerto" | "vendido">("todos");
+  const [filtroEstado, setFiltroEstado] = useState<string>("");
 
   const auth = getAuth();
   const navigate = useNavigate();
@@ -96,7 +96,6 @@ export default function AnimalesPorLote() {
     if (!loteSeleccionado || !animal.id) return;
     if (!confirm(`¿Marcar ${animal.codigo} como muerto?`)) return;
     await setDoc(doc(db, "lotes", loteSeleccionado.id!, "animales", animal.id), { estado: "muerto" }, { merge: true });
-    await addDoc(collection(db, "lotes", loteSeleccionado.id!, "historial"), { ...animal, estado: "muerto", fechaAccion: new Date().toISOString() });
     cargarAnimales();
   };
 
@@ -104,27 +103,31 @@ export default function AnimalesPorLote() {
     if (!loteSeleccionado || !animal.id) return;
     if (!confirm(`¿Marcar ${animal.codigo} como vendido?`)) return;
     await setDoc(doc(db, "lotes", loteSeleccionado.id!, "animales", animal.id), { estado: "vendido" }, { merge: true });
-    await addDoc(collection(db, "lotes", loteSeleccionado.id!, "historial"), { ...animal, estado: "vendido", precio: animal.precio || 0, fechaAccion: new Date().toISOString() });
     cargarAnimales();
   };
 
   const mandarAReproduccion = async (animal: Animal) => {
     if (!loteSeleccionado || !animal.id) return;
-    const duraciones: Record<string, number> = { Bovino: 283, Ovino: 147, Caprino: 150, Porcino: 115, Equino: 340 };
-    const dias = duraciones[animal.especie] || 0;
-    if (!dias) return;
-    const fecha = new Date(); fecha.setDate(fecha.getDate() + dias);
-    await setDoc(doc(db, "lotes", loteSeleccionado.id!, "animales", animal.id), { ...animal, enReproduccion: true, fechaPosibleParto: fecha.toISOString().split("T")[0] }, { merge: true });
+    await setDoc(doc(db, "lotes", loteSeleccionado.id!, "animales", animal.id), { ...animal, enReproduccion: true }, { merge: true });
     cargarAnimales();
+  };
+
+  const mandarAAlimentacion = async (animal: Animal) => {
+    if (!loteSeleccionado || !animal.id) return;
+    await setDoc(doc(db, "lotes", loteSeleccionado.id!, "animales", animal.id), { ...animal, estado: "en nutricion" }, { merge: true });
+    setAnimales(prev => prev.map(a => (a.id === animal.id ? { ...a, estado: "en nutricion" } : a)));
   };
 
   const toggleOrden = (campo: keyof Animal) => setOrden(prev => ({ campo, asc: prev.campo === campo ? !prev.asc : true }));
   const mostrarFlecha = (campo: keyof Animal) => orden.campo !== campo ? "⇅" : orden.asc ? "▲" : "▼";
 
   const animalesFiltrados = animales
-    .filter(a => (filtroEstado === "todos" || a.estado === filtroEstado) &&
-      [a.especie, a.codigo, a.raza, a.sexo, a.fechaNacimiento, a.edad].some(c => c.toLowerCase().includes(busqueda.toLowerCase()))
+    .filter(a => filtroEstado === "" || 
+      (filtroEstado === "en reproduccion" && a.enReproduccion) ||
+      (filtroEstado === "en nutricion" && a.estado === "en nutricion") ||
+      a.estado === filtroEstado
     )
+    .filter(a => [a.especie, a.codigo, a.raza, a.sexo, a.fechaNacimiento, a.edad].some(c => c.toLowerCase().includes(busqueda.toLowerCase())))
     .sort((a, b) => {
       if (!orden.campo) return 0;
       const valA = a[orden.campo!] || "", valB = b[orden.campo!] || "";
@@ -154,14 +157,6 @@ export default function AnimalesPorLote() {
                 onClick={() => { setLoteSeleccionado(lote); setPagina(1); }}>
                 {lote.nombre}
               </button>
-              <button onClick={() => {
-                const nuevoNombre = prompt("Nuevo nombre:", lote.nombre);
-                if (nuevoNombre && lote.id) setDoc(doc(db, "lotes", lote.id), { nombre: nuevoNombre }, { merge: true }).then(cargarLotes);
-              }} className="bg-blue-600 text-white p-2 rounded-full hover:bg-blue-700"><FaEdit /></button>
-              <button onClick={async () => {
-                if (!lote.id) return; if (!confirm(`Eliminar "${lote.nombre}"?`)) return;
-                await deleteDoc(doc(db, "lotes", lote.id)); cargarLotes(); if (loteSeleccionado?.id === lote.id) setLoteSeleccionado(null);
-              }} className="bg-red-600 text-white p-2 rounded-full hover:bg-red-700"><FaTrash /></button>
             </div>
           ))}
           <button className="mt-2 bg-green-600 text-white px-3 py-1 rounded-lg flex items-center gap-2 hover:bg-green-700 transition"><FaPlus /> Agregar Lote</button>
@@ -169,6 +164,7 @@ export default function AnimalesPorLote() {
 
         {/* Contenido */}
         <div className="w-full md:w-3/4 flex flex-col gap-6">
+          {/* Formulario */}
           {loteSeleccionado && (
             <div className="bg-white/30 backdrop-blur-md border border-white/40 p-6 rounded-3xl shadow-lg">
               <h2 className="text-2xl font-bold mb-4 text-gray-900">Registrar Animal</h2>
@@ -181,23 +177,38 @@ export default function AnimalesPorLote() {
                   <option value="Porcino">Porcino</option>
                   <option value="Equino">Equino</option>
                 </select>
-                <input type="text" placeholder="Código" value={formData.codigo} onChange={e => setFormData(f => ({ ...f, codigo: e.target.value }))} className="border border-white/50 bg-white/50 rounded-lg px-4 py-2" />
-                <input type="text" placeholder="Raza" value={formData.raza} onChange={e => setFormData(f => ({ ...f, raza: e.target.value }))} className="border border-white/50 bg-white/50 rounded-lg px-4 py-2" />
-                <select value={formData.sexo} onChange={e => setFormData(f => ({ ...f, sexo: e.target.value as "macho" | "hembra" }))} className="border border-white/50 bg-white/50 rounded-lg px-4 py-2">
+                <input type="text" placeholder="Código" value={formData.codigo} onChange={e => setFormData(f => ({ ...f, codigo: e.target.value }))} className="border border-white/50 bg-white/50 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-teal-400"/>
+                <input type="text" placeholder="Raza" value={formData.raza} onChange={e => setFormData(f => ({ ...f, raza: e.target.value }))} className="border border-white/50 bg-white/50 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-teal-400"/>
+                <select value={formData.sexo} onChange={e => setFormData(f => ({ ...f, sexo: e.target.value as "macho" | "hembra" }))} className="border border-white/50 bg-white/50 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-teal-400">
                   <option value="macho">Macho</option>
                   <option value="hembra">Hembra</option>
                 </select>
-                <input type="date" max={new Date().toISOString().split("T")[0]} value={formData.fechaNacimiento} onChange={e => setFormData(f => ({ ...f, fechaNacimiento: e.target.value }))} className="border border-white/50 bg-white/50 rounded-lg px-4 py-2" />
+                <input type="date" max={new Date().toISOString().split("T")[0]} value={formData.fechaNacimiento} onChange={e => setFormData(f => ({ ...f, fechaNacimiento: e.target.value }))} className="border border-white/50 bg-white/50 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-teal-400"/>
               </div>
               <button onClick={guardarAnimal} className="mt-4 bg-teal-500 text-white px-6 py-2 rounded-2xl font-semibold hover:bg-teal-700 transition-shadow shadow-md hover:shadow-xl">Guardar</button>
             </div>
           )}
 
+          {/* Filtro por estado */}
+          {loteSeleccionado && (
+            <div className="flex gap-4 mb-4">
+              <label className="font-semibold">Filtrar por estado:</label>
+              <select value={filtroEstado} onChange={e => setFiltroEstado(e.target.value)} className="border border-white/50 bg-white/50 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-teal-400">
+                <option value="">Todos</option>
+                <option value="vivo">Vivo</option>
+                <option value="en nutricion">En nutrición</option>
+                <option value="en reproduccion">En reproducción</option>
+                <option value="muerto">Muerto</option>
+                <option value="vendido">Vendido</option>
+              </select>
+            </div>
+          )}
+
+          {/* Tabla de animales */}
           {loteSeleccionado && (
             <div className="bg-white/30 backdrop-blur-md border border-white/40 p-6 rounded-3xl shadow-lg overflow-x-auto">
               <h2 className="text-2xl font-bold mb-4 text-gray-900">Lista de Animales - {loteSeleccionado.nombre}</h2>
-
-              <input type="text" placeholder="Buscar..." value={busqueda} onChange={(e) => setBusqueda(e.target.value)} className="w-full mb-4 px-4 py-2 rounded-lg border border-white/50 bg-white/50 focus:outline-none focus:ring-2 focus:ring-teal-400" />
+              <input type="text" placeholder="Buscar..." value={busqueda} onChange={e => setBusqueda(e.target.value)} className="w-full mb-4 px-4 py-2 rounded-lg border border-white/50 bg-white/50 focus:outline-none focus:ring-2 focus:ring-teal-400"/>
 
               <table className="w-full border-collapse text-left">
                 <thead>
@@ -209,24 +220,27 @@ export default function AnimalesPorLote() {
                     <th className="p-3 border cursor-pointer" onClick={() => toggleOrden("sexo")}>Sexo {mostrarFlecha("sexo")}</th>
                     <th className="p-3 border cursor-pointer" onClick={() => toggleOrden("fechaNacimiento")}>Fecha Nac. {mostrarFlecha("fechaNacimiento")}</th>
                     <th className="p-3 border cursor-pointer" onClick={() => toggleOrden("edad")}>Edad {mostrarFlecha("edad")}</th>
-                    <th className="p-3 border text-center">
-                      Estado
-                      <select value={filtroEstado} onChange={e => { setFiltroEstado(e.target.value as any); setPagina(1); }} className="ml-2 rounded px-1 text-black">
-                        <option value="todos">Todos</option>
-                        <option value="vivo">Vivo</option>
-                        <option value="muerto">Muerto</option>
-                        <option value="vendido">Vendido</option>
-                      </select>
-                    </th>
+                    <th className="p-3 border text-center">Estado</th>
                     <th className="p-3 border text-center">Acciones</th>
                   </tr>
                 </thead>
                 <tbody>
                   {paginaActual.map((a, i) => {
-                    const estaVivo = a.estado === "vivo";
                     const numero = (pagina - 1) * ITEMS_PAGINA + i + 1;
+                    const estadosMostrados = [
+                      a.estado === "vivo" ? "Vivo" : null,
+                      a.estado === "en nutricion" ? "En nutrición" : null,
+                      a.enReproduccion ? "En reproducción" : null,
+                      a.estado === "muerto" ? "Muerto" : null,
+                      a.estado === "vendido" ? "Vendido" : null
+                    ].filter(Boolean).join(", ");
+
+                    const bloqueadoGeneral = a.estado === "muerto" || a.estado === "vendido";
+                    const bloqueadoReproduccion = bloqueadoGeneral || a.enReproduccion || a.sexo === "macho";
+                    const bloqueadoAlimentacion = bloqueadoGeneral || a.estado === "en nutricion";
+
                     return (
-                      <tr key={a.id} className={`border-b hover:bg-yellow-50 transition-colors ${!estaVivo ? "line-through text-gray-500" : ""}`}>
+                      <tr key={a.id} className={`border-b hover:bg-yellow-50 transition-colors ${bloqueadoGeneral ? "line-through text-gray-500" : ""}`}>
                         <td className="p-3 border text-center">{numero}</td>
                         <td className="p-3 border">{a.codigo}</td>
                         <td className="p-3 border">{a.especie}</td>
@@ -234,15 +248,14 @@ export default function AnimalesPorLote() {
                         <td className="p-3 border">{a.sexo}</td>
                         <td className="p-3 border">{a.fechaNacimiento}</td>
                         <td className="p-3 border">{a.edad}</td>
-                        <td className="p-3 border text-center">{a.estado}</td>
+                        <td className="p-3 border text-center">{estadosMostrados}</td>
                         <td className="p-3 border flex flex-wrap gap-2 justify-center">
-                          <button onClick={() => editarAnimal(a)} disabled={!estaVivo} className={`bg-blue-600 text-white p-2 rounded-full hover:bg-blue-700 ${!estaVivo ? "opacity-50 cursor-not-allowed" : ""}`}><FaEdit /></button>
-                          <button onClick={() => eliminarAnimal(a)} disabled={!estaVivo} className={`bg-red-600 text-white p-2 rounded-full hover:bg-red-700 ${!estaVivo ? "opacity-50 cursor-not-allowed" : ""}`}><FaTrash /></button>
-                          {!a.enReproduccion && a.sexo === "hembra" && <button onClick={() => mandarAReproduccion(a)} disabled={!estaVivo} className={`bg-green-600 text-white px-2 py-1 rounded-lg hover:bg-green-700 text-sm ${!estaVivo ? "opacity-50 cursor-not-allowed" : ""}`}>Reproducción</button>}
-                          {estaVivo && <>
-                            <button onClick={() => marcarComoMuerto(a)} className="bg-gray-700 text-white px-2 py-1 rounded-lg hover:bg-gray-900 text-sm">Muerto</button>
-                            <button onClick={() => marcarComoVendido(a)} className="bg-yellow-500 text-black px-2 py-1 rounded-lg hover:bg-yellow-600 text-sm">Vendido</button>
-                          </>}
+                          <button title="Editar" onClick={() => editarAnimal(a)} disabled={bloqueadoGeneral} className={`bg-blue-500 text-white p-2 rounded-full hover:bg-blue-700 hover:text-black ${bloqueadoGeneral ? "opacity-50 cursor-not-allowed" : ""}`}><FaEdit /></button>
+                          <button title="Eliminar" onClick={() => eliminarAnimal(a)} disabled={bloqueadoGeneral} className={`bg-red-500 text-white p-2 rounded-full hover:bg-red-700 hover:text-black ${bloqueadoGeneral ? "opacity-50 cursor-not-allowed" : ""}`}><FaTrash /></button>
+                          <button title="Alimentación" onClick={() => mandarAAlimentacion(a)} disabled={bloqueadoAlimentacion} className={`bg-green-500 text-white p-2 rounded-full hover:bg-green-700 hover:text-black ${bloqueadoAlimentacion ? "opacity-50 cursor-not-allowed" : ""}`}><FaAppleAlt /></button>
+                          {a.sexo === "hembra" && <button title="Reproducción" onClick={() => mandarAReproduccion(a)} disabled={bloqueadoReproduccion} className={`bg-pink-500 text-white p-2 rounded-full hover:bg-pink-700 hover:text-black ${bloqueadoReproduccion ? "opacity-50 cursor-not-allowed" : ""}`}><FaHeart /></button>}
+                          <button title="Marcar como muerto" onClick={() => marcarComoMuerto(a)} disabled={bloqueadoGeneral} className={`bg-gray-500 text-white p-2 rounded-full hover:bg-gray-700 hover:text-black ${bloqueadoGeneral ? "opacity-50 cursor-not-allowed" : ""}`}><FaSkull /></button>
+                          <button title="Marcar como vendido" onClick={() => marcarComoVendido(a)} disabled={bloqueadoGeneral} className={`bg-orange-500 text-white p-2 rounded-full hover:bg-orange-700 hover:text-black ${bloqueadoGeneral ? "opacity-50 cursor-not-allowed" : ""}`}><FaMoneyBillWave /></button>
                         </td>
                       </tr>
                     );

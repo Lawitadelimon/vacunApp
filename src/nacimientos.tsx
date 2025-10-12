@@ -17,11 +17,7 @@ type Nacimiento = {
   estadoSalud: string;
 };
 
-type Lote = {
-  id?: string;
-  nombre: string;
-};
-
+type Lote = { id?: string; nombre: string };
 
 export default function NacimientosPorLote() {
   const [lotes, setLotes] = useState<Lote[]>([]);
@@ -37,7 +33,6 @@ export default function NacimientosPorLote() {
     peso: "",
     estadoSalud: "",
   });
-  const [nuevoLoteNombre, setNuevoLoteNombre] = useState("");
   const [pagina, setPagina] = useState(1);
   const [busqueda, setBusqueda] = useState("");
   const ITEMS_PAGINA = 40;
@@ -125,6 +120,8 @@ export default function NacimientosPorLote() {
   const totalPaginas = Math.ceil(nacimientosFiltrados.length / ITEMS_PAGINA);
   const paginaActual = nacimientosFiltrados.slice((pagina - 1) * ITEMS_PAGINA, pagina * ITEMS_PAGINA);
 
+  const inputClasses = "border px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500";
+
   return (
     <div className="relative min-h-screen">
       <div className="absolute inset-0 bg-cover bg-center blur-[2px]" style={{ backgroundImage: `url(${cowsBackground})` }}></div>
@@ -137,73 +134,57 @@ export default function NacimientosPorLote() {
 
       <div className="relative p-9 flex gap-9">
         {/* Lotes */}
-        <div className="w-1/6 bg-white/80 backdrop-blur-md border border-white/50 p-4 rounded-xl shadow-xl h-[calc(100vh-6rem)] sticky top-24 flex flex-col gap-2 overflow-y-auto">
+        <div className="w-1/6 bg-white/30 backdrop-blur-md border border-white/50 p-4 rounded-xl shadow-xl h-[calc(100vh-6rem)] sticky top-24 flex flex-col gap-2 overflow-y-auto">
           <h2 className="text-xl font-bold mb-4">Lotes</h2>
 
           {lotes.map(lote => (
             <div key={lote.id} className="flex items-center justify-between gap-2">
               <button
-                className={`flex-1 px-4 py-2 rounded-lg font-semibold text-left ${
-                  loteSeleccionado?.id === lote.id ? "bg-pink-600 text-white" : "bg-pink-500 text-white"
-                }`}
+                className={`flex-1 px-4 py-2 rounded-lg font-semibold text-left ${loteSeleccionado?.id === lote.id ? "bg-pink-600 text-white" : "bg-pink-500 text-white"}`}
                 onClick={() => setLoteSeleccionado(lote)}
               >
                 {lote.nombre}
               </button>
               <div className="flex items-center gap-2">
-                <button
-                  onClick={() => editarLote(lote)}
-                  className="bg-blue-600 text-white p-2 rounded-full hover:bg-blue-700 transition flex items-center justify-center"
-                >
-                  <FaEdit size={14} />
-                </button>
-                <button
-                  onClick={() => eliminarLote(lote)}
-                  className="bg-red-600 text-white p-2 rounded-full hover:bg-red-700 transition flex items-center justify-center"
-                >
-                  <FaTrash size={14} />
-                </button>
+                <button onClick={() => editarLote(lote)} className="bg-blue-600 text-white p-2 rounded-full hover:bg-blue-700 transition flex items-center justify-center"><FaEdit size={14} /></button>
+                <button onClick={() => eliminarLote(lote)} className="bg-red-600 text-white p-2 rounded-full hover:bg-red-700 transition flex items-center justify-center"><FaTrash size={14} /></button>
               </div>
             </div>
           ))}
 
-          <button onClick={agregarLote} className="mt-2 bg-green-600 text-white px-3 py-1 gap-1 rounded-lg flex items-center justify-center">
-            <FaPlus /> Agregar Lote
-          </button>
+          <button onClick={agregarLote} className="mt-2 bg-green-600 text-white px-3 py-1 gap-1 rounded-lg flex items-center justify-center"><FaPlus /> Agregar Lote</button>
         </div>
 
         {/* Nacimientos */}
         <div className="w-5/6 flex flex-col gap-6">
           {loteSeleccionado && (
-            <div className="bg-white/80 backdrop-blur-md border border-white/50 p-6 rounded-xl shadow-xl">
+            <div className="bg-white/30 backdrop-blur-md border border-white/50 p-6 rounded-xl shadow-xl">
               <h2 className="text-xl font-bold mb-4">Registrar Nacimiento - {loteSeleccionado.nombre}</h2>
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <input type="text" placeholder="Código" value={formData.codigo} onChange={e => setFormData(f => ({ ...f, codigo: e.target.value }))} className="border px-4 py-2 rounded-lg" />
-                <input type="text" placeholder="Código madre" value={formData.codigoMadre} onChange={e => setFormData(f => ({ ...f, codigoMadre: e.target.value }))} className="border px-4 py-2 rounded-lg" />
-                <input type="text" placeholder="Código padre" value={formData.codigoPadre} onChange={e => setFormData(f => ({ ...f, codigoPadre: e.target.value }))} className="border px-4 py-2 rounded-lg" />
-                <input type="date" max={new Date().toISOString().split("T")[0]} value={formData.fechaNacimiento} onChange={e => setFormData(f => ({ ...f, fechaNacimiento: e.target.value }))} className="border px-4 py-2 rounded-lg" />
-                <input type="text" placeholder="Raza" value={formData.raza} onChange={e => setFormData(f => ({ ...f, raza: e.target.value }))} className="border px-4 py-2 rounded-lg" />
-                <select value={formData.sexo} onChange={e => setFormData(f => ({ ...f, sexo: e.target.value as "Macho" | "Hembra" }))} className="border px-4 py-2 rounded-lg">
+                <input type="text" placeholder="Código" value={formData.codigo} onChange={e => setFormData(f => ({ ...f, codigo: e.target.value }))} className={inputClasses} />
+                <input type="text" placeholder="Código madre" value={formData.codigoMadre} onChange={e => setFormData(f => ({ ...f, codigoMadre: e.target.value }))} className={inputClasses} />
+                <input type="text" placeholder="Código padre" value={formData.codigoPadre} onChange={e => setFormData(f => ({ ...f, codigoPadre: e.target.value }))} className={inputClasses} />
+                <input type="date" max={new Date().toISOString().split("T")[0]} value={formData.fechaNacimiento} onChange={e => setFormData(f => ({ ...f, fechaNacimiento: e.target.value }))} className={inputClasses} />
+                <input type="text" placeholder="Raza" value={formData.raza} onChange={e => setFormData(f => ({ ...f, raza: e.target.value }))} className={inputClasses} />
+                <select value={formData.sexo} onChange={e => setFormData(f => ({ ...f, sexo: e.target.value as "Macho" | "Hembra" }))} className={inputClasses}>
                   <option value="Macho">Macho</option>
                   <option value="Hembra">Hembra</option>
                 </select>
-                <input type="text" placeholder="Peso al nacer" value={formData.peso} onChange={e => setFormData(f => ({ ...f, peso: e.target.value }))} className="border px-4 py-2 rounded-lg" />
-                <input type="text" placeholder="Estado de salud" value={formData.estadoSalud} onChange={e => setFormData(f => ({ ...f, estadoSalud: e.target.value }))} className="border px-4 py-2 rounded-lg" />
+                <input type="text" placeholder="Peso al nacer" value={formData.peso} onChange={e => setFormData(f => ({ ...f, peso: e.target.value }))} className={inputClasses} />
+                <input type="text" placeholder="Estado de salud" value={formData.estadoSalud} onChange={e => setFormData(f => ({ ...f, estadoSalud: e.target.value }))} className={inputClasses} />
               </div>
-              <button onClick={guardarNacimiento} className="mt-4 bg-pink-500 text-white px-6 py-2 rounded-xl font-semibold hover:bg-pink-600 transition">
-                Guardar
-              </button>
+              <button onClick={guardarNacimiento} className="mt-4 bg-pink-500 text-white px-6 py-2 rounded-xl font-semibold hover:bg-pink-600 transition">Guardar</button>
             </div>
           )}
 
           {loteSeleccionado && (
-            <div className="bg-white/80 backdrop-blur-md border border-white/50 p-6 rounded-xl shadow-xl overflow-x-auto">
+            <div className="bg-white/30 backdrop-blur-md border border-white/50 p-6 rounded-xl shadow-xl overflow-x-auto">
               <h2 className="text-xl font-bold mb-4">Lista de nacimientos</h2>
-              <input type="text" placeholder="Buscar..." value={busqueda} onChange={e => setBusqueda(e.target.value)} className="border px-4 py-2 rounded-lg mb-4 w-full" />
+              <input type="text" placeholder="Buscar..." value={busqueda} onChange={e => setBusqueda(e.target.value)} className={`${inputClasses} mb-4 w-full`} />
 
               <table className="w-full border-collapse text-left">
                 <thead>
-                  <tr className="bg-pink-500">
+                  <tr className="bg-pink-500 text-white">
                     <th className="p-2 border">#</th>
                     <th className="p-2 border">Código</th>
                     <th className="p-2 border">Madre</th>

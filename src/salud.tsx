@@ -12,7 +12,9 @@ import {
 } from "firebase/firestore";
 import { db } from "./firebase";
 import { getAuth } from "firebase/auth";
-import { FaPlus } from "react-icons/fa";
+import { FaPlus, FaArrowLeft } from "react-icons/fa";
+import { useNavigate } from "react-router-dom";
+import cowsBackground from "./assets/cows2.jpg";
 
 type Animal = {
   id?: string;
@@ -43,6 +45,7 @@ type Lote = {
 };
 
 export default function Salud() {
+  const navigate = useNavigate();
   const [lotes, setLotes] = useState<Lote[]>([]);
   const [loteSeleccionado, setLoteSeleccionado] = useState<Lote | null>(null);
   const [animales, setAnimales] = useState<Animal[]>([]);
@@ -58,6 +61,8 @@ export default function Salud() {
   });
 
   const auth = getAuth();
+
+  const inputClasses = "border px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500";
 
   // 🔹 Cargar lotes
   const cargarLotes = async () => {
@@ -177,167 +182,114 @@ export default function Salud() {
     cargarVacunasAnimal(animalSeleccionado);
   };
 
-  // 🔹 Función para determinar color de "Ver / Editar Vacunas"
-  const colorBotonVacunas = (a: Animal) => {
-    const vacunaAnimal = vacunasAnimal.find((v) => v.asignada && a.id === animalSeleccionado?.id);
-    if (!vacunaAnimal) return "text-red-600";
-    const todasAplicadas = vacunaAnimal.dosisAplicadas.every((d) => d);
-    return todasAplicadas ? "text-green-600" : "text-red-600";
-  };
-
   return (
-    <div className="min-h-screen bg-yellow-50 p-6">
-      <h1 className="text-3xl font-bold text-yellow-700 mb-6">Salud - Control de Vacunas</h1>
+    <div className="relative min-h-screen">
+      {/* Background imagen */}
+      <div className="absolute inset-0 bg-cover bg-center blur-[2px]" style={{ backgroundImage: `url(${cowsBackground})` }}></div>
+      <div className="absolute inset-0 bg-white/20"></div>
 
-      {/* 🔹 Vacunas generales */}
-      <div className="bg-white p-4 rounded-xl shadow mb-6">
-        <h2 className="text-xl font-bold mb-3">Vacunas Generales</h2>
-        <div className="flex flex-col md:flex-row gap-3">
-          <input
-            type="text"
-            placeholder="Nombre"
-            value={nuevaVacunaGeneral.nombre}
-            onChange={(e) => setNuevaVacunaGeneral((v) => ({ ...v, nombre: e.target.value }))}
-            className="border px-3 py-2 rounded-lg"
-          />
-          <input
-            type="number"
-            placeholder="Dosis"
-            value={nuevaVacunaGeneral.dosis}
-            onChange={(e) => setNuevaVacunaGeneral((v) => ({ ...v, dosis: parseInt(e.target.value) }))}
-            className="border px-3 py-2 rounded-lg w-24"
-            min={1}
-          />
-          <input
-            type="text"
-            placeholder="Recordatorio"
-            value={nuevaVacunaGeneral.recordatorio}
-            onChange={(e) => setNuevaVacunaGeneral((v) => ({ ...v, recordatorio: e.target.value }))}
-            className="border px-3 py-2 rounded-lg flex-1"
-          />
-          <button
-            onClick={agregarVacunaGeneral}
-            className="bg-yellow-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-yellow-700 transition flex items-center gap-2"
-          >
-            <FaPlus /> Agregar
-          </button>
-        </div>
+      {/* Barra de navegación */}
+      <div className="sticky top-0 z-50 bg-red-500 text-white p-4 flex items-center gap-4 shadow-md">
+        <button onClick={() => navigate(-1)} className="hover:text-red-200 transition">
+          <FaArrowLeft size={20} />
+        </button>
+        <h1 className="text-lg font-bold">Salud - Control de Vacunas</h1>
       </div>
 
-      {/* 🔹 Selección de lote */}
-      <div className="mb-6 flex gap-4 flex-wrap">
-        {lotes.map((lote) => (
-          <button
-            key={lote.id}
-            onClick={() => {
-              setLoteSeleccionado(lote);
-              setAnimalSeleccionado(null); // cerrar modal al cambiar lote
-            }}
-            className={`px-5 py-2 rounded-xl font-semibold ${
-              loteSeleccionado?.id === lote.id ? "bg-yellow-700 text-white" : "bg-yellow-600 text-black"
-            }`}
-          >
-            {lote.nombre.toUpperCase()}
-          </button>
-        ))}
-      </div>
-
-      {/* 🔹 Lista de animales */}
-      <div className="bg-white p-6 rounded-xl shadow-md mb-6">
-        <h2 className="text-xl font-bold mb-4">Animales del lote {loteSeleccionado?.nombre}</h2>
-        <table className="w-full border-collapse text-left">
-          <thead>
-            <tr className="bg-yellow-600">
-              <th className="p-2 border">Código</th>
-              <th className="p-2 border">Raza</th>
-              <th className="p-2 border">Sexo</th>
-              <th className="p-2 border">Edad</th>
-              <th className="p-2 border">Vacunas</th>
-            </tr>
-          </thead>
-          <tbody>
-            {animales.map((a) => {
-              const todasDosis = vacunasAnimal
-                .filter((v) => v.asignada)
-                .every((v) => v.dosisAplicadas.every((d) => d));
-              return (
-                <tr key={a.id} className="border-b hover:bg-yellow-50">
-                  <td className="p-2 border">{a.codigo}</td>
-                  <td className="p-2 border">{a.raza}</td>
-                  <td className="p-2 border">{a.sexo}</td>
-                  <td className="p-2 border">{a.edad}</td>
-                  <td className="p-2 border">
-                    <button
-                      className={`${todasDosis ? "text-green-600" : "text-red-600"} hover:underline`}
-                      onClick={() => cargarVacunasAnimal(a)}
-                    >
-                      Ver / Editar Vacunas
-                    </button>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-
-      {/* 🔹 Modal vacunas */}
-      {animalSeleccionado && (
-        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center p-6 z-50">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full p-6 overflow-y-auto max-h-[90vh]">
-            <h2 className="text-2xl font-bold text-yellow-700 mb-4">Vacunas de {animalSeleccionado.codigo}</h2>
-
-            {vacunasAnimal.map((v) => (
-              <div key={v.id} className="bg-yellow-100 p-3 rounded-lg mb-3">
-                <p className="font-semibold">{v.nombre} ({v.dosis} dosis)</p>
-                <p className="text-sm text-gray-600 mb-2">{v.recordatorio}</p>
-
-                {v.asignada ? (
-                  <div className="flex flex-col gap-3">
-                    {Array.from({ length: v.dosis }).map((_, i) => (
-                      <div key={i} className="flex items-center gap-3">
-                        <button
-                          onClick={() => toggleDosis(v, i)}
-                          className={`w-8 h-8 rounded-lg border flex items-center justify-center ${
-                            v.dosisAplicadas[i] ? "bg-green-500 text-white" : "bg-gray-200"
-                          }`}
-                        >
-                          {i + 1}
-                        </button>
-                        <input
-                          type="date"
-                          value={v.fechasAplicacion[i] || ""}
-                          onChange={(e) => actualizarFechaDosis(v, i, e.target.value)}
-                          className={`border rounded px-2 py-1 text-sm ${
-                            v.dosisAplicadas[i] ? "bg-white" : "bg-gray-100 text-gray-400"
-                          }`}
-                          disabled={!v.dosisAplicadas[i]}
-                        />
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-gray-500 italic">No asignada</p>
-                )}
-
-                <button
-                  onClick={() => toggleAsignacion(v)}
-                  className={`mt-3 px-3 py-1 rounded ${v.asignada ? "bg-red-500" : "bg-blue-500"} text-white`}
-                >
-                  {v.asignada ? "Quitar" : "Asignar"}
-                </button>
-              </div>
-            ))}
-
+      {/* Contenido */}
+      <div className="relative p-6 flex flex-col gap-6">
+        {/* Vacunas generales */}
+        <div className="bg-white/30 backdrop-blur-md border border-white/50 p-4 rounded-xl shadow">
+          <h2 className="text-xl font-bold mb-3 text-red-700">Vacunas Generales</h2>
+          <div className="flex flex-col md:flex-row gap-3">
+            <input
+              type="text"
+              placeholder="Nombre"
+              value={nuevaVacunaGeneral.nombre}
+              onChange={(e) => setNuevaVacunaGeneral((v) => ({ ...v, nombre: e.target.value }))}
+              className={inputClasses}
+            />
+            <input
+              type="number"
+              placeholder="Dosis"
+              value={nuevaVacunaGeneral.dosis}
+              onChange={(e) => setNuevaVacunaGeneral((v) => ({ ...v, dosis: parseInt(e.target.value) }))}
+              className={`${inputClasses} w-24`}
+              min={1}
+            />
+            <input
+              type="text"
+              placeholder="Recordatorio"
+              value={nuevaVacunaGeneral.recordatorio}
+              onChange={(e) => setNuevaVacunaGeneral((v) => ({ ...v, recordatorio: e.target.value }))}
+              className={`${inputClasses} flex-1`}
+            />
             <button
-              onClick={() => setAnimalSeleccionado(null)}
-              className="mt-4 w-full bg-yellow-400 hover:bg-yellow-500 text-white font-semibold px-4 py-2 rounded-xl"
+              onClick={agregarVacunaGeneral}
+              className="bg-red-500 text-white px-4 py-2 rounded-lg font-semibold hover:bg-red-600 transition flex items-center gap-2"
             >
-              Cerrar
+              <FaPlus /> Agregar
             </button>
           </div>
         </div>
-      )}
+
+        {/* Selección de lote */}
+        <div className="flex gap-4 flex-wrap">
+          {lotes.map((lote) => (
+            <button
+              key={lote.id}
+              onClick={() => {
+                setLoteSeleccionado(lote);
+                setAnimalSeleccionado(null);
+              }}
+              className={`px-5 py-2 rounded-xl font-semibold ${
+                loteSeleccionado?.id === lote.id ? "bg-red-700 text-white" : "bg-red-500 text-white"
+              }`}
+            >
+              {lote.nombre.toUpperCase()}
+            </button>
+          ))}
+        </div>
+
+        {/* Lista de animales */}
+        <div className="bg-white/30 backdrop-blur-md border border-white/50 p-6 rounded-xl shadow-md">
+          <h2 className="text-xl font-bold mb-4 text-red-700">Animales del lote {loteSeleccionado?.nombre}</h2>
+          <table className="w-full border-collapse text-left">
+            <thead>
+              <tr className="bg-red-500 text-white">
+                <th className="p-2 border">Código</th>
+                <th className="p-2 border">Raza</th>
+                <th className="p-2 border">Sexo</th>
+                <th className="p-2 border">Edad</th>
+                <th className="p-2 border">Vacunas</th>
+              </tr>
+            </thead>
+            <tbody>
+              {animales.map((a) => {
+                const todasDosis = vacunasAnimal
+                  .filter((v) => v.asignada)
+                  .every((v) => v.dosisAplicadas.every((d) => d));
+                return (
+                  <tr key={a.id} className="border-b hover:bg-white/20">
+                    <td className="p-2 border">{a.codigo}</td>
+                    <td className="p-2 border">{a.raza}</td>
+                    <td className="p-2 border">{a.sexo}</td>
+                    <td className="p-2 border">{a.edad}</td>
+                    <td className="p-2 border">
+                      <button
+                        className={`${todasDosis ? "text-green-600" : "text-red-600"} hover:underline`}
+                        onClick={() => cargarVacunasAnimal(a)}
+                      >
+                        Ver / Editar Vacunas
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
   );
 }
