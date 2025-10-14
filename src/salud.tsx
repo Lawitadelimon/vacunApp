@@ -46,21 +46,39 @@ type Lote = {
 
 export default function Salud() {
   const navigate = useNavigate();
+  const auth = getAuth();
+
   const [lotes, setLotes] = useState<Lote[]>([]);
   const [loteSeleccionado, setLoteSeleccionado] = useState<Lote | null>(null);
   const [animales, setAnimales] = useState<Animal[]>([]);
   const [animalSeleccionado, setAnimalSeleccionado] = useState<Animal | null>(null);
   const [vacunasGenerales, setVacunasGenerales] = useState<VacunaGeneral[]>([]);
   const [vacunasAnimal, setVacunasAnimal] = useState<
-    (VacunaGeneral & { asignada: boolean; asignacionId?: string; dosisAplicadas: boolean[]; fechasAplicacion: string[] })[]
+    (VacunaGeneral & {
+      asignada: boolean;
+      asignacionId?: string;
+      dosisAplicadas: boolean[];
+      fechasAplicacion: string[];
+    })[]
   >([]);
+  const [vacunasPorAnimal, setVacunasPorAnimal] = useState<{
+    [animalId: string]: (VacunaGeneral & {
+      asignada: boolean;
+      dosisAplicadas: boolean[];
+    })[];
+  }>({});
+
   const [nuevaVacunaGeneral, setNuevaVacunaGeneral] = useState<VacunaGeneral>({
     nombre: "",
     dosis: 1,
     recordatorio: "",
   });
 
-  const auth = getAuth();
+  // Filtros y contadores
+  const [filtroVacunas, setFiltroVacunas] = useState<"todos" | "completos" | "incompletos" | "sinAsignar">("todos");
+  const [totalCompletos, setTotalCompletos] = useState(0);
+  const [totalIncompletos, setTotalIncompletos] = useState(0);
+  const [totalSinAsignar, setTotalSinAsignar] = useState(0);
 
   const inputClasses = "border px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500";
 
@@ -70,7 +88,10 @@ export default function Salud() {
     if (!user) return;
     const q = query(collection(db, "lotes"), where("uid", "==", user.uid));
     const snaps = await getDocs(q);
-    const listaLotes: Lote[] = snaps.docs.map((d) => ({ id: d.id, ...(d.data() as any) }));
+    const listaLotes: Lote[] = snaps.docs.map((d) => ({
+      id: d.id,
+      ...(d.data() as any),
+    }));
     setLotes(listaLotes);
     if (listaLotes.length > 0 && !loteSeleccionado) setLoteSeleccionado(listaLotes[0]);
   };
@@ -79,15 +100,22 @@ export default function Salud() {
     cargarLotes();
   }, []);
 
-  // 🔹 Escuchar animales en tiempo real
+  // 🔹 Escuchar animales por lote
   useEffect(() => {
     if (!loteSeleccionado) return;
     const user = auth.currentUser;
     if (!user) return;
 
-    const q = query(collection(db, "lotes", loteSeleccionado.id, "animales"), where("uid", "==", user.uid));
+    const q = query(
+      collection(db, "lotes", loteSeleccionado.id, "animales"),
+      where("uid", "==", user.uid)
+    );
+
     const unsub = onSnapshot(q, (snapshot) => {
-      const lista: Animal[] = snapshot.docs.map((d) => ({ id: d.id, ...(d.data() as Animal) }));
+      const lista: Animal[] = snapshot.docs.map((d) => ({
+        id: d.id,
+        ...(d.data() as Animal),
+      }));
       setAnimales(lista);
       if (animalSeleccionado && !lista.find((a) => a.id === animalSeleccionado.id)) {
         setAnimalSeleccionado(null);
@@ -97,27 +125,46 @@ export default function Salud() {
     return () => unsub();
   }, [loteSeleccionado]);
 
-  // 🔹 Escuchar vacunas generales
+  // 🔹 Escuchar vacunas generales por lote
   useEffect(() => {
-    const unsub = onSnapshot(collection(db, "vacunasGenerales"), (snapshot) => {
-      const lista = snapshot.docs.map((d) => ({ id: d.id, ...(d.data() as VacunaGeneral) }));
-      setVacunasGenerales(lista);
-    });
-    return () => unsub();
-  }, []);
+    if (!loteSeleccionado) return;
 
-  // 🔹 Agregar vacuna general
+    const unsub = onSnapshot(
+      collection(db, "lotes", loteSeleccionado.id, "vacunasGenerales"),
+      (snapshot) => {
+        const lista = snapshot.docs.map((d) => ({
+          id: d.id,
+          ...(d.data() as VacunaGeneral),
+        }));
+        setVacunasGenerales(lista);
+      }
+    );
+
+    return () => unsub();
+  }, [loteSeleccionado]);
+
+  // 🔹 Agregar vacuna general (por lote)
   const agregarVacunaGeneral = async () => {
+    if (!loteSeleccionado) return;
     if (!nuevaVacunaGeneral.nombre || nuevaVacunaGeneral.dosis < 1) return;
-    await addDoc(collection(db, "vacunasGenerales"), nuevaVacunaGeneral);
+
+    await addDoc(
+      collection(db, "lotes", loteSeleccionado.id, "vacunasGenerales"),
+      nuevaVacunaGeneral
+    );
     setNuevaVacunaGeneral({ nombre: "", dosis: 1, recordatorio: "" });
   };
 
   // 🔹 Cargar vacunas de un animal
   const cargarVacunasAnimal = async (animal: Animal) => {
     if (!loteSeleccionado || !animal.id) return;
-    const snaps = await getDocs(collection(db, "lotes", loteSeleccionado.id, "animales", animal.id, "vacunas"));
-    const asignadas = snaps.docs.map((d) => ({ id: d.id, ...(d.data() as VacunaAsignada) }));
+    const snaps = await getDocs(
+      collection(db, "lotes", loteSeleccionado.id, "animales", animal.id, "vacunas")
+    );
+    const asignadas = snaps.docs.map((d) => ({
+      id: d.id,
+      ...(d.data() as VacunaAsignada),
+    }));
 
     const combinadas = vacunasGenerales.map((vg) => {
       const a = asignadas.find((x) => x.vacunaId === vg.id);
@@ -132,6 +179,9 @@ export default function Salud() {
 
     setVacunasAnimal(combinadas);
     setAnimalSeleccionado(animal);
+
+    // Guardar en el estado global de vacunas por animal
+    setVacunasPorAnimal((prev) => ({ ...prev, [animal.id!]: combinadas }));
   };
 
   // 🔹 Asignar / Quitar vacuna
@@ -139,13 +189,33 @@ export default function Salud() {
     if (!animalSeleccionado || !loteSeleccionado) return;
 
     if (v.asignada && v.asignacionId) {
-      await deleteDoc(doc(db, "lotes", loteSeleccionado.id, "animales", animalSeleccionado.id!, "vacunas", v.asignacionId));
+      await deleteDoc(
+        doc(
+          db,
+          "lotes",
+          loteSeleccionado.id,
+          "animales",
+          animalSeleccionado.id!,
+          "vacunas",
+          v.asignacionId
+        )
+      );
     } else {
-      await addDoc(collection(db, "lotes", loteSeleccionado.id, "animales", animalSeleccionado.id!, "vacunas"), {
-        vacunaId: v.id,
-        dosisAplicadas: Array(v.dosis).fill(false),
-        fechasAplicacion: Array(v.dosis).fill(""),
-      });
+      await addDoc(
+        collection(
+          db,
+          "lotes",
+          loteSeleccionado.id,
+          "animales",
+          animalSeleccionado.id!,
+          "vacunas"
+        ),
+        {
+          vacunaId: v.id,
+          dosisAplicadas: Array(v.dosis).fill(false),
+          fechasAplicacion: Array(v.dosis).fill(""),
+        }
+      );
     }
     cargarVacunasAnimal(animalSeleccionado);
   };
@@ -156,9 +226,18 @@ export default function Salud() {
     const nuevaLista = [...v.dosisAplicadas];
     nuevaLista[index] = !nuevaLista[index];
 
-    await updateDoc(doc(db, "lotes", loteSeleccionado.id, "animales", animalSeleccionado.id!, "vacunas", v.asignacionId), {
-      dosisAplicadas: nuevaLista,
-    });
+    await updateDoc(
+      doc(
+        db,
+        "lotes",
+        loteSeleccionado.id,
+        "animales",
+        animalSeleccionado.id!,
+        "vacunas",
+        v.asignacionId
+      ),
+      { dosisAplicadas: nuevaLista }
+    );
 
     cargarVacunasAnimal(animalSeleccionado);
   };
@@ -175,20 +254,66 @@ export default function Salud() {
     const nuevasFechas = [...v.fechasAplicacion];
     nuevasFechas[index] = fecha;
 
-    await updateDoc(doc(db, "lotes", loteSeleccionado.id, "animales", animalSeleccionado.id!, "vacunas", v.asignacionId), {
-      fechasAplicacion: nuevasFechas,
-    });
+    await updateDoc(
+      doc(
+        db,
+        "lotes",
+        loteSeleccionado.id,
+        "animales",
+        animalSeleccionado.id!,
+        "vacunas",
+        v.asignacionId
+      ),
+      { fechasAplicacion: nuevasFechas }
+    );
 
     cargarVacunasAnimal(animalSeleccionado);
   };
 
+  // 🔹 Contadores por animal
+  useEffect(() => {
+    if (animales.length === 0) {
+      setTotalCompletos(0);
+      setTotalIncompletos(0);
+      setTotalSinAsignar(0);
+      return;
+    }
+
+    let completos = 0;
+    let incompletos = 0;
+    let sinAsignar = 0;
+
+    animales.forEach((animal) => {
+      const vacunas = vacunasPorAnimal[animal.id!] || [];
+      const asignadas = vacunas.filter((v) => v.asignada);
+
+      if (asignadas.length === 0) {
+        sinAsignar++;
+        return;
+      }
+
+      const todasAplicadas = asignadas.every((v) =>
+        v.dosisAplicadas.every((d) => d)
+      );
+
+      if (todasAplicadas) completos++;
+      else incompletos++;
+    });
+
+    setTotalCompletos(completos);
+    setTotalIncompletos(incompletos);
+    setTotalSinAsignar(sinAsignar);
+  }, [animales, vacunasPorAnimal]);
+
+  // 🔹 Interfaz
   return (
     <div className="relative min-h-screen">
-      {/* Background imagen */}
-      <div className="absolute inset-0 bg-cover bg-center blur-[2px]" style={{ backgroundImage: `url(${cowsBackground})` }}></div>
+      <div
+        className="absolute inset-0 bg-cover bg-center blur-[2px]"
+        style={{ backgroundImage: `url(${cowsBackground})` }}
+      ></div>
       <div className="absolute inset-0 bg-white/20"></div>
 
-      {/* Barra de navegación */}
       <div className="sticky top-0 z-50 bg-red-500 text-white p-4 flex items-center gap-4 shadow-md">
         <button onClick={() => navigate(-1)} className="hover:text-red-200 transition">
           <FaArrowLeft size={20} />
@@ -196,11 +321,12 @@ export default function Salud() {
         <h1 className="text-lg font-bold">Salud - Control de Vacunas</h1>
       </div>
 
-      {/* Contenido */}
       <div className="relative p-6 flex flex-col gap-6">
         {/* Vacunas generales */}
         <div className="bg-white/30 backdrop-blur-md border border-white/50 p-4 rounded-xl shadow">
-          <h2 className="text-xl font-bold mb-3 text-red-700">Vacunas Generales</h2>
+          <h2 className="text-xl font-bold mb-3 text-red-700">
+            Vacunas del lote {loteSeleccionado?.nombre}
+          </h2>
           <div className="flex flex-col md:flex-row gap-3">
             <input
               type="text"
@@ -213,7 +339,9 @@ export default function Salud() {
               type="number"
               placeholder="Dosis"
               value={nuevaVacunaGeneral.dosis}
-              onChange={(e) => setNuevaVacunaGeneral((v) => ({ ...v, dosis: parseInt(e.target.value) }))}
+              onChange={(e) =>
+                setNuevaVacunaGeneral((v) => ({ ...v, dosis: parseInt(e.target.value) }))
+              }
               className={`${inputClasses} w-24`}
               min={1}
             />
@@ -221,7 +349,9 @@ export default function Salud() {
               type="text"
               placeholder="Recordatorio"
               value={nuevaVacunaGeneral.recordatorio}
-              onChange={(e) => setNuevaVacunaGeneral((v) => ({ ...v, recordatorio: e.target.value }))}
+              onChange={(e) =>
+                setNuevaVacunaGeneral((v) => ({ ...v, recordatorio: e.target.value }))
+              }
               className={`${inputClasses} flex-1`}
             />
             <button
@@ -233,7 +363,7 @@ export default function Salud() {
           </div>
         </div>
 
-        {/* Selección de lote */}
+        {/* Lotes */}
         <div className="flex gap-4 flex-wrap">
           {lotes.map((lote) => (
             <button
@@ -251,9 +381,56 @@ export default function Salud() {
           ))}
         </div>
 
-        {/* Lista de animales */}
+        {/* Animales */}
         <div className="bg-white/30 backdrop-blur-md border border-white/50 p-6 rounded-xl shadow-md">
-          <h2 className="text-xl font-bold mb-4 text-red-700">Animales del lote {loteSeleccionado?.nombre}</h2>
+          <h2 className="text-xl font-bold mb-4 text-red-700">
+            Animales del lote {loteSeleccionado?.nombre}
+          </h2>
+
+          {/* Filtro */}
+          <div className="flex flex-wrap gap-3 mb-4">
+            <button
+              onClick={() => setFiltroVacunas("todos")}
+              className={`px-4 py-2 rounded-lg font-semibold transition ${
+                filtroVacunas === "todos"
+                  ? "bg-red-600 text-white"
+                  : "bg-white/60 text-red-600 hover:bg-white/80"
+              }`}
+            >
+              Todos ({animales.length})
+            </button>
+            <button
+              onClick={() => setFiltroVacunas("completos")}
+              className={`px-4 py-2 rounded-lg font-semibold transition ${
+                filtroVacunas === "completos"
+                  ? "bg-green-600 text-white"
+                  : "bg-white/60 text-green-600 hover:bg-white/80"
+              }`}
+            >
+              Completos ✅ ({totalCompletos})
+            </button>
+            <button
+              onClick={() => setFiltroVacunas("incompletos")}
+              className={`px-4 py-2 rounded-lg font-semibold transition ${
+                filtroVacunas === "incompletos"
+                  ? "bg-yellow-500 text-white"
+                  : "bg-white/60 text-yellow-600 hover:bg-white/80"
+              }`}
+            >
+              Incompletos ⚠ ({totalIncompletos})
+            </button>
+            <button
+              onClick={() => setFiltroVacunas("sinAsignar")}
+              className={`px-4 py-2 rounded-lg font-semibold transition ${
+                filtroVacunas === "sinAsignar"
+                  ? "bg-gray-600 text-white"
+                  : "bg-white/60 text-gray-700 hover:bg-white/80"
+              }`}
+            >
+              Sin asignar 🐮 ({totalSinAsignar})
+            </button>
+          </div>
+
           <table className="w-full border-collapse text-left">
             <thead>
               <tr className="bg-red-500 text-white">
@@ -265,11 +442,19 @@ export default function Salud() {
               </tr>
             </thead>
             <tbody>
-              {animales.map((a) => {
-                const todasDosis = vacunasAnimal
-                  .filter((v) => v.asignada)
-                  .every((v) => v.dosisAplicadas.every((d) => d));
-                return (
+              {animales
+                .filter((a) => {
+                  const vacunas = vacunasPorAnimal[a.id!] || [];
+                  const asignadas = vacunas.filter((v) => v.asignada);
+                  const todasAplicadas = asignadas.every((v) => v.dosisAplicadas.every((d) => d));
+
+                  if (filtroVacunas === "todos") return true;
+                  if (filtroVacunas === "completos") return asignadas.length > 0 && todasAplicadas;
+                  if (filtroVacunas === "incompletos") return asignadas.length > 0 && !todasAplicadas;
+                  if (filtroVacunas === "sinAsignar") return asignadas.length === 0;
+                  return true;
+                })
+                .map((a) => (
                   <tr key={a.id} className="border-b hover:bg-white/20">
                     <td className="p-2 border">{a.codigo}</td>
                     <td className="p-2 border">{a.raza}</td>
@@ -277,17 +462,72 @@ export default function Salud() {
                     <td className="p-2 border">{a.edad}</td>
                     <td className="p-2 border">
                       <button
-                        className={`${todasDosis ? "text-green-600" : "text-red-600"} hover:underline`}
+                        className="text-blue-600 hover:underline"
                         onClick={() => cargarVacunasAnimal(a)}
                       >
                         Ver / Editar Vacunas
                       </button>
                     </td>
                   </tr>
-                );
-              })}
+                ))}
             </tbody>
           </table>
+
+          {/* Vacunas por animal */}
+          {animalSeleccionado && (
+            <div className="mt-6 bg-white/40 p-4 rounded-lg">
+              <h3 className="text-lg font-bold mb-3">
+                Vacunas del animal {animalSeleccionado.codigo}
+              </h3>
+              <table className="w-full border-collapse text-left">
+                <thead>
+                  <tr className="bg-gray-200">
+                    <th className="p-2 border">Vacuna</th>
+                    <th className="p-2 border">Dosis</th>
+                    <th className="p-2 border">Recordatorio</th>
+                    <th className="p-2 border">Acción</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {vacunasAnimal.map((v) => (
+                    <tr key={v.id} className="border-b">
+                      <td className="p-2 border">{v.nombre}</td>
+                      <td className="p-2 border">
+                        <div className="flex flex-wrap gap-2">
+                          {v.dosisAplicadas.map((d, i) => (
+                            <div key={i} className="flex items-center gap-1">
+                              <input
+                                type="checkbox"
+                                checked={d}
+                                onChange={() => toggleDosis(v, i)}
+                              />
+                              <input
+                                type="date"
+                                value={v.fechasAplicacion[i] || ""}
+                                onChange={(e) => actualizarFechaDosis(v, i, e.target.value)}
+                                className="border rounded p-1 text-sm"
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      </td>
+                      <td className="p-2 border">{v.recordatorio}</td>
+                      <td className="p-2 border text-center">
+                        <button
+                          onClick={() => toggleAsignacion(v)}
+                          className={`px-3 py-1 rounded ${
+                            v.asignada ? "bg-red-600 text-white" : "bg-green-600 text-white"
+                          }`}
+                        >
+                          {v.asignada ? "Quitar" : "Asignar"}
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       </div>
     </div>
