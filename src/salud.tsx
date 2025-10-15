@@ -383,7 +383,7 @@ export default function Salud() {
 
         {/* Animales */}
         <div className="bg-white/30 backdrop-blur-md border border-white/50 p-6 rounded-xl shadow-md">
-          <h2 className="text-xl font-bold mb-4 text-red-900">
+          <h2 className="text-xl font-bold mb-4 text-red-800">
             Animales del lote {loteSeleccionado?.nombre}
           </h2>
 
