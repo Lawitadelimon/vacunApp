@@ -141,30 +141,44 @@ export default function AnimalesPorLote() {
     if (loteSeleccionado?.id === lote.id) setLoteSeleccionado(null);
   };
 
-  // Filtrado y orden
-  const animalesFiltrados = animales
-    .filter(a =>
-      a.codigo.toLowerCase().includes(busqueda.toLowerCase()) ||
-      a.raza.toLowerCase().includes(busqueda.toLowerCase()) ||
-      a.sexo.toLowerCase().includes(busqueda.toLowerCase()) ||
-      a.fechaNacimiento.includes(busqueda) ||
-      a.edad.includes(busqueda)
-    )
-    .sort((a, b) => {
-      if (!orden.campo) return 0;
-      const campo = orden.campo;
-      const valA = a[campo] || "";
-      const valB = b[campo] || "";
-      return orden.asc ? valA.toString().localeCompare(valB.toString()) : valB.toString().localeCompare(valA.toString());
+  const editarCategoria = (cat: string) => {
+    setCategoriaAnterior(cat);
+    setCategoriaEditada(cat);
+  };
+
+  const guardarEdicionCategoria = async () => {
+    const user = getAuth().currentUser;
+    if (!user) return;
+
+    const newCat = categoriaEditada.trim();
+    if (!newCat || newCat.toLowerCase() === categoriaAnterior.toLowerCase() || categorias.some(c => c.toLowerCase() === newCat.toLowerCase())) {
+      alert("Nombre inválido o repetido.");
+      return;
+    }
+    if (!confirm(`Renombrar ${categoriaAnterior} → ${newCat}?`)) return;
+
+    const snaps = await getDocs(collection(db, 'categorias', categoriaAnterior, 'animales'));
+
+    //Esto es parte de lo anterior
+    await setDoc(doc(db, 'categorias', newCat), { uid: user.uid });
+
+    for (const d of snaps.docs) {
+      await setDoc(doc(db, 'categorias', newCat, 'animales', d.id), { uid: user.uid, ...d.data() });
+      await deleteDoc(doc(db, 'categorias', categoriaAnterior, 'animales', d.id));
+    }
+
+    await deleteDoc(doc(db, 'categorias', categoriaAnterior));
+
+    setCategorias(prev => prev.map(c => c === categoriaAnterior ? newCat : c));
+    setAnimales(prev => {
+      const n = { ...prev, [newCat]: prev[categoriaAnterior] };
+      delete n[categoriaAnterior];
+      return n;
     });
-
-  const paginaActual = animalesFiltrados.slice((pagina - 1) * ITEMS_PAGINA, pagina * ITEMS_PAGINA);
-  const totalPaginas = Math.ceil(animalesFiltrados.length / ITEMS_PAGINA);
-  const toggleOrden = (campo: keyof Animal) => setOrden(prev => ({ campo, asc: prev.campo === campo ? !prev.asc : true }));
-
-  function abrirFormulario(arg0: string): void {
-    throw new Error("Function not implemented.");
-  }
+    setCategoriaSeleccionada(newCat);
+    setCategoriaAnterior('');
+    setCategoriaEditada('');
+  };
 
   return (
     <div className="min-h-screen bg-yellow-50 p-6">
@@ -511,7 +525,12 @@ export default function AnimalesPorLote() {
             )}
           </>
         )}
-      </div>
+        {/* Footer */}
+        <footer className="w-full bg-[#094297dc] py-4 text-center text-white relative z-10">
+          <p>© 2025 INNOVASYSTEM. Todos los derechos reservados.</p>
+        </footer>
+      </div> 
+        
     </div>
   );
 }

@@ -26,6 +26,7 @@ const cards = [
 
 export default function HomePage() {
   const [hayNotificaciones, setHayNotificaciones] = useState(false);
+  const [notificaciones, setNotificaciones] = useState<any[]>([]);
   const [usuariosPendientes, setUsuariosPendientes] = useState<any[]>([]);
   const [menuOpen, setMenuOpen] = useState(false);
   const navigate = useNavigate();
@@ -54,21 +55,24 @@ export default function HomePage() {
     return () => unsubscribe();
   }, []);
 
-  // 🔔 Cargar notificaciones
-  const cargarNotificaciones = async () => {
-    const currentUser = auth.currentUser;
-    if (!currentUser) return;
+  // 🔔 Escuchar notificaciones en tiempo real
+  useEffect(() => {
+    if (!user) return;
 
-    const q = query(collection(db, "tareas"), where("uid", "==", currentUser.uid));
-    const querySnapshot = await getDocs(q);
-    const hoy = new Date().toISOString().split("T")[0];
+    const q = query(
+      collection(db, "notificaciones"),
+      where("para", "==", user.role === "admin" ? "admin" : user.uid)
+    );
 
-    const pendientes = querySnapshot.docs
-      .map(doc => doc.data())
-      .filter((t: any) => t.fecha && t.fecha <= hoy && !t.completada);
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setNotificaciones(data);
+      // Solo contar las no leídas
+      setHayNotificaciones(data.filter(n => !n.leido).length > 0);
+    });
 
-    setHayNotificaciones(pendientes.length > 0);
-  };
+    return () => unsubscribe();
+  }, [user]);
 
   // 👥 Escuchar usuarios en espera en tiempo real
   useEffect(() => {
@@ -87,10 +91,6 @@ export default function HomePage() {
   const asignarRol = async (id: string, rol: "admin" | "worker") => {
     await updateDoc(doc(db, "users", id), { role: rol });
   };
-
-  useEffect(() => {
-    cargarNotificaciones();
-  }, []);
 
   const handleLogout = async () => {
     await signOut(auth);
@@ -118,13 +118,11 @@ export default function HomePage() {
 
       {/* Contenido */}
       <div className="relative z-10 flex-1 flex flex-col md:flex-row w-full">
-        {/* Columna principal */}
         <div className="flex-1 flex flex-col items-center">
           {/* Header */}
           <header className="w-full py-3 px-4 md:py-4 md:px-6 flex justify-between items-center shadow-md bg-black/5 backdrop-blur-md text-white relative z-20">
             <h1 className="text-lg md:text-2xl font-extrabold">AniManager</h1>
 
-            {}
             <div className="hidden md:flex items-center gap-4">
               <button onClick={() => navigate("/home")} className="text-white hover:text-yellow-400 transition">
                 <FaHome size={22} />
@@ -133,7 +131,7 @@ export default function HomePage() {
               <Link to="/notificaciones" className="text-white text-xl relative">
                 <FaBell />
                 {hayNotificaciones && (
-                  <span className="absolute -top-2 -right-2 text-lg animate-bounce">🐄</span>
+                  <span className="absolute -top-2 -right-2 w-3 h-3 rounded-full bg-red-500 animate-pulse" />
                 )}
               </Link>
 
@@ -145,7 +143,6 @@ export default function HomePage() {
               </button>
             </div>
 
-            {}
             <button
               className="md:hidden text-white text-2xl"
               onClick={() => setMenuOpen(!menuOpen)}
@@ -153,7 +150,6 @@ export default function HomePage() {
               {menuOpen ? <FaTimes /> : <FaBars />}
             </button>
 
-            {}
             {menuOpen && (
               <div className="absolute top-full right-2 mt-2 w-48 bg-black/90 backdrop-blur-md rounded-lg shadow-lg flex flex-col p-3 space-y-2 md:hidden">
                 <button
@@ -170,7 +166,7 @@ export default function HomePage() {
                 >
                   <FaBell /> Notificaciones
                   {hayNotificaciones && (
-                    <span className="absolute right-2 text-lg animate-bounce">🐄</span>
+                    <span className="absolute right-2 w-3 h-3 rounded-full bg-red-500 animate-pulse" />
                   )}
                 </Link>
 
@@ -191,7 +187,6 @@ export default function HomePage() {
 
           {/* Carrusel */}
           <div className="relative w-full max-w-4xl mt-6 md:mt-10 flex-1 px-4 md:px-6">
-            {/* Botón scroll left */}
             <button
               onClick={() => scroll("left")}
               className="absolute -left-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full z-20 hidden md:flex"
@@ -220,7 +215,6 @@ export default function HomePage() {
                   )
               )}
 
-              {/* 👉 Tarjeta de Usuarios solo admin */}
               {user?.role === "admin" && (
                 <Link
                   to="/usuarios"
@@ -232,7 +226,6 @@ export default function HomePage() {
               )}
             </div>
 
-            {/* Botón scroll right */}
             <button
               onClick={() => scroll("right")}
               className="absolute -right-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full z-20 hidden md:flex"
@@ -278,11 +271,9 @@ export default function HomePage() {
         )}
       </div>
 
-      {/* Footer */}
       <footer className="w-full bg-[#094297dc] py-3 md:py-4 text-center text-xs md:text-sm text-white relative z-10">
         <p>© 2025 INNOVASYSTEM. Todos los derechos reservados.</p>
       </footer>
     </div>
   );
 }
-//Ya es responsiv
