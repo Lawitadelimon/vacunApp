@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
 import { collection, addDoc, getDocs, doc, setDoc, deleteDoc } from "firebase/firestore";
 import { db } from "./firebase";
-import { FaTrash, FaEdit, FaArrowLeft, FaPlus } from "react-icons/fa";
+import { FaTrash, FaEdit, FaArrowLeft, FaPlus, FaHome, FaBell, FaTimes, FaBars } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import cowsBackground from "./assets/cows2.jpg";
+import { getAuth, signOut } from "firebase/auth";
 
 type Nacimiento = {
   id?: string;
@@ -37,6 +38,14 @@ export default function NacimientosPorLote() {
   const [busqueda, setBusqueda] = useState("");
   const ITEMS_PAGINA = 40;
   const navigate = useNavigate();
+  
+  const [menuAbierto, setMenuAbierto] = useState(false);
+  
+    const auth = getAuth();
+    const handleLogout = async () => {
+      await signOut(auth);
+      navigate("/");
+    };
 
   const cargarLotes = async () => {
     const snaps = await getDocs(collection(db, "lotes_nuevos"));
@@ -127,10 +136,33 @@ export default function NacimientosPorLote() {
       <div className="absolute inset-0 bg-cover bg-center blur-[2px]" style={{ backgroundImage: `url(${cowsBackground})` }}></div>
       <div className="absolute inset-0 bg-white/20"></div>
 
-      <div className="sticky top-0 z-50 bg-pink-500 text-black p-4 flex items-center gap-4 shadow-md">
-        <button onClick={() => navigate(-1)} className="hover:text-pink-600 transition"><FaArrowLeft size={20} /></button>
-        <h1 className="text-lg font-bold ">Animales nacidos en el rancho</h1>
-      </div>
+      <nav className="sticky top-0 z-50 bg-pink-500 text-black flex items-center justify-between p-4 shadow-lg">
+        <div className="flex items-center gap-4">
+          <h1 className="text-2xl font-extrabold">Nacimientos </h1>
+        </div>
+      
+        <div className="flex items-center gap-4">
+          <button onClick={() => navigate("/home")} className="hover:text-pink-300 transition">
+            <FaHome size={20} />
+          </button>
+          <button onClick={() => navigate("/notificaciones")} className="relative hover:text-pink-300 transition">
+            <FaBell size={20} />
+          </button>
+          <button onClick={() => setMenuAbierto(!menuAbierto)} className="md:hidden hover:text-pink-300">
+            {menuAbierto ? <FaTimes size={22} /> : <FaBars size={22} />}
+          </button>
+          <button onClick={handleLogout} className="hidden md:inline bg-pink-600 text-black font-semibold px-3 py-1 rounded-xl hover:bg-pink-300">
+            Cerrar sesión
+          </button>
+        </div>
+      
+        {menuAbierto && (
+          <div className="absolute top-full right-0 bg-white text-black w-48 rounded-b-lg shadow-lg md:hidden">
+            <button onClick={() => navigate("/notificaciones")} className="w-full text-left px-4 py-2 hover:bg-gray-200">🔔 Notificaciones</button>
+            <button onClick={handleLogout} className="w-full text-left px-4 py-2 hover:bg-gray-200">🚪 Cerrar sesión</button>
+          </div>
+        )}
+      </nav>
 
       <div className="relative p-9 flex gap-9">
         {/* Lotes */}
@@ -235,6 +267,9 @@ export default function NacimientosPorLote() {
           )}
         </div>
       </div>
+       <footer className="w-screen bg-[#094297dc] py-3 md:py-4 text-center text-xs md:text-sm text-white relative z-10">
+          <p>© 2025 INNOVASYSTEM. Todos los derechos reservados.</p>
+        </footer>
     </div>
   );
 }

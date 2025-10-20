@@ -3,8 +3,12 @@ import { Link, useNavigate } from "react-router-dom";
 import {
   FaHome, FaPaw, FaClipboardList, FaBell, FaLeaf, FaStethoscope,
   FaBook, FaChevronLeft, FaChevronRight, FaVenusMars, FaUserPlus,
-  FaBars, FaTimes, FaBaby
+  FaBars, FaTimes, 
 } from "react-icons/fa";
+import { GiBabyBottle } from "react-icons/gi";
+import { BsFileEarmarkBarGraph } from "react-icons/bs";
+
+
 import { auth, db } from "./firebase";
 import { signOut, onAuthStateChanged } from "firebase/auth";
 import {
@@ -16,16 +20,15 @@ import { useUser } from "./UserContext";
 
 const cards = [
   { title: "Registros de animales", to: "/animales", icon: FaPaw, color: "bg-teal-500", hover: "hover:bg-teal-600", roles: ["admin"] },
-
-  // 🔄 Reproducción y luego Nacimientos
+  { title: "Nacidos en el rancho", to: "/nacimientos", icon: GiBabyBottle, color: "bg-pink-500", hover: "hover:bg-pink-600", roles: ["admin"] },
   { title: "Reproducción", to: "/reproduccion", icon: FaVenusMars, color: "bg-amber-400", hover: "hover:bg-amber-500", roles: ["admin"] },
-  { title: "Nacidos en el rancho", to: "/nacimientos", icon: FaBaby, color: "bg-pink-500", hover: "hover:bg-pink-600", roles: ["admin"] },
-  { title: "Historial de animales", to: "/historial", icon: FaBook, color: "bg-gray-500", hover: "hover:bg-gray-600", roles: ["admin"] },
   { title: "Alimentación y Salud", to: "/alimentacion", icon: FaLeaf, color: "bg-green-500", hover: "hover:bg-green-600", roles: ["admin"] },
   { title: "Vacunas", to: "/salud", icon: FaStethoscope, color: "bg-red-500", hover: "hover:bg-red-600", roles: ["admin"] },
-  { title: "Reportes", to: "/reportes", icon: FaClipboardList, color: "bg-indigo-500", hover: "hover:bg-indigo-600", roles: ["admin", "worker"] },
-  { title: "Tareas del personal", to: "/pendientes", icon: FaBook, color: "bg-yellow-500", hover: "hover:bg-yellow-600", roles: ["admin"] },
+  { title: "Estadisticas decesos", to: "/estadisticas", icon: BsFileEarmarkBarGraph, color: "bg-orange-500", hover: "hover:bg-orange-600", roles: ["admin"] },
+  { title: "Reportes de tareas", to: "/reportes", icon: FaClipboardList, color: "bg-indigo-500", hover: "hover:bg-indigo-600", roles: ["admin", "worker"] },
+  
   { title: "Notificaciones", to: "/notificaciones", icon: FaBell, color: "bg-amber-700", hover: "hover:bg-amber-800", roles: ["admin", "worker"] },
+  { title: "Tareas del personal", to: "/pendientes", icon: FaBook, color: "bg-blue-500", hover: "hover:bg--600", roles: ["admin"] },
 ];
 
 export default function HomePage() {

@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
 import { collection, addDoc, getDocs, doc, setDoc, deleteDoc } from "firebase/firestore";
 import { db } from "./firebase";
-import { FaTrash, FaEdit, FaArrowLeft } from "react-icons/fa";
+import { FaTrash, FaEdit, FaArrowLeft, FaHome, FaBell, FaTimes, FaBars } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import cowsBackground from "./assets/cows2.jpg";
+import { getAuth, signOut } from "firebase/auth";
 
 type Hembra = {
   id: string;
@@ -59,6 +60,14 @@ export default function ReproduccionPorHembra() {
   const ITEMS_PAGINA = 40;
   const navigate = useNavigate();
   const hoy = new Date().toISOString().split("T")[0];
+
+  const [menuAbierto, setMenuAbierto] = useState(false);
+
+  const auth = getAuth();
+  const handleLogout = async () => {
+    await signOut(auth);
+    navigate("/");
+  };
 
   // --- Calcular fecha posible de parto según especie ---
   const calcularFechaParto = (fechaInseminacion: string, especie: string) => {
@@ -216,19 +225,42 @@ export default function ReproduccionPorHembra() {
       <div className="absolute inset-0 bg-cover bg-center blur-[2px]" style={{ backgroundImage: `url(${cowsBackground})` }} />
       <div className="absolute inset-0 bg-white/20" />
 
-      <div className="sticky top-0 z-50 bg-amber-400 text-black p-4 flex items-center gap-4 shadow-md">
-        <button onClick={() => navigate(-1)} className="hover:text-amber-500 transition">
-          <FaArrowLeft size={20} />
-        </button>
-        <h1 className="text-lg font-bold">Reproducción por Hembra</h1>
-      </div>
+      <nav className="sticky top-0 z-50 bg-amber-400 text-black flex items-center justify-between p-4 shadow-lg">
+    <div className="flex items-center gap-4">
+    <h1 className="text-2xl font-extrabold">Reproducción por Hembra</h1>
+  </div>
+
+  <div className="flex items-center gap-4">
+    <button onClick={() => navigate("/home")} className="hover:text-amber-200 transition">
+      <FaHome size={20} />
+    </button>
+    <button onClick={() => navigate("/notificaciones")} className="relative hover:text-amber-200 transition">
+      <FaBell size={20} />
+     
+    </button>
+    <button onClick={() => setMenuAbierto(!menuAbierto)} className="md:hidden hover:text-amber-200">
+      {menuAbierto ? <FaTimes size={22} /> : <FaBars size={22} />}
+    </button>
+    <button onClick={handleLogout} className="hidden md:inline bg-amber-300 text-black font-semibold px-3 py-1 rounded-xl hover:bg-yellow-500">
+      Cerrar sesión
+    </button>
+  </div>
+
+  {menuAbierto && (
+    <div className="absolute top-full right-0 bg-white text-black w-48 rounded-b-lg shadow-lg md:hidden">
+      <button onClick={() => navigate("/notificaciones")} className="w-full text-left px-4 py-2 hover:bg-gray-200">🔔 Notificaciones</button>
+      <button onClick={handleLogout} className="w-full text-left px-4 py-2 hover:bg-gray-200">🚪 Cerrar sesión</button>
+    </div>
+  )}
+</nav>
+
 
       <div className="relative flex flex-col md:flex-row p-6 gap-6">
         {/* Lista de hembras */}
         <div className="w-full md:w-1/6 bg-white/30 backdrop-blur-md border border-white/50 p-4 rounded-xl shadow-xl h-auto md:h-[calc(100vh-6rem)] sticky top-24 overflow-y-auto">
           <h2 className="text-xl font-bold mb-4">Hembras</h2>
 
-          <div className="mb-4">
+          <div className="mb-4  focus:outline-none focus:ring-2 focus:bg-amber-400">
             <select
               value={filtroEstado}
               onChange={(e) => { setFiltroEstado(e.target.value as any); setPagina(1); }}
@@ -246,7 +278,7 @@ export default function ReproduccionPorHembra() {
             return (
               <div
                 key={h.id}
-                className={`w-full text-left px-4 py-2 mb-2 rounded-lg flex flex-col ${!estaViva ? "bg-gray-300 text-gray-700 line-through" : "bg-amber-400 text-black"}`}
+                className={`w-full text-left px-4 py-2 mb-2 rounded-lg flex flex-col ${!estaViva ? "bg-gray-200 text-black line-through hover:bg-amber-400" : "bg-amber-400 text-black"}`}
               >
                 <span className="font-bold">{h.codigo} - {h.loteNombre} ({h.especie})</span>
                 <div className="flex gap-2 mt-2">
@@ -428,7 +460,12 @@ export default function ReproduccionPorHembra() {
             </>
           )}
         </div>
+        
       </div>
+       <footer className="w-screen bg-[#094297dc] py-3 md:py-4 text-center text-xs md:text-sm text-white relative z-10">
+          <p>© 2025 INNOVASYSTEM. Todos los derechos reservados.</p>
+        </footer>
     </div>
+    
   );
 }

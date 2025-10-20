@@ -64,7 +64,7 @@ export default function App() {
       />
 
       <Route
-        path="/historial"
+        path="/estadisticas"
         element={
           <ProtectedRoute allowedRoles={["admin", "worker"]}>
             <HistorialAnimales />

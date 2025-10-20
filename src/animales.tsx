@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react"; 
 import { collection, addDoc, getDocs, doc, setDoc, deleteDoc, query, where } from "firebase/firestore";
 import { db } from "./firebase";
-import { getAuth } from "firebase/auth";
-import { FaTrash, FaEdit, FaPlus, FaArrowLeft, FaAppleAlt, FaHeart, FaSkull, FaMoneyBillWave } from "react-icons/fa";
+import { getAuth, signOut } from "firebase/auth";
+import { FaTrash, FaEdit, FaPlus, FaArrowLeft, FaAppleAlt, FaHeart, FaSkull, FaMoneyBillWave, FaHome, FaBell, FaTimes, FaBars } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import cowsBackground from "./assets/cows2.jpg";
 
@@ -33,9 +33,16 @@ export default function AnimalesPorLote() {
   const [orden, setOrden] = useState<{ campo: keyof Animal | null; asc: boolean }>({ campo: null, asc: true });
   const [filtroEstado, setFiltroEstado] = useState<string>("");
 
+  const [menuAbierto, setMenuAbierto] = useState(false);
+
   const auth = getAuth();
   const navigate = useNavigate();
   const ITEMS_PAGINA = 40;
+
+  const handleLogout = async () => {
+    await signOut(auth);
+    navigate("/");
+  };
 
   const calcularEdad = (fecha: string) => {
     const hoy = new Date();
@@ -92,19 +99,31 @@ export default function AnimalesPorLote() {
     cargarAnimales();
   };
 
-  const marcarComoMuerto = async (animal: Animal) => {
-    if (!loteSeleccionado || !animal.id) return;
-    if (!confirm(`¿Marcar ${animal.codigo} como muerto?`)) return;
-    await setDoc(doc(db, "lotes", loteSeleccionado.id!, "animales", animal.id), { estado: "muerto" }, { merge: true });
-    cargarAnimales();
-  };
+ const marcarComoMuerto = async (animal: Animal) => {
+  if (!loteSeleccionado || !animal.id) return;
+  if (!confirm(`¿Marcar ${animal.codigo} como muerto?`)) return;
+  
+  await setDoc(doc(db, "lotes", loteSeleccionado.id!, "animales", animal.id), {
+    estado: "muerto",
+    fechaMuerte: new Date().toISOString().split("T")[0] // <- Aquí
+  }, { merge: true });
+  
+  cargarAnimales();
+};
 
-  const marcarComoVendido = async (animal: Animal) => {
-    if (!loteSeleccionado || !animal.id) return;
-    if (!confirm(`¿Marcar ${animal.codigo} como vendido?`)) return;
-    await setDoc(doc(db, "lotes", loteSeleccionado.id!, "animales", animal.id), { estado: "vendido" }, { merge: true });
-    cargarAnimales();
-  };
+const marcarComoVendido = async (animal: Animal) => {
+  if (!loteSeleccionado || !animal.id) return;
+  if (!confirm(`¿Marcar ${animal.codigo} como vendido?`)) return;
+
+  await setDoc(doc(db, "lotes", loteSeleccionado.id!, "animales", animal.id), {
+    estado: "vendido",
+    fechaVenta: new Date().toISOString().split("T")[0] // <- Aquí
+  }, { merge: true });
+  
+  cargarAnimales();
+};
+
+
 
   const mandarAReproduccion = async (animal: Animal) => {
     if (!loteSeleccionado || !animal.id) return;
@@ -142,10 +161,41 @@ export default function AnimalesPorLote() {
       <div className="absolute inset-0 bg-cover bg-center blur-[2px]" style={{ backgroundImage: `url(${cowsBackground})` }} />
       <div className="absolute inset-0 bg-white/20" />
 
-      <div className="sticky top-0 z-50 bg-teal-500 text-black p-4 flex items-center gap-4 shadow-md">
-        <button onClick={() => navigate(-1)} className="hover:text-teal-700 transition"><FaArrowLeft size={20} /></button>
-        <h1 className="text-lg font-bold">Gestión de Animales por Lote</h1>
-      </div>
+      {/*barra de navegación */}
+      <nav className="sticky top-0 z-50 bg-teal-500 text-black flex items-center justify-between p-4 shadow-lg">
+        <div className="flex items-center gap-4">
+          
+          <h1 className="text-2xl font-extrabold">Gestión de Animales por Lote</h1>
+        </div>
+
+        <div className="flex items-center gap-4">
+          <button onClick={() => navigate("/home")} className="hover:text-teal-300 transition">
+            <FaHome size={20} />
+          </button>
+          <button onClick={() => navigate("/notificaciones")} className="hover:text-teal-300 transition">
+            <FaBell size={20} />
+          </button>
+          <button onClick={() => navigate("/estadisticas")} className="text-black font-semibold bg-teal-400 px-3 py-1 rounded-xl shadow-inner hover:bg-teal-600">
+  <span className="font-semibold">📊</span> Estadisticas
+</button>
+
+          <button onClick={() => setMenuAbierto(!menuAbierto)} className="md:hidden hover:text-teal-300">
+            {menuAbierto ? <FaTimes size={22} /> : <FaBars size={22} />}
+          </button>
+          <button onClick={handleLogout} className="hidden md:inline bg-teal-400 text-black font-semibold px-3 py-1 rounded-xl hover:bg-teal-600">
+            Cerrar sesión
+          </button>
+        </div>
+
+        {menuAbierto && (
+          <div className="absolute top-full right-0 bg-white text-black w-48 rounded-b-lg shadow-lg md:hidden">
+            <button onClick={() => navigate("/notificaciones")} className="w-full text-left px-4 py-2 hover:bg-gray-200">🔔 Notificaciones</button>
+            <button onClick={handleLogout} className="w-full text-left px-4 py-2 hover:bg-gray-200">🚪 Cerrar sesión</button>
+          </div>
+        )}
+      </nav>
+
+      
 
       <div className="relative p-6 md:p-9 flex flex-col md:flex-row gap-6 md:gap-9">
         {/* Lotes */}
@@ -274,6 +324,9 @@ export default function AnimalesPorLote() {
           )}
         </div>
       </div>
+       <footer className="w-screen bg-[#094297dc] py-3 md:py-4 text-center text-xs md:text-sm text-white relative z-10">
+          <p>© 2025 INNOVASYSTEM. Todos los derechos reservados.</p>
+        </footer>
     </div>
   );
 }

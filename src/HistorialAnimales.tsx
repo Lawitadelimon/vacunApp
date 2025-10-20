@@ -1,151 +1,357 @@
+import autoTable from "jspdf-autotable";
 import { useState, useEffect } from "react";
-import { collection, getDocs, query, where } from "firebase/firestore";
+import { collection, doc, getDocs } from "firebase/firestore";
 import { db } from "./firebase";
+import logoRancho from "./assets/logo.jpg";
+
 import {
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
+  startOfMonth,
+  endOfMonth,
+  eachDayOfInterval,
+  format,
+  parseISO,
+  isWithinInterval,
+} from "date-fns";
+import { es } from "date-fns/locale";
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
 } from "recharts";
-import { getAuth } from "firebase/auth";
+import jsPDF from "jspdf";
+import "jspdf-autotable";
+import { useNavigate } from "react-router-dom";
+import { getAuth, signOut } from "firebase/auth";
+import { useState as useMenuState } from "react";
+import { FaHome, FaBell, FaTimes, FaBars } from "react-icons/fa";
+import cowsBackground from "./assets/cows2.jpg";
 
-type AnimalHistorial = {
-  id?: string;
+interface Animal {
+  id: string;
   codigo: string;
-  especie: string;
-  raza: string;
-  sexo: string;
-  fechaNacimiento: string;
-  edad: string;
-  estado: "muerto" | "vendido";
-  precio?: number;
-  fechaAccion: string;
-};
-
-function getSemana(fechaStr: string) {
-  const fecha = new Date(fechaStr);
-  const primerDia = new Date(fecha.getFullYear(), 0, 1);
-  const dia = Math.floor((fecha.getTime() - primerDia.getTime()) / (1000 * 60 * 60 * 24));
-  return Math.ceil((dia + primerDia.getDay() + 1) / 7);
+  fechaMuerte?: string;
+  fechaVenta?: string;
 }
 
-export default function HistorialAnimales() {
-  const [animales, setAnimales] = useState<AnimalHistorial[]>([]);
-  const [filtro, setFiltro] = useState<"muerto" | "vendido">("muerto");
-  const [datosGrafica, setDatosGrafica] = useState<any[]>([]);
+interface DiaResumen {
+  dia: string;
+  muertos: number;
+  vendidos: number;
+  codigosMuertos: string;
+  codigosVendidos: string;
+}
 
+export default function Estadisticas() {
+  const [animales, setAnimales] = useState<Animal[]>([]);
+  const [mesSeleccionado, setMesSeleccionado] = useState(() => new Date());
+  const [resumen, setResumen] = useState<DiaResumen[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [menuAbierto, setMenuAbierto] = useMenuState(false);
+
+  const navigate = useNavigate();
   const auth = getAuth();
 
+  const handleLogout = async () => {
+    await signOut(auth);
+    navigate("/");
+  };
+
   useEffect(() => {
-    const cargarDatos = async () => {
-      const user = auth.currentUser;
-      if (!user) return;
-
-      const lotesSnap = await getDocs(query(collection(db, "lotes"), where("uid", "==", user.uid)));
-      const lotes = lotesSnap.docs.map(doc => ({ id: doc.id }));
-
-      let todosHistorial: AnimalHistorial[] = [];
-
-      for (const lote of lotes) {
-        const historialSnap = await getDocs(collection(db, "lotes", lote.id!, "historial"));
-        const historial = historialSnap.docs.map(doc => ({ id: doc.id, ...(doc.data() as AnimalHistorial) }));
-        todosHistorial = todosHistorial.concat(historial);
-      }
-
-      setAnimales(todosHistorial);
-    };
-
-    cargarDatos();
+    cargarAnimales();
   }, []);
 
   useEffect(() => {
-    const animalesFiltrados = animales.filter(a => a.estado === filtro);
-    const porSemana: Record<number, any> = {};
+    procesarResumen();
+  }, [animales, mesSeleccionado]);
 
-    animalesFiltrados.forEach(a => {
-      const semana = getSemana(a.fechaAccion); 
-      if (!porSemana[semana]) porSemana[semana] = { semana, cantidad: 0, total: 0 };
-      porSemana[semana].cantidad += 1;
-      if (filtro === "vendido" && a.precio) porSemana[semana].total += a.precio;
-    });
+  const cargarAnimales = async () => {
+    setLoading(true);
+    const colecciones = ["lotes", "lotesnuevos"];
+    let todos: Animal[] = [];
 
-    // Ordenar semanas y acumular
-    const semanasOrdenadas = Object.values(porSemana).sort((a, b) => a.semana - b.semana);
-    let acumulado = 0;
-    semanasOrdenadas.forEach(s => {
-      acumulado += s.cantidad;
-      s.acumulado = acumulado;
-      if (filtro === "vendido") {
-        s.totalAcumulado = (s.totalAcumulado || 0) + s.total;
+    for (const col of colecciones) {
+      const lotesSnap = await getDocs(collection(db, col));
+      for (const loteDoc of lotesSnap.docs) {
+        const animalesSnap = await getDocs(
+          collection(db, col, loteDoc.id, "animales")
+        );
+        todos.push(
+          ...animalesSnap.docs.map((a) => ({
+            id: a.id,
+            codigo: a.data().codigo,
+            fechaMuerte: a.data().fechaMuerte,
+            fechaVenta: a.data().fechaVenta,
+          }))
+        );
       }
+    }
+
+    setAnimales(todos);
+    setLoading(false);
+  };
+
+  const procesarResumen = () => {
+    const inicio = startOfMonth(mesSeleccionado);
+    const fin = endOfMonth(mesSeleccionado);
+    const dias = eachDayOfInterval({ start: inicio, end: fin });
+
+    const resumenDias: DiaResumen[] = dias.map((d) => {
+      const muertosArr = animales.filter(
+        (a) =>
+          a.fechaMuerte &&
+          isWithinInterval(parseISO(a.fechaMuerte), { start: inicio, end: fin }) &&
+          parseISO(a.fechaMuerte).getDate() === d.getDate()
+      );
+      const vendidosArr = animales.filter(
+        (a) =>
+          a.fechaVenta &&
+          isWithinInterval(parseISO(a.fechaVenta), { start: inicio, end: fin }) &&
+          parseISO(a.fechaVenta).getDate() === d.getDate()
+      );
+
+      return {
+        dia: format(d, "dd MMM", { locale: es }),
+        muertos: muertosArr.length,
+        vendidos: vendidosArr.length,
+        codigosMuertos: muertosArr.map((a) => a.codigo).join(", "),
+        codigosVendidos: vendidosArr.map((a) => a.codigo).join(", "),
+      };
     });
 
-    setDatosGrafica(semanasOrdenadas);
-  }, [animales, filtro]);
+    setResumen(resumenDias);
+  };
 
-  const animalesTabla = animales.filter(a => a.estado === filtro);
+  const exportarPDF = () => {
+  const doc = new jsPDF("p", "mm", "a4");
+  const margin = 14;
+
+  // 🔹 Encabezado con logo y título
+  doc.addImage(logoRancho, "PNG", margin, 10, 25, 25);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(18);
+  doc.text("Rancho El Paraíso", margin + 30, 18);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(12);
+  doc.text("Reporte mensual de animales", margin + 30, 26);
+  doc.setFontSize(10);
+  doc.text(`Fecha: ${format(new Date(), "dd/MM/yyyy")}`, 195, 18, { align: "right" });
+
+  // 🔹 Subtítulo
+  doc.setFontSize(12);
+  doc.text(
+    `Mes: ${format(mesSeleccionado, "MMMM yyyy", { locale: es })}`,
+    margin,
+    42
+  );
+
+  // 🔹 Tabla con los datos
+  const tableData = resumen.map((r) => [
+    r.dia,
+    r.muertos,
+    r.codigosMuertos,
+    r.vendidos,
+    r.codigosVendidos,
+  ]);
+
+  autoTable(doc, {
+    head: [["Día", "Muertos", "Códigos Muertos", "Vendidos", "Códigos Vendidos"]],
+    body: tableData,
+    startY: 48,
+    styles: { fontSize: 9, cellPadding: 2 },
+    headStyles: { fillColor: [255, 145, 0], textColor: 255, halign: "center" },
+    alternateRowStyles: { fillColor: [245, 245, 245] },
+    columnStyles: {
+      0: { halign: "center", cellWidth: 25 },
+      1: { halign: "center", cellWidth: 20 },
+      3: { halign: "center", cellWidth: 20 },
+    },
+  });
+
+  // 🔹 Totales generales
+  const finalY = (doc as any).lastAutoTable.finalY || 48;
+  const totalMuertos = resumen.reduce((sum, r) => sum + r.muertos, 0);
+  const totalVendidos = resumen.reduce((sum, r) => sum + r.vendidos, 0);
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(12);
+  doc.text(
+    `Totales del mes — Muertos: ${totalMuertos} | Vendidos: ${totalVendidos}`,
+    margin,
+    finalY + 10
+  );
+
+  // 🔹 Pie de página
+  const pageHeight = doc.internal.pageSize.height;
+  doc.setFont("helvetica", "italic");
+  doc.setFontSize(9);
+  doc.text(
+    `Generado automáticamente por Animanager – ${format(new Date(), "dd/MM/yyyy")}`,
+    105,
+    pageHeight - 10,
+    { align: "center" }
+  );
+
+  // 🔹 Guardar el PDF
+  doc.save(`Reporte_Rancho_${format(mesSeleccionado, "MM_yyyy")}.pdf`);
+};
+
+
+
+  if (loading)
+    return <div className="text-center py-10 text-white">Cargando...</div>;
 
   return (
-    <div className="p-6 bg-white/80 backdrop-blur-md rounded-3xl shadow-lg space-y-6">
-      <h2 className="text-2xl font-bold mb-2">Historial de Animales</h2>
+    <div className="relative min-h-screen">
+      {/* Fondo */}
+      <div
+        className="absolute inset-0 bg-cover bg-center blur-[2px]"
+        style={{ backgroundImage: `url(${cowsBackground})` }}
+      />
+      <div className="absolute inset-0 bg-white/30" />
 
-      <div className="mb-4">
-        <label className="mr-2 font-semibold">Mostrar:</label>
-        <select
-          value={filtro}
-          onChange={e => setFiltro(e.target.value as "muerto" | "vendido")}
-          className="border rounded px-2 py-1"
-        >
-          <option value="muerto">Muertos</option>
-          <option value="vendido">Vendidos</option>
-        </select>
-      </div>
+      {/* Navbar */}
+      <nav className="sticky top-0 z-50 bg-orange-500 text-black flex items-center justify-between p-4 shadow-lg">
+        <div className="flex items-center gap-4">
+          <h1 className="text-2xl font-extrabold"> Estadísticas animales muertos y vendidos</h1>
+        </div>
+        <div className="flex items-center gap-4">
+          <button
+            onClick={() => navigate("/home")}
+            className="hover:text-orange-300 transition"
+            title="Inicio"
+          >
+            <FaHome size={20} />
+          </button>
+          <button
+            onClick={() => navigate("/notificaciones")}
+            className="hover:text-orange-300 transition"
+            title="Notificaciones"
+          >
+            <FaBell size={20} />
+          </button>
+          
+          <button
+            onClick={() => setMenuAbierto(!menuAbierto)}
+            className="md:hidden hover:text-orange-300"
+          >
+            {menuAbierto ? <FaTimes size={22} /> : <FaBars size={22} />}
+          </button>
+          <button
+            onClick={handleLogout}
+            className="hidden md:inline bg-orange-400 text-black font-semibold px-3 py-1 rounded-xl hover:bg-orange-600"
+          >
+            Cerrar sesión
+          </button>
+        </div>
+        {menuAbierto && (
+          <div className="absolute top-full right-0 bg-white text-black w-48 rounded-b-lg shadow-lg md:hidden">
+            <button
+              onClick={() => navigate("/notificaciones")}
+              className="w-full text-left px-4 py-2 hover:bg-gray-200"
+            >
+              🔔 Notificaciones
+            </button>
+            <button
+              onClick={handleLogout}
+              className="w-full text-left px-4 py-2 hover:bg-gray-200"
+            >
+              🚪 Cerrar sesión
+            </button>
+          </div>
+        )}
+      </nav>
 
-      <div className="overflow-x-auto rounded-xl shadow-md">
-        <table className="w-full border-collapse text-left">
-          <thead className="bg-teal-500 text-white">
-            <tr>
-              <th className="p-2 border">Código</th>
-              <th className="p-2 border">Especie</th>
-              <th className="p-2 border">Raza</th>
-              <th className="p-2 border">Sexo</th>
-              <th className="p-2 border">Fecha Nac.</th>
-              <th className="p-2 border">Edad</th>
-              <th className="p-2 border">Fecha Acción</th>
-              {filtro === "vendido" && <th className="p-2 border">Precio</th>}
-            </tr>
-          </thead>
-          <tbody>
-            {animalesTabla.map(a => (
-              <tr key={a.id} className="border-b hover:bg-yellow-50 transition-colors">
-                <td className="p-2 border">{a.codigo}</td>
-                <td className="p-2 border">{a.especie}</td>
-                <td className="p-2 border">{a.raza}</td>
-                <td className="p-2 border">{a.sexo}</td>
-                <td className="p-2 border">{a.fechaNacimiento}</td>
-                <td className="p-2 border">{a.edad}</td>
-                <td className="p-2 border">{new Date(a.fechaAccion).toLocaleDateString()}</td>
-                {filtro === "vendido" && <td className="p-2 border">{a.precio}</td>}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      {/* Contenido */}
+      <div className="relative p-6 md:p-10">
+        <div className="bg-white/30 backdrop-blur-md border border-white/40 p-6 rounded-3xl shadow-lg">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-lg font-bold">📊 Reporte Mensual</h2>
+            <div className="flex gap-4">
+              <input
+                type="month"
+                value={format(mesSeleccionado, "yyyy-MM")}
+                onChange={(e) =>
+                  setMesSeleccionado(new Date(e.target.value + "-01"))
+                }
+                className="px-2 py-1 rounded text-black"
+              />
+              <button
+                onClick={exportarPDF}
+                className="bg-orange-500 px-4 py-2 rounded-2xl hover:bg-orange-600 text-white"
+              >
+                📄 Descargar PDF
+              </button>
+            </div>
+          </div>
 
-      <div className="bg-white/50 p-4 rounded-xl shadow">
-        <h3 className="font-semibold mb-2 text-gray-700">
-          {filtro === "muerto" ? "Muertes Semanales (Acumuladas)" : "Ventas Semanales (Acumuladas)"}
-        </h3>
-        <ResponsiveContainer width="100%" height={300}>
-          <LineChart data={datosGrafica} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="semana" label={{ value: "Semana", position: "insideBottom", offset: -5 }} />
-            <YAxis label={{ value: "Cantidad", angle: -90, position: "insideLeft" }} />
-            <Tooltip />
-            <Legend />
-            <Line type="monotone" dataKey="cantidad" stroke={filtro === "muerto" ? "#f87171" : "#34d399"} name="Cantidad" />
-            <Line type="monotone" dataKey="acumulado" stroke="#0d9488" name="Acumulado" />
-            {filtro === "vendido" && <Line type="monotone" dataKey="totalAcumulado" stroke="#059669" name="Monto Total Acumulado" />}
-          </LineChart>
-        </ResponsiveContainer>
+          <div className="bg-gray-600 p-4 rounded mb-6">
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={resumen}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="dia" />
+                <YAxis />
+                <Tooltip
+                  formatter={(value, name) => [
+                    value,
+                    name === "muertos" ? "Muertos" : "Vendidos",
+                  ]}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="muertos"
+                  stroke="#ef4444"
+                  name="Muertos"
+                />
+                <Line
+                  type="monotone"
+                  dataKey="vendidos"
+                  stroke="#f97316"
+                  name="Vendidos"
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+
+          <div className="bg-gray-600 p-4 rounded overflow-x-auto">
+            <table className="w-full text-white border-collapse">
+              <thead>
+                <tr className="bg-orange-500">
+                  <th className="p-2 border">Día</th>
+                  <th className="p-2 border">Muertos</th>
+                  <th className="p-2 border">Códigos Muertos</th>
+                  <th className="p-2 border">Vendidos</th>
+                  <th className="p-2 border">Códigos Vendidos</th>
+                </tr>
+              </thead>
+              <tbody>
+                {resumen.map((r) => (
+                  <tr key={r.dia} className="even:bg-gray-700">
+                    <td className="p-2 border">{r.dia}</td>
+                    <td className="p-2 border">{r.muertos}</td>
+                    <td className="p-2 border">{r.codigosMuertos}</td>
+                    <td className="p-2 border">{r.vendidos}</td>
+                    <td className="p-2 border">{r.codigosVendidos}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            {/* Total general */}
+            <div className="mt-6 text-right text-xl font-bold text-white">
+              Total Muertos:{" "}
+              {resumen.reduce((sum, r) => sum + r.muertos, 0)} | Total Vendidos:{" "}
+              {resumen.reduce((sum, r) => sum + r.vendidos, 0)}
+            </div>
+          </div>
+        </div>
       </div>
+       <footer className="w-screen bg-[#094297dc] py-3 md:py-4 text-center text-xs md:text-sm text-white relative z-10">
+          <p>© 2025 INNOVASYSTEM. Todos los derechos reservados.</p>
+        </footer>
     </div>
   );
 }

@@ -1,46 +1,35 @@
 import { useState } from "react";
 import { signInWithEmailAndPassword } from "firebase/auth";
-import { auth, db } from "./firebase";
-import { doc, getDoc } from "firebase/firestore";
+import { auth } from "./firebase";
+import { useNavigate } from "react-router-dom";
 
-interface Props {
+interface LoginFormProps {
   onValidation: (msg: string) => void;
 }
 
-export default function LoginForm({ onValidation }: Props) {
+export default function LoginForm({ onValidation }: LoginFormProps) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const navigate = useNavigate();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      const user = userCredential.user;
-
-      // Revisar role
-      const docSnap = await getDoc(doc(db, "users", user.uid));
-      if (docSnap.exists()) {
-        const data = docSnap.data() as any;
-        if (!data.role) {
-          onValidation("❌ Usuario pendiente de aprobación por admin.");
-          return;
-        }
-      }
-
+      await signInWithEmailAndPassword(auth, email, password);
       onValidation("✅ Inicio de sesión exitoso");
-    } catch (err: any) {
-      onValidation("❌ " + err.message);
+    } catch (error: any) {
+      onValidation(`❌ ${error.message}`);
     }
   };
 
   return (
-    <form onSubmit={handleLogin} className="flex flex-col gap-4">
+    <form onSubmit={handleLogin} className="flex flex-col gap-3">
       <input
         type="email"
         placeholder="Correo"
         value={email}
         onChange={(e) => setEmail(e.target.value)}
-        className="p-2 border rounded"
+        className="border rounded p-2"
         required
       />
       <input
@@ -48,14 +37,25 @@ export default function LoginForm({ onValidation }: Props) {
         placeholder="Contraseña"
         value={password}
         onChange={(e) => setPassword(e.target.value)}
-        className="p-2 border rounded"
+        className="border rounded p-2"
         required
       />
+
       <button
         type="submit"
-        className="bg-green-500 hover:bg-green-700 text-white py-2 rounded"
+        className="text-white rounded py-2 hover:bg-blue-600 transition"
+        style={{ backgroundColor: "#099757dc" }}
       >
         Iniciar Sesión
+      </button>
+
+      {/* Redirigir a pantalla de recuperación */}
+      <button
+        type="button"
+        onClick={() => navigate("/forgot-password")}
+        className="text-sm text-blue-700 hover:underline mt-1 self-start"
+      >
+        ¿Olvidaste tu contraseña?
       </button>
     </form>
   );
