@@ -387,7 +387,7 @@ export default function Salud() {
               />
               <button
                 onClick={agregarVacunaGeneral}
-                className="bg-red-500 text-white px-4 py-2 rounded-lg font-semibold hover:bg-red-600 transition flex items-center gap-2"
+                className="bg-red-500 text-white px-4 py-2 rounded-2xl font-semibold hover:bg-red-600 transition flex items-center gap-2"
               >
                 <FaPlus /> Agregar
               </button>

@@ -205,7 +205,7 @@ export default function NacimientosPorLote() {
                 <input type="text" placeholder="Peso al nacer" value={formData.peso} onChange={e => setFormData(f => ({ ...f, peso: e.target.value }))} className={inputClasses} />
                 <input type="text" placeholder="Estado de salud" value={formData.estadoSalud} onChange={e => setFormData(f => ({ ...f, estadoSalud: e.target.value }))} className={inputClasses} />
               </div>
-              <button onClick={guardarNacimiento} className="mt-4 bg-pink-500 text-white px-6 py-2 rounded-xl font-semibold hover:bg-pink-600 transition">Guardar</button>
+              <button onClick={guardarNacimiento} className="mt-4 bg-pink-500 text-white px-6 py-2 rounded-2xl font-semibold hover:bg-pink-600 transition">Guardar</button>
             </div>
           )}
 

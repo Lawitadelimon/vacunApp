@@ -377,7 +377,7 @@ export default function ReproduccionPorHembra() {
                   disabled={selectedHembra.estado !== "vivo"}
                   className={`mt-6 w-full md:w-auto bg-amber-400 text-white px-6 py-3 rounded-2xl font-semibold hover:bg-yellow-500 transition-shadow shadow-md hover:shadow-xl ${selectedHembra.estado !== "vivo" ? "opacity-50 cursor-not-allowed" : ""}`}
                 >
-                  Guardar Registro
+                  Guardar
                 </button>
               </div>
 

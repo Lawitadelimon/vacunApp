@@ -190,14 +190,14 @@ export default function Alimentacion() {
               <button
                 onClick={guardarPlan}
                 disabled={guardando}
-                className={`flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-2xl transition ${guardando ? "opacity-50 cursor-not-allowed" : ""}`}
+                className={`flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white font-semibold px-4 py-2 rounded-2xl transition ${guardando ? "opacity-50 cursor-not-allowed" : ""}`}
               >
                 <FaSave /> {guardando ? "Guardando..." : "Guardar Plan"}
               </button>
 
               <button
                 onClick={quitarDeAlimentacion}
-                className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-2xl transition"
+                className="bg-red-500 hover:bg-red-600 text-white font-semibold px-4 py-2 rounded-2xl transition"
               >
                 Quitar de nutrición
               </button>
