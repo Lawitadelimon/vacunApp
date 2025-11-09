@@ -101,7 +101,7 @@ export default function Reportes() {
     setMenuNotificacionesOpen(false);
   };
 
-  // 🔹 Cargar reportes
+  
   useEffect(() => {
     if (!userId || !userRole) return;
 
