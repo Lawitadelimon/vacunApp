@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { auth, db } from "./firebase";
-import { createUserWithEmailAndPassword } from "firebase/auth";
+import { createUserWithEmailAndPassword, signOut } from "firebase/auth";
 import { doc, setDoc } from "firebase/firestore";
 
 interface RegisterFormProps {
@@ -37,12 +37,19 @@ export function RegisterForm({ onRegisterSuccess, onValidation }: RegisterFormPr
       await setDoc(doc(db, "users", newUser.uid), {
         name,
         email,
-        role: "pending", // <-- Importante: queda en espera
+        role: "pending", // queda en espera de aprobación
         createdAt: new Date().toISOString(),
       });
 
+      // ✅ Avisar que se creó el usuario
       onValidation("✅ Usuario creado correctamente. Contacta a tu administrador para obtener acceso.");
+
+      // 🚪 Cerrar sesión inmediatamente después del registro
+      await signOut(auth);
+
+      // 🔁 Redirigir a la pantalla de inicio de sesión
       onRegisterSuccess();
+
     } catch (error: any) {
       console.error("Error en registro:", error);
       onValidation("❌ Error al crear usuario: " + error.message);

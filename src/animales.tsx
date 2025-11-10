@@ -176,7 +176,7 @@ const marcarComoVendido = async (animal: Animal) => {
             <FaBell size={20} />
           </button>
           <button onClick={() => navigate("/estadisticas")} className="text-black font-semibold bg-teal-400 px-3 py-1 rounded-xl shadow-inner hover:bg-teal-600">
-  <span className="font-semibold">📊</span> Estadisticas por mes
+  <span className="font-semibold">📊</span> Estadisticas
 </button>
 
           <button onClick={() => setMenuAbierto(!menuAbierto)} className="md:hidden hover:text-teal-300">

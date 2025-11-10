@@ -33,6 +33,7 @@ const cards = [
 
 export default function HomePage() {
   const [hayNotificaciones, setHayNotificaciones] = useState(false);
+  const [notificaciones, setNotificaciones] = useState<any[]>([]);
   const [usuariosPendientes, setUsuariosPendientes] = useState<any[]>([]);
   const [menuOpen, setMenuOpen] = useState(false);
   const navigate = useNavigate();
@@ -61,20 +62,24 @@ export default function HomePage() {
   }, []);
 
   // 🔔 Cargar notificaciones
-  const cargarNotificaciones = async () => {
+  useEffect(() => {
     const currentUser = auth.currentUser;
     if (!currentUser) return;
 
-    const q = query(collection(db, "tareas"), where("uid", "==", currentUser.uid));
-    const querySnapshot = await getDocs(q);
-    const hoy = new Date().toISOString().split("T")[0];
+    const q = query(
+      collection(db, "notificaciones"),
+      where("para", "==", user?.role === "admin" ? "admin" : currentUser.uid)
+    );
 
-    const pendientes = querySnapshot.docs
-      .map(doc => doc.data())
-      .filter((t: any) => t.fecha && t.fecha <= hoy && !t.completada);
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setNotificaciones(data);
+      // Solo contar las no leídas
+      setHayNotificaciones(data.filter(n => !n.leido).length > 0);
+    });
 
-    setHayNotificaciones(pendientes.length > 0);
-  };
+    return () => unsubscribe();
+  }, [user?.role]);
 
   // 👥 Escuchar usuarios en espera
   useEffect(() => {
@@ -93,10 +98,6 @@ export default function HomePage() {
   const asignarRol = async (id: string, rol: "admin" | "worker") => {
     await updateDoc(doc(db, "users", id), { role: rol });
   };
-
-  useEffect(() => {
-    cargarNotificaciones();
-  }, []);
 
   const handleLogout = async () => {
     await signOut(auth);
@@ -124,7 +125,6 @@ export default function HomePage() {
 
       {/* Contenido */}
       <div className="relative z-10 flex-1 flex flex-col md:flex-row w-full">
-        {/* Columna principal */}
         <div className="flex-1 flex flex-col items-center">
           {/* Header */}
           <header className="w-full py-3 px-4 md:py-4 md:px-6 flex justify-between items-center shadow-md bg-black/5 backdrop-blur-md text-white relative z-20">
@@ -138,7 +138,7 @@ export default function HomePage() {
               <Link to="/notificaciones" className="text-white text-xl relative">
                 <FaBell />
                 {hayNotificaciones && (
-                  <span className="absolute -top-2 -right-2 text-lg animate-bounce">🐄</span>
+                  <span className="absolute -top-2 -right-2 w-3 h-3 rounded-full bg-red-500 animate-pulse" />
                 )}
               </Link>
 
@@ -173,7 +173,7 @@ export default function HomePage() {
                 >
                   <FaBell /> Notificaciones
                   {hayNotificaciones && (
-                    <span className="absolute right-2 text-lg animate-bounce">🐄</span>
+                    <span className="absolute right-2 w-3 h-3 rounded-full bg-red-500 animate-pulse" />
                   )}
                 </Link>
 

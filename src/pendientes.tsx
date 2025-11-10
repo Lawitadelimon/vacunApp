@@ -76,7 +76,9 @@ export default function Pendientes() {
 
   const navigate = useNavigate();
   const categoriasGranja = ["Vacunación", "Alimentación", "Limpieza", "Revisión"];
-  const hoy = new Date().toISOString().split("T")[0];
+  const hoy = new Date(Date.now() - new Date().getTimezoneOffset() * 60000)
+  .toISOString()
+  .split("T")[0];
   const tareasPorPagina = 5;
 
   const toggleTarea = (id: string) => {
@@ -218,34 +220,34 @@ export default function Pendientes() {
 
       <div className="relative z-10 flex-1 flex flex-col items-center max-w-6xl mx-auto w-full px-4">
        {/* Header */}
-<header className="w-screen py-3 px-4 md:py-4 md:px-6 flex justify-between items-center shadow-md bg-blue-500 text-black relative z-20">
-  <h1 className="text-2xl font-extrabold">Asignacion de tareas</h1>
+<header className="w-screen py-3 px-4 md:py-4 md:px-6 flex justify-between items-center shadow-md bg-amber-500 text-white relative z-20">
+  <h1 className="text-lg md:text-2xl font-extrabold">AniManager</h1>
 
   {/* Menú desktop */}
   <div className="hidden md:flex items-center gap-4">
-    <button onClick={() => navigate("/home")} className="text-black hover:text-blue-300 transition">
+    <button onClick={() => navigate("/home")} className="text-white hover:text-yellow-400 transition">
       <FaHome size={22} />
     </button>
 
     <div className="relative">
-      <button onClick={() => navigate("/notificaciones")} className="text-black hover:text-blue-300 text-xl transition">
+      <button onClick={() => navigate("/notificaciones")} className="text-white hover:text-yellow-400 text-xl transition">
         <FaBell />
       </button>
       {hayNotificaciones && (
-        <span className="absolute -top-2 -right-2 bg-red-600 text-black text-xs font-bold px-1.5 py-0.5 rounded-full animate-pulse">
+        <span className="absolute -top-2 -right-2 bg-red-600 text-white text-xs font-bold px-1.5 py-0.5 rounded-full animate-pulse">
           {notificaciones.filter(n => !n.leido).length}
         </span>
       )}
     </div>
 
-    <button onClick={handleLogout} className="bg-blue-400 hover:bg-blue-700 text-black font-semibold px-3 py-1 rounded-xl">
+    <button onClick={handleLogout} className="bg-red-500 hover:bg-red-700 text-white px-3 py-1 rounded text-sm">
       Cerrar sesión
     </button>
   </div>
 
   {/* Menú hamburguesa móvil */}
   <button
-    className="md:hidden text-white text-2xl hover:text-blue-400 transition"
+    className="md:hidden text-white text-2xl hover:text-yellow-400 transition"
     onClick={() => setMenuOpen(!menuOpen)}
   >
     {menuOpen ? <FaTimes /> : <FaBars />}
@@ -304,8 +306,8 @@ export default function Pendientes() {
         <main className="flex flex-col md:flex-row justify-center gap-8 p-6 w-full">
           {/* Lista de tareas */}
           <section className="bg-white/90 backdrop-blur-md rounded-2xl shadow-lg p-6 w-full md:w-1/2 border border-yellow-100 transition-all hover:shadow-2xl hover:scale-[1.01] max-h-[600px] overflow-y-auto scrollbar-hide">
-            <h2 className="text-xl font-bold flex items-center gap-2 text-black mb-6 border-b border-blue-500 pb-2">
-              <FaClipboardList className="text-blue-600" /> Tareas Registradas
+            <h2 className="text-xl font-bold flex items-center gap-2 text-yellow-800 mb-6 border-b border-yellow-300 pb-2">
+              <FaClipboardList className="text-yellow-600" /> Tareas Registradas
             </h2>
 
             {tareas.length === 0 ? (
@@ -337,8 +339,8 @@ export default function Pendientes() {
                         {abierta && (
                           <div className="mt-2 ml-9">
                             {t.descripcion && <div className="text-xs text-gray-700">{t.descripcion}</div>}
-                            <div className="text-sm text-gray-800 mt-1">👨‍🌾 Asignada a: <span className="font-medium text-blue-800">{t.paraNombre || t.para}</span></div>
-                            <div className="text-xs text-blue-700 mt-1">📅 Fecha: {t.fecha}</div>
+                            <div className="text-sm text-gray-800 mt-1">👨‍🌾 Asignada a: <span className="font-medium text-yellow-800">{t.paraNombre || t.para}</span></div>
+                            <div className="text-xs text-yellow-700 mt-1">📅 Fecha: {t.fecha}</div>
                             {pendiente && <div className="mt-2 p-3 rounded-md border border-gray-300 bg-white/70 text-gray-700 italic">⏳ Esperando reporte del trabajador</div>}
                             {!pendiente && (
                               <div className={`mt-3 p-3 rounded-md border ${noRealizada ? "bg-red-50 border-red-300 text-red-900" : "bg-green-50 border-green-300 text-green-900"} transition-opacity`}>
@@ -361,7 +363,7 @@ export default function Pendientes() {
                 {totalPaginas > 1 && (
                   <div className="flex justify-center gap-2 mt-4">
                     {Array.from({ length: totalPaginas }, (_, i) => i + 1).map(num => (
-                      <button key={num} onClick={() => setPagina(num)} className={`px-3 py-1 rounded ${num === pagina ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-700 hover:bg-blue-300"}`}>{num}</button>
+                      <button key={num} onClick={() => setPagina(num)} className={`px-3 py-1 rounded ${num === pagina ? "bg-yellow-600 text-white" : "bg-gray-200 text-gray-700 hover:bg-yellow-300"}`}>{num}</button>
                     ))}
                   </div>
                 )}
@@ -370,38 +372,38 @@ export default function Pendientes() {
           </section>
 
           {/* Formulario */}
-          <section className="bg-white/90 backdrop-blur-md rounded-2xl shadow-lg p-6 w-full md:w-1/2 border border-blue-500 transition-all hover:shadow-2xl hover:scale-[1.01]">
-            <h2 className="text-xl font-bold text-blue-800 mb-6 border-b border-blue-500 pb-2">
+          <section className="bg-white/90 backdrop-blur-md rounded-2xl shadow-lg p-6 w-full md:w-1/2 border border-yellow-100 transition-all hover:shadow-2xl hover:scale-[1.01]">
+            <h2 className="text-xl font-bold text-yellow-800 mb-6 border-b border-yellow-300 pb-2">
               {editandoId ? "✏️ Editar tarea" : "🧾 Añadir nueva tarea"}
             </h2>
             <form className="space-y-5" onSubmit={handleSubmit}>
               <div className="flex flex-col">
-                <label className="text-sm font-semibold text-blue-800">Tarea:</label>
-                <input type="text" value={tarea} onChange={(e) => setTarea(e.target.value)} className="mt-1 p-2 border rounded-lg focus:ring-2 focus:ring-blue-400 outline-none transition-all" placeholder="Ej. Alimentar ganado" />
+                <label className="text-sm font-semibold text-yellow-800">Tarea:</label>
+                <input type="text" value={tarea} onChange={(e) => setTarea(e.target.value)} className="mt-1 p-2 border rounded-lg focus:ring-2 focus:ring-yellow-400 outline-none transition-all" placeholder="Ej. Alimentar ganado" />
               </div>
               <div className="flex flex-col">
-                <label className="text-sm font-semibold text-blue-800">Descripción:</label>
-                <textarea value={descripcion} onChange={(e) => setDescripcion(e.target.value)} className="mt-1 p-2 border rounded-lg focus:ring-2 focus:ring-blue-400 outline-none transition-all" placeholder="Detalles adicionales..."></textarea>
+                <label className="text-sm font-semibold text-yellow-800">Descripción:</label>
+                <textarea value={descripcion} onChange={(e) => setDescripcion(e.target.value)} className="mt-1 p-2 border rounded-lg focus:ring-2 focus:ring-yellow-400 outline-none transition-all" placeholder="Detalles adicionales..."></textarea>
               </div>
               <div className="flex flex-col">
-                <label className="text-sm font-semibold text-blue-800">Asignar a trabajador:</label>
-                <select value={para} onChange={(e) => setPara(e.target.value)} className="mt-1 p-2 border rounded-lg focus:ring-2 focus:ring-blue-400 outline-none transition-all">
+                <label className="text-sm font-semibold text-yellow-800">Asignar a trabajador:</label>
+                <select value={para} onChange={(e) => setPara(e.target.value)} className="mt-1 p-2 border rounded-lg focus:ring-2 focus:ring-yellow-400 outline-none transition-all">
                   <option value="">Seleccionar trabajador</option>
                   {usuarios.map((u) => (<option key={u.id} value={u.id}>{u.nombre || u.email}</option>))}
                 </select>
               </div>
               <div className="flex flex-col">
-                <label className="text-sm font-semibold text-blue-800">Categoría:</label>
-                <select value={categoria} onChange={(e) => setCategoria(e.target.value)} className="mt-1 p-2 border rounded-lg focus:ring-2 focus:ring-blue-400 outline-none transition-all">
+                <label className="text-sm font-semibold text-yellow-800">Categoría:</label>
+                <select value={categoria} onChange={(e) => setCategoria(e.target.value)} className="mt-1 p-2 border rounded-lg focus:ring-2 focus:ring-yellow-400 outline-none transition-all">
                   <option value="">Seleccionar categoría</option>
                   {categoriasGranja.map((cat) => (<option key={cat} value={cat}>{cat}</option>))}
                 </select>
               </div>
               <div className="flex flex-col">
-                <label className="text-sm font-semibold text-blue-800">Fecha:</label>
-                <input type="date" value={fecha} min={hoy} onChange={(e) => setFecha(e.target.value)} className="mt-1 p-2 border rounded-lg focus:ring-2 focus:ring-blue-400 outline-none transition-all" />
+                <label className="text-sm font-semibold text-yellow-800">Fecha:</label>
+                <input type="date" value={fecha} min={hoy} onChange={(e) => setFecha(e.target.value)} className="mt-1 p-2 border rounded-lg focus:ring-2 focus:ring-yellow-400 outline-none transition-all" />
               </div>
-              <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-transform hover:scale-[1.03]">
+              <button type="submit" className="w-full bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-2 px-4 rounded-lg transition-transform hover:scale-[1.03]">
                 {editandoId ? "Guardar cambios" : "Añadir tarea"}
               </button>
             </form>

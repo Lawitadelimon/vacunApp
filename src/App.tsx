@@ -1,6 +1,7 @@
 import { Routes, Route } from "react-router-dom";
 import Inicio from "./inicio";
 import AuthPage from "./AuthPage";
+import ForgotPasswordPage from "./ForgotPasswordPage"; // <-- Importa la nueva página
 import HomePage from "./HomePage";
 import Pendientes from "./pendientes";
 import Notificaciones from "./notificaciones";
@@ -11,22 +12,19 @@ import Salud from "./salud";
 import Reportes from "./reportes";
 import ProtectedRoute from "./ProtectedRoute";
 import ErrorPage from "./ErrorPage";
-import { Navigate } from "react-router-dom";
-import { useUser } from "./UserContext";
 import UsuariosPage from "./usuariosPage";
-import Nacimientos from "./nacimientos";
 import HistorialAnimales from "./HistorialAnimales";
+import Nacimientos from "./nacimientos";
 
 export default function App() {
-  
   return (
-
     <Routes>
       {/* Páginas públicas */}
       <Route path="/" element={<Inicio />} />
       <Route path="/auth" element={<AuthPage />} />
+      <Route path="/forgot-password" element={<ForgotPasswordPage />} /> {/* <-- NUEVA RUTA */}
 
-      {/* Páginas protegidas (todos los usuarios logueados) */}
+      {/* Páginas protegidas */}
       <Route
         path="/home"
         element={
@@ -35,7 +33,6 @@ export default function App() {
           </ProtectedRoute>
         }
       />
-
       <Route
         path="/animales"
         element={
@@ -44,7 +41,6 @@ export default function App() {
           </ProtectedRoute>
         }
       />
-
       <Route
         path="/reproduccion"
         element={
@@ -53,7 +49,6 @@ export default function App() {
           </ProtectedRoute>
         }
       />
-
       <Route
         path="/nacimientos"
         element={
@@ -80,7 +75,6 @@ export default function App() {
           </ProtectedRoute>
         }
       />
-
       <Route
         path="/salud"
         element={
@@ -89,16 +83,14 @@ export default function App() {
           </ProtectedRoute>
         }
       />
-
       <Route
         path="/reportes"
         element={
-          <ProtectedRoute allowedRoles={["admin"]}>
+          <ProtectedRoute allowedRoles={["admin", "worker"]}>
             <Reportes />
           </ProtectedRoute>
         }
       />
-
       <Route
         path="/pendientes"
         element={
@@ -107,7 +99,6 @@ export default function App() {
           </ProtectedRoute>
         }
       />
-
       <Route
         path="/notificaciones"
         element={
@@ -117,18 +108,17 @@ export default function App() {
         }
       />
       <Route
-          path="/usuarios"
-          element={
-            <ProtectedRoute allowedRoles={["admin"]}>
-              <UsuariosPage />
-            </ProtectedRoute>
-          }
-        />
+        path="/usuarios"
+        element={
+          <ProtectedRoute allowedRoles={["admin"]}>
+            <UsuariosPage />
+          </ProtectedRoute>
+        }
+      />
 
       {/* Página de error */}
       <Route path="/error" element={<ErrorPage />} />
       <Route path="*" element={<ErrorPage />} />
     </Routes>
-      
   );
 }

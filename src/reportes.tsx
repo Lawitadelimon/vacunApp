@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { db, auth } from "./firebase";
+import { serverTimestamp } from "firebase/firestore";
 import {
   collection,
   onSnapshot,
@@ -31,7 +32,9 @@ interface Reporte {
   fecha: string;
   estado: "realizada" | "no realizada" | "pendiente";
   reporte: any;
-  creadoEn: any;
+  
+  // creadoEn puede ser un Timestamp de Firestore, un objeto, o el valor especial devuelto por serverTimestamp()
+  creadoEn?: any;
 }
 
 interface Notificacion {
@@ -40,7 +43,7 @@ interface Notificacion {
   mensaje: string;
   reporteId?: string; // Id del reporte asociado
   leido: boolean;
-  creadoEn: any;
+  creadoEn?: any;
 }
 
 export default function Reportes() {
@@ -101,7 +104,7 @@ export default function Reportes() {
     setMenuNotificacionesOpen(false);
   };
 
-  // 🔹 Cargar reportes
+  
   useEffect(() => {
     if (!userId || !userRole) return;
 
@@ -162,27 +165,76 @@ export default function Reportes() {
     return cumpleCategoria && cumpleFecha;
   });
 
-  const formatearReporteVisual = (r: any) => {
-    if (!r) return <span className="italic text-gray-500">Sin reporte</span>;
-    const entries = Object.entries(r).filter(([_, v]) => v && v.toString().trim() !== "");
-    return entries.length === 0 ? (
-      <span className="italic text-gray-500">Sin reporte</span>
-    ) : (
-      <ul className="list-disc list-inside space-y-1">
-        {entries.map(([k, v]) => (
-          <li key={k}>
-            <strong className="capitalize">{k}:</strong> {v}
-          </li>
-        ))}
-      </ul>
-    );
-  };
+ const formatearReporteVisual = (r: any) => {
+  if (!r || (typeof r === "string" && r.trim() === "")) {
+    return <span className="italic text-gray-500">Sin reporte</span>;
+  }
+
+  // 🟦 Si el reporte es texto plano
+  if (typeof r === "string") {
+    const texto = r.trim();
+
+    // 🔹 Si contiene guiones o saltos de línea, lo tratamos como lista
+    if (texto.includes("\n") || texto.includes("-")) {
+      // separa por saltos de línea o guiones
+      const lineas = texto
+        .split(/\r?\n|-/)
+        .map((l) => l.trim())
+        .filter((l) => l !== "");
+
+      return (
+        <ul className="list-disc list-inside space-y-1">
+          {lineas.map((linea, idx) => (
+            <li key={idx}>{linea}</li>
+          ))}
+        </ul>
+      );
+    }
+
+    // 🔹 Si es solo un texto simple
+    return <div className="whitespace-pre-line">{texto}</div>;
+  }
+
+  // 🟨 Si el reporte es objeto (con campos clave-valor)
+  const entries = Object.entries(r).filter(([_, v]) => v && v.toString().trim() !== "");
+  return entries.length === 0 ? (
+    <span className="italic text-gray-500">Sin reporte</span>
+  ) : (
+    <ul className="list-disc list-inside space-y-1">
+      {entries.map(([k, v]) => (
+        <li key={k}>
+          <strong className="capitalize">{k}:</strong> {v}
+        </li>
+      ))}
+    </ul>
+  );
+};
+
 
   const formatearFecha = (fecha: any) => {
-    if (!fecha) return "Sin fecha";
+  if (!fecha) return "Sin fecha";
+
+  try {
+    // Si es un Timestamp de Firestore
     if (fecha.toDate) return fecha.toDate().toLocaleString();
-    return new Date(fecha).toLocaleString();
-  };
+
+    // Si es un string tipo "2025-11-09" o ISO
+    if (typeof fecha === "string") {
+      const parsed = new Date(fecha);
+      if (!isNaN(parsed.getTime())) return parsed.toLocaleString();
+    }
+
+    // Si es un número (timestamp UNIX)
+    if (typeof fecha === "number") {
+      return new Date(fecha).toLocaleString();
+    }
+
+    return "Fecha no válida";
+  } catch (e) {
+    return "Error de fecha";
+  }
+};
+
 
   const categorias = Array.from(new Set(reportes.map((r) => r.categoria)));
 
@@ -200,17 +252,17 @@ export default function Reportes() {
       />
       <div className="absolute inset-0 z-0 bg-black/40 backdrop-blur-[2px]" />
       {/* Header */}
-<header className="w-screen py-3 px-4 md:py-4 md:px-6 flex justify-between items-center shadow-md bg-indigo-500 text-black relative z-20">
-  <h1 className="text-2xl font-extrabold">Reportes tareas</h1>
+<header className="w-screen py-3 px-4 md:py-4 md:px-6 flex justify-between items-center shadow-md bg-indigo-500 text-white relative z-20">
+  <h1 className="text-lg md:text-2xl font-extrabold">AniManager</h1>
 
   {/* Menú desktop */}
   <div className="hidden md:flex items-center gap-4">
-    <button onClick={() => navigate("/home")} className="text-black hover:text-indigo-300 transition">
+    <button onClick={() => navigate("/home")} className="text-white hover:text-yellow-400 transition">
       <FaHome size={22} />
     </button>
 
     <div className="relative">
-      <button onClick={() => navigate("/notificaciones")} className="text-black hover:text-indigo-300 text-xl transition">
+      <button onClick={() => navigate("/notificaciones")} className="text-white hover:text-yellow-400 text-xl transition">
         <FaBell />
       </button>
       {hayNotificaciones && (
@@ -220,7 +272,7 @@ export default function Reportes() {
       )}
     </div>
 
-    <button onClick={handleLogout} className="bg-indigo-400 hover:bg-indigo-600 text-black font-semibold px-3 py-1 rounded-xl">
+    <button onClick={handleLogout} className="bg-red-500 hover:bg-red-700 text-white px-3 py-1 rounded text-sm">
       Cerrar sesión
     </button>
   </div>
@@ -285,11 +337,11 @@ export default function Reportes() {
                 onChange={(e) => setFiltroCategoria(e.target.value)}
                 className="p-2 rounded-lg bg-indigo-500 text-white border border-yellow-300/50 focus:outline-none focus:ring-2 focus:ring-yellow-400 transition-all"
               >
-                <option className="bg-gray-100 text-black" value="todas">
+                <option className="bg-gray-100 text-indigo-500" value="todas">
                   Todas las categorías
                 </option>
                 {categorias.map((c) => (
-                  <option key={c} className="bg-white text-black" value={c}>{c}</option>
+                  <option key={c} className="bg-white text-indigo-500" value={c}>{c}</option>
                 ))}
               </select>
 
@@ -349,9 +401,8 @@ export default function Reportes() {
           </ul>
         )}
       </main>
-       <footer className="w-screen bg-[#094297dc] py-3 md:py-4 text-center text-xs md:text-sm text-white relative z-10">
-          <p>© 2025 INNOVASYSTEM. Todos los derechos reservados.</p>
-        </footer>
     </div>
   );
 }
+
+
