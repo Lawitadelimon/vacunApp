@@ -186,7 +186,7 @@ export default function AnimalesPorLote() {
 
       {loteSeleccionado && (
         <div className="bg-white p-6 rounded-xl shadow-md mb-6">
-          <h2 className="text-xl font-bold mb-4">Registrar Animal</h2>
+          <h2 className="text-xl font-bold mb-4">Registrar animal</h2>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <input type="text" placeholder="Código" value={formData.codigo} onChange={e => setFormData(f => ({ ...f, codigo: e.target.value }))} className="border px-4 py-2 rounded-lg" />
             <input type="text" placeholder="Raza" value={formData.raza} onChange={e => setFormData(f => ({ ...f, raza: e.target.value }))} className="border px-4 py-2 rounded-lg" />
