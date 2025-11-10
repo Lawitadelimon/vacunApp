@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { db, auth } from "./firebase";
+import { serverTimestamp } from "firebase/firestore";
 import {
   collection,
   onSnapshot,
@@ -31,7 +32,9 @@ interface Reporte {
   fecha: string;
   estado: "realizada" | "no realizada" | "pendiente";
   reporte: any;
-  creadoEn: any;
+  
+  // creadoEn puede ser un Timestamp de Firestore, un objeto, o el valor especial devuelto por serverTimestamp()
+  creadoEn?: any;
 }
 
 interface Notificacion {
@@ -40,7 +43,7 @@ interface Notificacion {
   mensaje: string;
   reporteId?: string; // Id del reporte asociado
   leido: boolean;
-  creadoEn: any;
+  creadoEn?: any;
 }
 
 export default function Reportes() {
@@ -101,58 +104,65 @@ export default function Reportes() {
     setMenuNotificacionesOpen(false);
   };
 
-  // 🔹 Cargar reportes
+  
   useEffect(() => {
-    if (!userId || !userRole) return;
+  if (!userId || !userRole) return;
 
-    const reportesRef = collection(db, "reportes");
-    const tareasRef = collection(db, "tareas");
+  const reportesRef = collection(db, "reportes");
+  const tareasRef = collection(db, "tareas");
 
-    const qReportes =
-      userRole === "worker"
-        ? query(reportesRef, where("trabajadorId", "==", userId), orderBy("creadoEn", "desc"))
-        : query(reportesRef, orderBy("creadoEn", "desc"));
+  let qReportes;
+  let qTareas;
 
-    const qTareas =
-      userRole === "worker"
-        ? query(tareasRef, where("para", "==", userId), orderBy("fecha", "desc"))
-        : query(tareasRef, orderBy("fecha", "desc"));
+  if (userRole === "worker") {
+    // Solo reportes del worker actual
+    qReportes = query(reportesRef, where("trabajadorId", "==", userId), orderBy("creadoEn", "desc"));
+    // Solo tareas asignadas al worker actual
+    qTareas = query(tareasRef, where("para", "==", userId), orderBy("fecha", "desc"));
+  } else {
+    // Admin ve todo
+    qReportes = query(reportesRef, orderBy("creadoEn", "desc"));
+    qTareas = query(tareasRef, orderBy("fecha", "desc"));
+  }
 
-    const unsubReportes = onSnapshot(qReportes, (snap) => {
-      const rpts = snap.docs.map((doc) => ({
+  const unsubReportes = onSnapshot(qReportes, (snap) => {
+    const rpts = snap.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+    } as Reporte));
+    setReportes(rpts);
+  });
+
+  const unsubTareas = onSnapshot(qTareas, (snap) => {
+    const tareasData = snap.docs.map((doc) => {
+      const t = doc.data();
+      return {
         id: doc.id,
-        ...doc.data(),
-      } as Reporte));
-      setReportes(rpts);
+        titulo: t.titulo,
+        categoria: t.categoria,
+        trabajadorId: t.para,
+        trabajadorNombre: t.paraNombre,
+        fecha: t.fecha,
+        estado: t.estado || "pendiente",
+        reporte: t.reporte || "",
+        creadoEn: t.fecha,
+      } as Reporte;
     });
 
-    const unsubTareas = onSnapshot(qTareas, (snap) => {
-      if (userRole !== "admin") return;
-      const tareasConReporte = snap.docs
-        .map((doc) => ({ id: doc.id, ...doc.data() }))
-        .filter((t: any) => t.reporte && t.reporte !== "")
-        .map(
-          (t: any) =>
-            ({
-              id: t.id,
-              titulo: t.titulo,
-              categoria: t.categoria,
-              trabajadorId: t.para,
-              trabajadorNombre: t.paraNombre,
-              fecha: t.fecha,
-              estado: t.estado || "pendiente",
-              reporte: t.reporte,
-              creadoEn: t.fecha,
-            } as Reporte)
-        );
-      setReportes((prev) => [...prev, ...tareasConReporte]);
+    // Solo agregar tareas si no estamos duplicando reportes
+    setReportes((prev) => {
+      const idsPrev = new Set(prev.map((r) => r.id));
+      const nuevasTareas = tareasData.filter((t) => !idsPrev.has(t.id));
+      return [...prev, ...nuevasTareas];
     });
+  });
 
-    return () => {
-      unsubReportes();
-      unsubTareas();
-    };
-  }, [userId, userRole]);
+  return () => {
+    unsubReportes();
+    unsubTareas();
+  };
+}, [userId, userRole]);
+
 
   const reportesFiltrados = reportes.filter((r) => {
     const cumpleCategoria = filtroCategoria === "todas" || r.categoria === filtroCategoria;
@@ -162,27 +172,76 @@ export default function Reportes() {
     return cumpleCategoria && cumpleFecha;
   });
 
-  const formatearReporteVisual = (r: any) => {
-    if (!r) return <span className="italic text-gray-500">Sin reporte</span>;
-    const entries = Object.entries(r).filter(([_, v]) => v && v.toString().trim() !== "");
-    return entries.length === 0 ? (
-      <span className="italic text-gray-500">Sin reporte</span>
-    ) : (
-      <ul className="list-disc list-inside space-y-1">
-        {entries.map(([k, v]) => (
-          <li key={k}>
-            <strong className="capitalize">{k}:</strong> {v}
-          </li>
-        ))}
-      </ul>
-    );
-  };
+ const formatearReporteVisual = (r: any) => {
+  if (!r || (typeof r === "string" && r.trim() === "")) {
+    return <span className="italic text-gray-500">Sin reporte</span>;
+  }
+
+  // 🟦 Si el reporte es texto plano
+  if (typeof r === "string") {
+    const texto = r.trim();
+
+    // 🔹 Si contiene guiones o saltos de línea, lo tratamos como lista
+    if (texto.includes("\n") || texto.includes("-")) {
+      // separa por saltos de línea o guiones
+      const lineas = texto
+        .split(/\r?\n|-/)
+        .map((l) => l.trim())
+        .filter((l) => l !== "");
+
+      return (
+        <ul className="list-disc list-inside space-y-1">
+          {lineas.map((linea, idx) => (
+            <li key={idx}>{linea}</li>
+          ))}
+        </ul>
+      );
+    }
+
+    // 🔹 Si es solo un texto simple
+    return <div className="whitespace-pre-line">{texto}</div>;
+  }
+
+  // 🟨 Si el reporte es objeto (con campos clave-valor)
+  const entries = Object.entries(r).filter(([_, v]) => v && v.toString().trim() !== "");
+  return entries.length === 0 ? (
+    <span className="italic text-gray-500">Sin reporte</span>
+  ) : (
+    <ul className="list-disc list-inside space-y-1">
+      {entries.map(([k, v]) => (
+        <li key={k}>
+          <strong className="capitalize">{k}:</strong> {v}
+        </li>
+      ))}
+    </ul>
+  );
+};
+
 
   const formatearFecha = (fecha: any) => {
-    if (!fecha) return "Sin fecha";
+  if (!fecha) return "Sin fecha";
+
+  try {
+    // Si es un Timestamp de Firestore
     if (fecha.toDate) return fecha.toDate().toLocaleString();
-    return new Date(fecha).toLocaleString();
-  };
+
+    // Si es un string tipo "2025-11-09" o ISO
+    if (typeof fecha === "string") {
+      const parsed = new Date(fecha);
+      if (!isNaN(parsed.getTime())) return parsed.toLocaleString();
+    }
+
+    // Si es un número (timestamp UNIX)
+    if (typeof fecha === "number") {
+      return new Date(fecha).toLocaleString();
+    }
+
+    return "Fecha no válida";
+  } catch (e) {
+    return "Error de fecha";
+  }
+};
+
 
   const categorias = Array.from(new Set(reportes.map((r) => r.categoria)));
 
@@ -201,7 +260,7 @@ export default function Reportes() {
       <div className="absolute inset-0 z-0 bg-black/40 backdrop-blur-[2px]" />
       {/* Header */}
 <header className="w-screen py-3 px-4 md:py-4 md:px-6 flex justify-between items-center shadow-md bg-indigo-500 text-black relative z-20">
-  <h1 className="text-2xl font-extrabold">Reportes tareas</h1>
+  <h1 className="text-lg md:text-2xl font-extrabold">Reportes de tareas</h1>
 
   {/* Menú desktop */}
   <div className="hidden md:flex items-center gap-4">
@@ -220,7 +279,7 @@ export default function Reportes() {
       )}
     </div>
 
-    <button onClick={handleLogout} className="bg-indigo-400 hover:bg-indigo-600 text-black font-semibold px-3 py-1 rounded-xl">
+    <button onClick={handleLogout} className="bg-indigo-400 hover:bg-indigo-600 text-black font-semibold px-3 py-1 rounded-xl ">
       Cerrar sesión
     </button>
   </div>
@@ -285,19 +344,18 @@ export default function Reportes() {
                 onChange={(e) => setFiltroCategoria(e.target.value)}
                 className="p-2 rounded-lg bg-indigo-500 text-white border border-yellow-300/50 focus:outline-none focus:ring-2 focus:ring-yellow-400 transition-all"
               >
-                <option className="bg-gray-100 text-black" value="todas">
+                <option className="bg-gray-100 text-indigo-500" value="todas">
                   Todas las categorías
                 </option>
                 {categorias.map((c) => (
-                  <option key={c} className="bg-white text-black" value={c}>{c}</option>
+                  <option key={c} className="bg-white text-indigo-500" value={c}>{c}</option>
                 ))}
               </select>
 
               <input type="date" value={filtroFechaInicio} onChange={(e) => setFiltroFechaInicio(e.target.value)}
                 className="p-2 rounded-lg bg-black/40 bg-indigo-500 border border-yellow-300/50 focus:outline-none focus:ring-2 focus:ring-yellow-400 transition-all" />
 
-              <input type="date" value={filtroFechaFin} onChange={(e) => setFiltroFechaFin(e.target.value)}
-                className="p-2 rounded-lg bg-black/40 bg-indigo-500 border border-yellow-300/50 focus:outline-none focus:ring-2 focus:ring-yellow-400 transition-all" />
+              
 
               <button onClick={() => { setFiltroCategoria("todas"); setFiltroFechaInicio(""); setFiltroFechaFin(""); }}
                 className="px-4 py-2 bg-yellow-400/80 hover:bg-yellow-600 text-black font-semibold rounded-lg shadow-md transition-all">
@@ -349,9 +407,10 @@ export default function Reportes() {
           </ul>
         )}
       </main>
-       <footer className="w-screen bg-[#094297dc] py-3 md:py-4 text-center text-xs md:text-sm text-white relative z-10">
-          <p>© 2025 INNOVASYSTEM. Todos los derechos reservados.</p>
-        </footer>
+      <footer className="w-full bg-[#099757dc] py-3 md:py-4 text-center text-xs md:text-sm text-white fixed bottom-0 z-50">
+  <p>© 2025 INNOVASYSTEM. Todos los derechos reservados.</p>
+</footer>
     </div>
   );
 }
+

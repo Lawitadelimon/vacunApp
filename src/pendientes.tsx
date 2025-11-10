@@ -76,7 +76,9 @@ export default function Pendientes() {
 
   const navigate = useNavigate();
   const categoriasGranja = ["Vacunación", "Alimentación", "Limpieza", "Revisión"];
-  const hoy = new Date().toISOString().split("T")[0];
+  const hoy = new Date(Date.now() - new Date().getTimezoneOffset() * 60000)
+  .toISOString()
+  .split("T")[0];
   const tareasPorPagina = 5;
 
   const toggleTarea = (id: string) => {
@@ -409,9 +411,9 @@ export default function Pendientes() {
         </main>
 
         {/* Footer */}
-        <footer className="w-screen bg-[#094297dc] py-3 md:py-4 text-center text-xs md:text-sm text-white relative z-10">
-          <p>© 2025 INNOVASYSTEM. Todos los derechos reservados.</p>
-        </footer>
+        <footer className="w-full bg-[#099757dc] py-3 md:py-4 text-center text-xs md:text-sm text-white fixed bottom-0 z-50">
+  <p>© 2025 INNOVASYSTEM. Todos los derechos reservados.</p>
+</footer>
       </div>
     </div>
   );

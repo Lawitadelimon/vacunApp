@@ -3,11 +3,10 @@ import { Link, useNavigate } from "react-router-dom";
 import {
   FaHome, FaPaw, FaClipboardList, FaBell, FaLeaf, FaStethoscope,
   FaBook, FaChevronLeft, FaChevronRight, FaVenusMars, FaUserPlus,
-  FaBars, FaTimes, 
+  FaBars, FaTimes
 } from "react-icons/fa";
 import { GiBabyBottle } from "react-icons/gi";
 import { BsFileEarmarkBarGraph } from "react-icons/bs";
-
 
 import { auth, db } from "./firebase";
 import { signOut, onAuthStateChanged } from "firebase/auth";
@@ -26,7 +25,6 @@ const cards = [
   { title: "Vacunas", to: "/salud", icon: FaStethoscope, color: "bg-red-500", hover: "hover:bg-red-600", roles: ["admin"] },
   { title: "Estadisticas decesos", to: "/estadisticas", icon: BsFileEarmarkBarGraph, color: "bg-orange-500", hover: "hover:bg-orange-600", roles: ["admin"] },
   { title: "Reportes de tareas", to: "/reportes", icon: FaClipboardList, color: "bg-indigo-500", hover: "hover:bg-indigo-600", roles: ["admin", "worker"] },
-  
   { title: "Notificaciones", to: "/notificaciones", icon: FaBell, color: "bg-amber-700", hover: "hover:bg-amber-800", roles: ["admin", "worker"] },
   { title: "Tareas del personal", to: "/pendientes", icon: FaBook, color: "bg-blue-500", hover: "hover:bg--600", roles: ["admin"] },
 ];
@@ -35,11 +33,11 @@ export default function HomePage() {
   const [hayNotificaciones, setHayNotificaciones] = useState(false);
   const [usuariosPendientes, setUsuariosPendientes] = useState<any[]>([]);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [mostrarUsuarios, setMostrarUsuarios] = useState(true);
   const navigate = useNavigate();
   const carouselRef = useRef<HTMLDivElement>(null);
   const { user } = useUser();
-
-  // 🔑 Crear usuario en Firestore si no existe
+  // Crear usuario en Firestore si no existe
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       if (!currentUser) return;
@@ -60,7 +58,7 @@ export default function HomePage() {
     return () => unsubscribe();
   }, []);
 
-  // 🔔 Cargar notificaciones
+  // Cargar notificaciones
   const cargarNotificaciones = async () => {
     const currentUser = auth.currentUser;
     if (!currentUser) return;
@@ -76,7 +74,7 @@ export default function HomePage() {
     setHayNotificaciones(pendientes.length > 0);
   };
 
-  // 👥 Escuchar usuarios en espera
+  // Escuchar usuarios en espera
   useEffect(() => {
     if (user?.role !== "admin") return;
 
@@ -89,7 +87,7 @@ export default function HomePage() {
     return () => unsubscribe();
   }, [user]);
 
-  // ✅ Asignar rol
+  // Asignar rol
   const asignarRol = async (id: string, rol: "admin" | "worker") => {
     await updateDoc(doc(db, "users", id), { role: rol });
   };
@@ -98,11 +96,13 @@ export default function HomePage() {
     cargarNotificaciones();
   }, []);
 
-  const handleLogout = async () => {
+   const handleLogout = async () => {
     await signOut(auth);
     navigate("/");
   };
 
+
+ 
   const scroll = (direction: "left" | "right") => {
     if (carouselRef.current) {
       const scrollAmount = 200;
@@ -113,7 +113,7 @@ export default function HomePage() {
     }
   };
 
-  return (
+   return (
     <div className="relative min-h-screen flex flex-col">
       {/* Fondo */}
       <div
@@ -123,77 +123,45 @@ export default function HomePage() {
       <div className="absolute inset-0 z-0 bg-black/40 backdrop-blur-[3px]" />
 
       {/* Contenido */}
-      <div className="relative z-10 flex-1 flex flex-col md:flex-row w-full">
+      <div className="relative z-10 flex-1 flex flex-col md:flex-row w-full transition-all duration-500">
         {/* Columna principal */}
-        <div className="flex-1 flex flex-col items-center">
+        <div className={`flex flex-col items-center transition-all duration-500
+          ${mostrarUsuarios ? "md:flex-1" : "w-full"}`}>
+          
           {/* Header */}
           <header className="w-full py-3 px-4 md:py-4 md:px-6 flex justify-between items-center shadow-md bg-black/5 backdrop-blur-md text-white relative z-20">
             <h1 className="text-lg md:text-2xl font-extrabold">AniManager</h1>
-
             <div className="hidden md:flex items-center gap-4">
-              <button onClick={() => navigate("/home")} className="text-white hover:text-yellow-400 transition">
+              <button onClick={() => navigate("/home")} className="text-white hover:text-blue-900 transition">
                 <FaHome size={22} />
               </button>
-
-              <Link to="/notificaciones" className="text-white text-xl relative">
+              <Link to="/notificaciones" className="text-white hover:text-blue-900 text-xl relative">
                 <FaBell />
-                {hayNotificaciones && (
-                  <span className="absolute -top-2 -right-2 text-lg animate-bounce">🐄</span>
-                )}
+                {hayNotificaciones && <span className="absolute -top-2 -right-2 text-lg animate-bounce">🐄</span>}
               </Link>
-
               <button
                 onClick={handleLogout}
-                className="bg-red-500 hover:bg-red-700 text-white px-3 py-1 rounded text-sm"
+                className="bg-red-600 hover:bg-red-700 text-white font-semibold px-3 py-1 rounded-xl"
               >
                 Cerrar sesión
               </button>
             </div>
-
             <button
               className="md:hidden text-white text-2xl"
               onClick={() => setMenuOpen(!menuOpen)}
             >
               {menuOpen ? <FaTimes /> : <FaBars />}
             </button>
-
-            {menuOpen && (
-              <div className="absolute top-full right-2 mt-2 w-48 bg-black/90 backdrop-blur-md rounded-lg shadow-lg flex flex-col p-3 space-y-2 md:hidden">
-                <button
-                  onClick={() => { navigate("/home"); setMenuOpen(false); }}
-                  className="flex items-center gap-2 text-white hover:text-gray-300"
-                >
-                  <FaHome /> Inicio
-                </button>
-
-                <Link
-                  to="/notificaciones"
-                  onClick={() => setMenuOpen(false)}
-                  className="flex items-center gap-2 text-white hover:text-gray-300 relative"
-                >
-                  <FaBell /> Notificaciones
-                  {hayNotificaciones && (
-                    <span className="absolute right-2 text-lg animate-bounce">🐄</span>
-                  )}
-                </Link>
-
-                <button
-                  onClick={() => { handleLogout(); setMenuOpen(false); }}
-                  className="flex items-center gap-2 text-red-400 hover:text-red-600"
-                >
-                  🚪 Cerrar sesión
-                </button>
-              </div>
-            )}
           </header>
 
           {/* Bienvenida */}
-          <div className="mt-4 md:mt-6 text-white text-center text-base md:text-xl max-w-2xl px-3">
-            ¡Bienvenido {user?.name || "a AniManager"}! Explora las opciones disponibles en el carrusel.
+          <div className="mt-5 md:mt-9 text-white text-center font-semibold md:text-xl max-w-2xl px-5">
+            ¡Bienvenido a AniManager {user?.name || "a AniManager"}!, donde el bienestar de tus animales es primero. 
+            Explora las opciones disponibles en el carrusel.
           </div>
 
           {/* Carrusel */}
-          <div className="relative w-full max-w-4xl mt-6 md:mt-10 flex-1 px-4 md:px-6">
+          <div className="relative w-full max-w-4xl mt-6 md:mt-10 flex-1 px-4 md:px-6 transition-all duration-500">
             <button
               onClick={() => scroll("left")}
               className="absolute -left-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full z-20 hidden md:flex"
@@ -214,10 +182,8 @@ export default function HomePage() {
                       to={card.to}
                       className={`min-w-[12rem] md:min-w-[15rem] h-56 md:h-80 rounded-2xl shadow-lg flex flex-col items-center justify-center flex-shrink-0 text-white font-bold transform transition-all duration-300 ${card.color} ${card.hover} bg-opacity-70 backdrop-blur-sm hover:-translate-y-2 hover:shadow-2xl`}
                     >
-                      <card.icon size={50} className="md:size-30" />
-                      <p className="mt-2 text-xs md:text-sm text-center">
-                        {card.title}
-                      </p>
+                      <card.icon size={120} />
+                      <p className="mt-3 text-md md:text-md text-center">{card.title}</p>
                     </Link>
                   )
               )}
@@ -227,8 +193,8 @@ export default function HomePage() {
                   to="/usuarios"
                   className="min-w-[12rem] md:min-w-[15rem] h-56 md:h-80 rounded-2xl shadow-lg flex flex-col items-center justify-center flex-shrink-0 text-white font-bold bg-purple-500 hover:bg-purple-600"
                 >
-                  <FaUserPlus size={50} className="md:size-30" />
-                  <p className="mt-2 text-xs md:text-sm text-center">Usuarios (Workers)</p>
+                  <FaUserPlus size={120} />
+                  <p className="mt-3 text-md md:text-md text-center">Usuarios (Workers)</p>
                 </Link>
               )}
             </div>
@@ -242,42 +208,67 @@ export default function HomePage() {
           </div>
         </div>
 
+        {/* Aside usuarios pendientes */}
         {user?.role === "admin" && (
-          <aside className="w-full md:w-72 bg-white/10 backdrop-blur-md text-white p-4 border-t md:border-t-0 md:border-l border-white/30">
-            <h2 className="text-base md:text-lg font-bold mb-3 flex items-center gap-2">
-              <FaUserPlus /> Usuarios en espera
-            </h2>
-            {usuariosPendientes.length === 0 ? (
-              <p className="text-sm text-gray-200">No hay usuarios en espera</p>
-            ) : (
-              <ul className="space-y-3">
-                {usuariosPendientes.map((u) => (
-                  <li key={u.id} className="bg-white/20 rounded-lg p-3 flex flex-col">
-                    <span className="font-semibold text-sm md:text-base">{u.name}</span>
-                    <span className="text-xs text-gray-200">{u.email}</span>
-                    <div className="flex gap-2 mt-2">
-                      <button
-                        onClick={() => asignarRol(u.id, "worker")}
-                        className="flex-1 bg-green-600 hover:bg-green-700 text-white text-xs py-1 rounded"
-                      >
-                        Worker
-                      </button>
-                      <button
-                        onClick={() => asignarRol(u.id, "admin")}
-                        className="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-xs py-1 rounded"
-                      >
-                        Admin
-                      </button>
-                    </div>
-                  </li>
-                ))}
-              </ul>
+          <aside className={`transition-all duration-500
+            ${mostrarUsuarios ? "w-full md:w-72 p-4" : "w-0 p-0 overflow-hidden"} 
+            bg-white/10 backdrop-blur-md text-white border-t md:border-t-0 md:border-l border-white/30`}>
+            {mostrarUsuarios && (
+              <>
+                <div className="flex justify-between items-center mb-3">
+                  <h2 className="text-base md:text-lg font-bold flex items-center gap-2">
+                    <FaUserPlus /> Usuarios en espera
+                  </h2>
+                  <button
+                    onClick={() => setMostrarUsuarios(false)}
+                    className="text-sm md:text-base px-2 py-1 bg-white/40 rounded-xl hover:bg-white/30"
+                  >
+                    Ocultar
+                  </button>
+                </div>
+                {usuariosPendientes.length === 0 ? (
+                  <p className="text-sm text-gray-200">No hay usuarios en espera</p>
+                ) : (
+                  <ul className="space-y-3">
+                    {usuariosPendientes.map((u) => (
+                      <li key={u.id} className="bg-white/20 rounded-lg p-3 flex flex-col">
+                        <span className="font-semibold text-sm md:text-base">{u.name}</span>
+                        <span className="text-xs text-gray-200">{u.email}</span>
+                        <div className="flex gap-2 mt-2">
+                          <button
+                            onClick={() => asignarRol(u.id, "worker")}
+                            className="flex-1 bg-green-600 hover:bg-green-700 text-white text-xs py-1 rounded-xl"
+                          >
+                            Worker
+                          </button>
+                          <button
+                            onClick={() => asignarRol(u.id, "admin")}
+                            className="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-xs py-1 rounded-xl"
+                          >
+                            Admin
+                          </button>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </>
             )}
           </aside>
         )}
       </div>
 
-      <footer className="w-full bg-[#099757dc] py-3 md:py-4 text-center text-xs md:text-sm text-white relative z-10">
+      {/* Botón para mostrar usuarios si está oculto */}
+      {user?.role === "admin" && !mostrarUsuarios && (
+        <button
+          onClick={() => setMostrarUsuarios(true)}
+          className="fixed top-20 right-2 md:right-4 bg-white/40 text-white px-3 py-1 rounded-xl hover:bg-white/30 z-50 transition-all duration-500"
+        >
+          Mostrar usuarios
+        </button>
+      )}
+
+      <footer className="w-full bg-blue-900 py-3 md:py-4 text-center text-xs md:text-sm text-white fixed bottom-0 z-50">
         <p>© 2025 INNOVASYSTEM. Todos los derechos reservados.</p>
       </footer>
     </div>
