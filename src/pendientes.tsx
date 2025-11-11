@@ -1,4 +1,4 @@
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom"; 
 import {
   FaClipboardList,
   FaTrash,
@@ -223,90 +223,84 @@ export default function Pendientes() {
 
   return (
     <div className="relative min-h-screen flex flex-col overflow-hidden">
+      {/* Fondo */}
       <div
         className="absolute inset-0 z-0 bg-cover bg-center"
         style={{ backgroundImage: `url(${cow2Image})` }}
       />
       <div className="absolute inset-0 z-0 bg-black/40 backdrop-blur-[2px]" />
 
-      <div className="relative z-10 flex-1 flex flex-col items-center max-w-6xl mx-auto w-full px-2 sm:px-4">
-        {/* Header */}
-<header className="w-full py-3 px-4 flex justify-between items-center shadow-md bg-blue-500 text-black relative z-20">
-  <h1 className="text-xl sm:text-2xl font-extrabold">
-    Asignación de tareas
-  </h1>
+      {/* HEADER ancho completo */}
+      <header className="w-full py-3 px-4 flex justify-between items-center shadow-md bg-blue-500 text-black relative z-20">
+        <h1 className="text-xl sm:text-2xl font-extrabold">
+          Asignación de tareas
+        </h1>
 
-  {/* Desktop menu */}
-  <div className="hidden md:flex items-center gap-4">
-    <button
-      onClick={() => navigate("/home")}
-      className="text-black hover:text-blue-300 transition"
-    >
-      <FaHome size={22} />
-    </button>
+        <div className="hidden md:flex items-center gap-4">
+          <button onClick={() => navigate("/home")} className="text-black hover:text-blue-300 transition">
+            <FaHome size={22} />
+          </button>
 
-    <div className="relative">
-      <button
-        onClick={() => navigate("/notificaciones")}
-        className="text-black hover:text-blue-300 transition"
-      >
-        <FaBell size={22} />
-      </button>
-      {hayNotificaciones && (
-        <span className="absolute -top-2 -right-2 bg-red-600 text-white text-xs font-bold px-1.5 py-0.5 rounded-full animate-pulse">
-          {notificaciones.filter((n) => !n.leido).length}
-        </span>
-      )}
-    </div>
+          <div className="relative">
+            <button onClick={() => navigate("/notificaciones")} className="text-black hover:text-blue-300 transition">
+              <FaBell size={22} />
+            </button>
+            {hayNotificaciones && (
+              <span className="absolute -top-2 -right-2 bg-red-600 text-white text-xs font-bold px-1.5 py-0.5 rounded-full animate-pulse">
+                {notificaciones.filter((n) => !n.leido).length}
+              </span>
+            )}
+          </div>
 
-    <button
-      onClick={handleLogout}
-      className="bg-blue-400 hover:bg-blue-700 text-white font-semibold px-3 py-1 rounded-xl"
-    >
-      Cerrar sesión
-    </button>
-  </div>
+          <button
+            onClick={handleLogout}
+            className="bg-blue-400 hover:bg-blue-700 text-white font-semibold px-3 py-1 rounded-xl"
+          >
+            Cerrar sesión
+          </button>
+        </div>
 
-  {/* Mobile hamburger */}
-  <div className="md:hidden relative">
-    <button
-      className="text-black text-2xl hover:text-blue-300 transition"
-      onClick={() => setMenuOpen(!menuOpen)}
-    >
-      {menuOpen ? <FaTimes /> : <FaBars />}
-    </button>
+        {/* Menú móvil */}
+        <div className="md:hidden relative">
+          <button
+            className="text-black text-2xl hover:text-blue-300 transition"
+            onClick={() => setMenuOpen(!menuOpen)}
+          >
+            {menuOpen ? <FaTimes /> : <FaBars />}
+          </button>
 
-    {menuOpen && (
-      <div className="absolute right-0 mt-2 w-48 bg-white/40 rounded-xl shadow-lg py-3 flex flex-col items-center gap-2 z-50">
-        <button
-          onClick={() => { navigate("/home"); setMenuOpen(false); }}
-          className="w-5/7 py-2 rounded-xl bg-blue-400 hover:bg-blue-500 flex items-center font-semibold justify-center gap-2"
-        >
-          <FaHome /> Inicio
-        </button>
-        <button
-          onClick={() => { navigate("/notificaciones"); setMenuOpen(false); }}
-          className="w-5/7 py-2 rounded-xl bg-blue-400 hover:bg-blue-500 flex items-center font-semibold justify-center gap-2"
-        >
-          <FaBell /> Notificaciones
-          {hayNotificaciones && (
-            <span className="w-5/7 py-2 bg-red-600 text-white rounded-xl hover:bg-red-700 flex items-center font-semibold justify-center gap-2">
-              {notificaciones.filter((n) => !n.leido).length}
-            </span>
+          {menuOpen && (
+            <div className="absolute right-0 mt-2 w-48 bg-white/40 rounded-xl shadow-lg py-3 flex flex-col items-center gap-2 z-50">
+              <button
+                onClick={() => { navigate("/home"); setMenuOpen(false); }}
+                className="w-5/7 py-2 rounded-xl bg-blue-400 hover:bg-blue-500 flex items-center font-semibold justify-center gap-2"
+              >
+                <FaHome /> Inicio
+              </button>
+              <button
+                onClick={() => { navigate("/notificaciones"); setMenuOpen(false); }}
+                className="w-5/7 py-2 rounded-xl bg-blue-400 hover:bg-blue-500 flex items-center font-semibold justify-center gap-2"
+              >
+                <FaBell /> Notificaciones
+                {hayNotificaciones && (
+                  <span className="ml-2 bg-red-600 text-white text-xs font-bold px-1.5 py-0.5 rounded-full animate-pulse">
+                    {notificaciones.filter((n) => !n.leido).length}
+                  </span>
+                )}
+              </button>
+              <button
+                onClick={() => { handleLogout(); setMenuOpen(false); }}
+                className="bg-red-600 hover:bg-red-700 text-white font-semibold px-3 py-1 rounded-xl w-full"
+              >
+                Cerrar sesión
+              </button>
+            </div>
           )}
-        </button>
-        <button
-          onClick={() => { handleLogout(); setMenuOpen(false); }}
-          className="bg-red-600 hover:bg-red-700 text-white font-semibold px-3 py-1 rounded-xl w-full"
-        >
-          Cerrar sesión
-        </button>
-      </div>
-    )}
-  </div>
-</header>
+        </div>
+      </header>
 
-
+      {/* Contenedor centrado */}
+      <div className="relative z-10 flex-1 flex flex-col items-center w-full max-w-6xl mx-auto px-2 sm:px-4">
         {/* Leyenda */}
         <div className="flex flex-wrap justify-center gap-3 sm:gap-6 mt-6 text-xs sm:text-sm font-medium">
           <div className="flex items-center gap-2 text-gray-700 bg-white/60 px-3 py-1 rounded-full shadow">
@@ -484,10 +478,11 @@ export default function Pendientes() {
         </main>
 
         {/* Footer */}
-        <footer className="w-full bg-[#099757dc] py-3 text-center text-xs sm:text-sm text-white mt-auto">
-          <p>© 2025 INNOVASYSTEM. Todos los derechos reservados.</p>
-        </footer>
-      </div>
+       {/* FOOTER ancho completo */}
+      <footer className="w-full bg-[#099757dc] py-3 md:py-4 text-center text-xs md:text-sm text-white fixed bottom-0 z-50">
+        <p>© 2025 INNOVASYSTEM. Todos los derechos reservados.</p>
+      </footer>
+    </div>
     </div>
   );
 }

@@ -4,13 +4,9 @@ import { createUserWithEmailAndPassword, signOut } from "firebase/auth";
 import { doc, setDoc } from "firebase/firestore";
 import { motion } from "framer-motion";
 import { FaUser, FaEnvelope, FaLock, FaEye, FaEyeSlash } from "react-icons/fa";
+import Swal from "sweetalert2";
 
-interface RegisterFormProps {
-  onRegisterSuccess: () => void;
-  onValidation: (message: string) => void;
-}
-
-export function RegisterForm({ onRegisterSuccess, onValidation }: RegisterFormProps) {
+export function RegisterForm({ onRegisterSuccess }: { onRegisterSuccess: () => void }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
@@ -21,12 +17,12 @@ export function RegisterForm({ onRegisterSuccess, onValidation }: RegisterFormPr
     e.preventDefault();
 
     if (!name.trim()) {
-      onValidation("❌ Por favor, ingresa tu nombre.");
+      Swal.fire("Error", "❌ Por favor, ingresa tu nombre.", "warning");
       return;
     }
 
     if (!email || !password) {
-      onValidation("❌ Por favor, completa todos los campos.");
+      Swal.fire("Error", "❌ Por favor, completa todos los campos.", "warning");
       return;
     }
 
@@ -42,13 +38,16 @@ export function RegisterForm({ onRegisterSuccess, onValidation }: RegisterFormPr
         createdAt: new Date().toISOString(),
       });
 
-      onValidation("✅ Usuario creado correctamente. Contacta a tu administrador para obtener acceso.");
+      await Swal.fire(
+        "Usuario creado",
+        "✅ Usuario creado correctamente. Contacta a tu administrador para obtener acceso.",
+        "success"
+      );
 
       await signOut(auth);
       onRegisterSuccess();
     } catch (error: any) {
-      console.error("Error en registro:", error);
-      onValidation("❌ Error al crear usuario: " + error.message);
+      Swal.fire("Error", "❌ Error al crear usuario: " + error.message, "error");
     } finally {
       setLoading(false);
     }
@@ -62,8 +61,6 @@ export function RegisterForm({ onRegisterSuccess, onValidation }: RegisterFormPr
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
     >
-      
-
       {/* Nombre */}
       <div className="relative">
         <FaUser className="absolute left-3 top-3 text-gray-500" />

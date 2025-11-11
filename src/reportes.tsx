@@ -418,9 +418,7 @@ export default function Reportes() {
                     {formatearReporteVisual(r.reporte)}
                   </div>
 
-                  <div className="text-xs text-gray-300 mt-3 italic text-right">
-                    ⏰ Creado en: {formatearFecha(r.creadoEn)}
-                  </div>
+                  
                 </li>
               );
             })}

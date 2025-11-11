@@ -4,24 +4,32 @@ import { auth } from "./firebase";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { FaLock, FaEnvelope, FaEye, FaEyeSlash } from "react-icons/fa";
+import Swal from "sweetalert2";
 
-interface LoginFormProps {
-  onValidation: (msg: string) => void;
-}
-
-export default function LoginForm({ onValidation }: LoginFormProps) {
+export default function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!email || !password) {
+      Swal.fire("Error", "❌ Por favor completa todos los campos", "warning");
+      return;
+    }
+
+    setLoading(true);
     try {
       await signInWithEmailAndPassword(auth, email, password);
-      onValidation("✅ Inicio de sesión exitoso");
+      await Swal.fire("Éxito", "✅ Inicio de sesión exitoso", "success");
+      navigate("/home"); // o a la ruta que corresponda
     } catch (error: any) {
-      onValidation(`❌ ${error.message}`);
+      Swal.fire("Error", `❌ ${error.message}`, "error");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -72,9 +80,12 @@ export default function LoginForm({ onValidation }: LoginFormProps) {
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.98 }}
         type="submit"
-        className="bg-[#099757] text-white font-semibold py-2 sm:py-3 rounded-xl shadow-md hover:bg-[#077848] transition-all duration-300 text-sm sm:text-base"
+        disabled={loading}
+        className={`${
+          loading ? "opacity-50 cursor-not-allowed" : "hover:bg-[#077848]"
+        } bg-[#099757] text-white font-semibold py-2 sm:py-3 rounded-xl shadow-md transition-all duration-300 text-sm sm:text-base`}
       >
-        Iniciar Sesión
+        {loading ? "Iniciando..." : "Iniciar Sesión"}
       </motion.button>
 
       {/* Recuperar contraseña */}
