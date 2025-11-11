@@ -23,10 +23,10 @@ const cards = [
   { title: "Reproducción", to: "/reproduccion", icon: FaVenusMars, color: "bg-amber-400", hover: "hover:bg-amber-500", roles: ["admin"] },
   { title: "Alimentación y Salud", to: "/alimentacion", icon: FaLeaf, color: "bg-green-500", hover: "hover:bg-green-600", roles: ["admin"] },
   { title: "Vacunas", to: "/salud", icon: FaStethoscope, color: "bg-red-500", hover: "hover:bg-red-600", roles: ["admin"] },
-  { title: "Estadisticas decesos", to: "/estadisticas", icon: BsFileEarmarkBarGraph, color: "bg-orange-500", hover: "hover:bg-orange-600", roles: ["admin"] },
+  { title: "Estadísticas decesos", to: "/estadisticas", icon: BsFileEarmarkBarGraph, color: "bg-orange-500", hover: "hover:bg-orange-600", roles: ["admin"] },
   { title: "Reportes de tareas", to: "/reportes", icon: FaClipboardList, color: "bg-indigo-500", hover: "hover:bg-indigo-600", roles: ["admin", "worker"] },
   { title: "Notificaciones", to: "/notificaciones", icon: FaBell, color: "bg-amber-700", hover: "hover:bg-amber-800", roles: ["admin", "worker"] },
-  { title: "Tareas del personal", to: "/pendientes", icon: FaBook, color: "bg-blue-500", hover: "hover:bg--600", roles: ["admin"] },
+  { title: "Tareas del personal", to: "/pendientes", icon: FaBook, color: "bg-blue-500", hover: "hover:bg-blue-600", roles: ["admin"] },
 ];
 
 export default function HomePage() {
@@ -37,14 +37,12 @@ export default function HomePage() {
   const navigate = useNavigate();
   const carouselRef = useRef<HTMLDivElement>(null);
   const { user } = useUser();
-  // Crear usuario en Firestore si no existe
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       if (!currentUser) return;
-
       const ref = doc(db, "users", currentUser.uid);
       const snap = await getDoc(ref);
-
       if (!snap.exists()) {
         await setDoc(ref, {
           name: currentUser.displayName || "Usuario",
@@ -54,55 +52,42 @@ export default function HomePage() {
         });
       }
     });
-
     return () => unsubscribe();
   }, []);
 
-  // Cargar notificaciones
   const cargarNotificaciones = async () => {
     const currentUser = auth.currentUser;
     if (!currentUser) return;
-
     const q = query(collection(db, "tareas"), where("uid", "==", currentUser.uid));
     const querySnapshot = await getDocs(q);
     const hoy = new Date().toISOString().split("T")[0];
-
     const pendientes = querySnapshot.docs
       .map(doc => doc.data())
       .filter((t: any) => t.fecha && t.fecha <= hoy && !t.completada);
-
     setHayNotificaciones(pendientes.length > 0);
   };
 
-  // Escuchar usuarios en espera
+  useEffect(() => { cargarNotificaciones(); }, []);
+
   useEffect(() => {
     if (user?.role !== "admin") return;
-
     const q = query(collection(db, "users"), where("role", "==", "pending"));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const lista = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setUsuariosPendientes(lista);
     });
-
     return () => unsubscribe();
   }, [user]);
 
-  // Asignar rol
   const asignarRol = async (id: string, rol: "admin" | "worker") => {
     await updateDoc(doc(db, "users", id), { role: rol });
   };
 
-  useEffect(() => {
-    cargarNotificaciones();
-  }, []);
-
-   const handleLogout = async () => {
+  const handleLogout = async () => {
     await signOut(auth);
     navigate("/");
   };
 
-
- 
   const scroll = (direction: "left" | "right") => {
     if (carouselRef.current) {
       const scrollAmount = 200;
@@ -113,7 +98,7 @@ export default function HomePage() {
     }
   };
 
-   return (
+  return (
     <div className="relative min-h-screen flex flex-col">
       {/* Fondo */}
       <div
@@ -122,41 +107,68 @@ export default function HomePage() {
       />
       <div className="absolute inset-0 z-0 bg-black/40 backdrop-blur-[3px]" />
 
-      {/* Contenido */}
+      {/* Contenido principal */}
       <div className="relative z-10 flex-1 flex flex-col md:flex-row w-full transition-all duration-500">
-        {/* Columna principal */}
-        <div className={`flex flex-col items-center transition-all duration-500
-          ${mostrarUsuarios ? "md:flex-1" : "w-full"}`}>
-          
+
+        {/* Columna izquierda */}
+        <div className={`flex flex-col items-center transition-all duration-500 ${mostrarUsuarios ? "md:flex-1" : "w-full"}`}>
+
           {/* Header */}
           <header className="w-full py-3 px-4 md:py-4 md:px-6 flex justify-between items-center shadow-md bg-black/5 backdrop-blur-md text-white relative z-20">
             <h1 className="text-lg md:text-2xl font-extrabold">AniManager</h1>
-            <div className="hidden md:flex items-center gap-4">
-              <button onClick={() => navigate("/home")} className="text-white hover:text-blue-900 transition">
-                <FaHome size={22} />
-              </button>
-              <Link to="/notificaciones" className="text-white hover:text-blue-900 text-xl relative">
-                <FaBell />
-                {hayNotificaciones && <span className="absolute -top-2 -right-2 text-lg animate-bounce">🐄</span>}
-              </Link>
+
+            {/* Botón menú (3 líneas) */}
+            <div className="relative">
               <button
-                onClick={handleLogout}
-                className="bg-red-600 hover:bg-red-700 text-white font-semibold px-3 py-1 rounded-xl"
+                className="text-white text-2xl focus:outline-none"
+                onClick={() => setMenuOpen(!menuOpen)}
+              >
+                {menuOpen ? <FaTimes /> : <FaBars />}
+              </button>
+
+              {/* Menú desplegable */}
+              {menuOpen && (
+                <div className="absolute right-0 mt-2 w-48 bg-black/80 backdrop-blur-md rounded-xl shadow-lg py-3 flex flex-col items-center gap-2 z-50 transition-all duration-300 animate-fadeIn">
+              <button
+                onClick={() => {
+                  navigate("/home");
+                  setMenuOpen(false);
+                }}
+                className="flex items-center gap-2 bg-blue-950 hover:bg-blue-700 font-semibold text-white hover:text-gray-300 w-full justify-center py-2 rounded-xl transition-all duration-300"
+              >
+                <FaHome /> Inicio
+              </button>
+
+              <Link
+                to="/notificaciones"
+                onClick={() => setMenuOpen(false)}
+                className="flex items-center gap-2 text-white w-full justify-center py-2 relative 
+                          bg-blue-950 hover:bg-blue-700 font-semibold hover:text-white transition-all duration-300 rounded-xl"
+              >
+                <FaBell /> Notificaciones
+                {hayNotificaciones && (
+                  <span className="absolute right-4 -top-1 animate-bounce">🐄</span>
+                )}
+              </Link>
+
+              <button
+                onClick={() => {
+                  handleLogout();
+                  setMenuOpen(false);
+                }}
+                className="bg-red-600 hover:bg-red-700 text-white font-semibold px-3 py-1 rounded-xl transition-all duration-300"
               >
                 Cerrar sesión
               </button>
             </div>
-            <button
-              className="md:hidden text-white text-2xl"
-              onClick={() => setMenuOpen(!menuOpen)}
-            >
-              {menuOpen ? <FaTimes /> : <FaBars />}
-            </button>
+
+              )}
+            </div>
           </header>
 
           {/* Bienvenida */}
           <div className="mt-5 md:mt-9 text-white text-center font-semibold md:text-xl max-w-2xl px-5">
-            ¡Bienvenido a AniManager {user?.name || "a AniManager"}!, donde el bienestar de tus animales es primero. 
+            ¡Bienvenido a AniManager {user?.name || ""}! Donde el bienestar de tus animales es primero. 
             Explora las opciones disponibles en el carrusel.
           </div>
 
@@ -208,10 +220,9 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* Aside usuarios pendientes */}
+        {/* Panel lateral de usuarios pendientes */}
         {user?.role === "admin" && (
-          <aside className={`transition-all duration-500
-            ${mostrarUsuarios ? "w-full md:w-72 p-4" : "w-0 p-0 overflow-hidden"} 
+          <aside className={`transition-all duration-500 ${mostrarUsuarios ? "w-full md:w-72 p-4" : "w-0 p-0 overflow-hidden"} 
             bg-white/10 backdrop-blur-md text-white border-t md:border-t-0 md:border-l border-white/30`}>
             {mostrarUsuarios && (
               <>
@@ -258,7 +269,7 @@ export default function HomePage() {
         )}
       </div>
 
-      {/* Botón para mostrar usuarios si está oculto */}
+      {/* Botón para volver a mostrar usuarios */}
       {user?.role === "admin" && !mostrarUsuarios && (
         <button
           onClick={() => setMostrarUsuarios(true)}

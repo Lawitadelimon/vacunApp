@@ -1,16 +1,31 @@
 import { useEffect, useState } from "react";
-import { collection, query, where, getDocs, doc, deleteDoc, updateDoc, addDoc } from "firebase/firestore";
-import { db } from "./firebase";
-import casa from './assets/casa.png';
-import cowsBackground from './assets/cows2.jpg';
+import {
+  collection,
+  query,
+  where,
+  getDocs,
+  doc,
+  deleteDoc,
+  updateDoc,
+  addDoc,
+} from "firebase/firestore";
+import { db, auth } from "./firebase";
 import { useNavigate, Link } from "react-router-dom";
-import { FaHome, FaUserTie, FaEdit, FaTrash, FaPlus, FaBell, FaBars, FaTimes } from "react-icons/fa";
+import {
+  FaHome,
+  FaUserTie,
+  FaEdit,
+  FaTrash,
+  FaBell,
+  FaBars,
+  FaTimes,
+} from "react-icons/fa";
 import { motion } from "framer-motion";
 import { signOut } from "firebase/auth";
-import { auth } from "./firebase"; 
+import cowsBackground from "./assets/cows2.jpg";
 
 interface Worker {
-  hireDate: any;
+  hireDate?: any;
   id?: string;
   name: string;
   email: string;
@@ -34,34 +49,29 @@ export default function UsuariosPage() {
     salary: "",
     emergencyNumber: "",
   });
-  const [hayNotificaciones, setHayNotificaciones] = useState(true);
   const [menuOpen, setMenuOpen] = useState(false);
-  const workersPerPage = 10;
+  const [hayNotificaciones, setHayNotificaciones] = useState(true);
+  const workersPerPage = 8;
   const navigate = useNavigate();
 
   useEffect(() => {
+    const cargarWorkers = async () => {
+      const q = query(collection(db, "users"), where("role", "==", "worker"));
+      const snapshot = await getDocs(q);
+      setWorkers(snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() } as Worker)));
+    };
     cargarWorkers();
   }, []);
 
-  const cargarWorkers = async () => {
-    const q = query(collection(db, "users"), where("role", "==", "worker"));
-    const snapshot = await getDocs(q);
-    setWorkers(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Worker)));
-  };
-
   const handleLogout = async () => {
-  try {
     await signOut(auth);
     navigate("/login");
-  } catch (error) {
-    console.error("Error al cerrar sesión:", error);
-  }
-};
+  };
 
   const eliminarWorker = async (id: string) => {
     if (confirm("¿Seguro que quieres eliminar este trabajador?")) {
       await deleteDoc(doc(db, "users", id));
-      setWorkers(prev => prev.filter(worker => worker.id !== id));
+      setWorkers((prev) => prev.filter((w) => w.id !== id));
     }
   };
 
@@ -69,20 +79,10 @@ export default function UsuariosPage() {
     if (editingWorker) {
       const ref = doc(db, "users", editingWorker.id!);
       await updateDoc(ref, formData);
-      setWorkers(prev =>
-        prev.map(worker =>
-          worker.id === editingWorker.id ? { ...worker, ...formData } : worker
-        )
+      setWorkers((prev) =>
+        prev.map((w) => (w.id === editingWorker.id ? { ...w, ...formData } : w))
       );
       setEditingWorker(null);
-      setFormData({
-        name: "",
-        email: "",
-        phone: "",
-        position: "",
-        salary: "",
-        emergencyNumber: "",
-      });
     }
   };
 
@@ -93,16 +93,8 @@ export default function UsuariosPage() {
     }
     const nuevo = { ...formData, role: "worker" };
     const docRef = await addDoc(collection(db, "users"), nuevo);
-    setWorkers(prev => [...prev, { id: docRef.id, ...nuevo }]);
+    setWorkers((prev) => [...prev, { id: docRef.id, ...nuevo }]);
     setAddingWorker(false);
-    setFormData({
-      name: "",
-      email: "",
-      phone: "",
-      position: "",
-      salary: "",
-      emergencyNumber: "",
-    });
   };
 
   // Paginación
@@ -112,159 +104,213 @@ export default function UsuariosPage() {
   const totalPages = Math.ceil(workers.length / workersPerPage);
 
   return (
-    <div className="relative flex flex-col min-h-screen bg-black bg-center bg-cover" style={{ backgroundImage: `url(${cowsBackground})` }}>
-      {/* Overlay */}
-      <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" />
+    <div
+      className="relative flex flex-col min-h-screen bg-black bg-cover bg-center"
+      style={{ backgroundImage: `url(${cowsBackground})` }}
+    >
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
 
-      <div className="relative z-10 flex flex-col items-center w-full max-w-full sm:max-w-2xl md:max-w-4xl px-4 sm:px-6 mx-auto flex-1">
+      {/* HEADER */}
+      <header className="fixed top-0 left-0 w-full py-3 px-4 sm:px-6 flex justify-between items-center bg-purple-600 text-white shadow-md z-30">
+        <h1 className="text-2xl text-black  md:text-2xl font-extrabold">Lista de Trabajadores</h1>
 
-        {/* Header */}
-        <header className="fixed top-0 left-0 w-full py-3 sm:py-4 px-4 sm:px-6 flex justify-between items-center bg-purple-500 shadow-lg text-black z-20">
-          <h1 className="text-2xl  font-extrabold tracking-wide text-center">
-            Lista de Trabajadores
-          </h1>
+        {/* Desktop menu */}
+        <div className="hidden sm:flex text-black items-center gap-4">
+          <button
+            onClick={() => navigate("/home")}
+            className="hover:text-purple-300 transition"
+          >
+            <FaHome size={22} />
+          </button>
 
-          {/* Botones grandes */}
-          <div className="hidden sm:flex items-center gap-3">
-            <button onClick={() => navigate("/home")} className="text-black hover:text-purple-300 transition">
-              <FaHome size={22} />
-            </button>
-
-            <Link to="/notificaciones" className="relative text-black text-xl hover:text-purple-300 transition">
-              <FaBell />
-            </Link>
-
-            <button
-                onClick={handleLogout}
-                className="bg-purple-600 hover:bg-purple-700 text-black font-semibold px-3 py-1 rounded-xl"
-              >
-                Cerrar sesión
-              </button>
-            </div>
-
-          {}
-          <div className="sm:hidden relative">
-            <button onClick={() => setMenuOpen(!menuOpen)}>
-              {menuOpen ? <FaTimes size={22} /> : <FaBars size={22} />}
-            </button>
-
-            {menuOpen && (
-              <motion.div
-                initial={{ opacity: 0, x: 50 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 50 }}
-                className="absolute right-0 mt-2 w-48 bg-black/90 backdrop-blur-md rounded-lg shadow-lg flex flex-col p-3 space-y-2 md:hidden">
-                <button onClick={() => { navigate("/home"); setMenuOpen(false); }} className="flex items-center gap-2 text-white hover:text-gray-300">
-                  <FaHome /> Inicio
-                </button>
-
-                <Link to="/notificaciones" onClick={() => setMenuOpen(false)} className="flex items-center gap-2 text-white hover:text-gray-300 relative">
-                  <FaBell /> Notificaciones
-                  {hayNotificaciones && <span className="absolute right-2 text-lg animate-bounce"></span>}
-                </Link>
-
-                <button onClick={() => { handleLogout(); setMenuOpen(false); }} 
-                className="flex items-center gap-2 text-red-400 hover:text-red-600">
-                  🚪 Cerrar sesión
-                </button>
-              </motion.div>
+          <Link to="/notificaciones" className="relative hover:text-purple-300">
+            <FaBell size={20} />
+            {hayNotificaciones && (
+              <span className="absolute -top-1 -right-2 bg-red-600 text-white text-xs rounded-full px-1.5 py-0.5 animate-pulse">
+                🐮
+              </span>
             )}
-          </div>
-        </header>
+          </Link>
 
-        {/* Lista de trabajadores */}
-        <motion.div initial={{ opacity: 0, y: 50 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }} className="mt-20 sm:mt-24 mb-6 sm:mb-8 bg-white/30 p-4 sm:p-6 md:p-8 rounded-2xl w-full text-white shadow-lg backdrop-blur-lg overflow-y-auto max-h-[70vh]">
+          <button
+            onClick={handleLogout}
+            className="bg-purple-400 hover:bg-purple-500 text-black font-semibold px-3 py-1.5 rounded-lg transition"
+          >
+            Cerrar sesión
+          </button>
+        </div>
+
+        {/* Mobile menu */}
+        <button
+          className="sm:hidden text-black hover:text-purple-300 text-2xl"
+          onClick={() => setMenuOpen(!menuOpen)}
+        >
+          {menuOpen ? <FaTimes /> : <FaBars />}
+        </button>
+
+        {menuOpen && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="absolute top-full right-0 bg-white/40 text-black w-48 rounded-b-2xl shadow-lg flex flex-col items-center py-2 gap-2 md:hidden animate-fadeIn"
+          >
+            <button
+              onClick={() => {
+                navigate("/home");
+                setMenuOpen(false);
+              }}
+              className="w-4/5 py-2 rounded-xl bg-purple-400 hover:bg-purple-500 flex items-center font-semibold justify-center gap-2"
+            >
+              <FaHome /> Inicio
+            </button>
+            <Link
+              to="/notificaciones"
+              onClick={() => setMenuOpen(false)}
+              className="w-4/5 py-2 rounded-xl bg-purple-400 hover:bg-purple-500 flex items-center font-semibold justify-center gap-2"
+            >
+              <FaBell /> Notificaciones
+            </Link>
+            <button
+              onClick={() => {
+                handleLogout();
+                setMenuOpen(false);
+              }}
+              className="w-4/5 py-2 bg-red-600 text-white rounded-xl hover:bg-red-700 flex items-center font-semibold justify-center gap-2"
+            >
+              Cerrar sesión
+            </button>
+          </motion.div>
+        )}
+      </header>
+
+      {/* MAIN */}
+      <main className="relative z-10 flex flex-col flex-1 items-center pt-20 pb-20 px-3 sm:px-6 w-full">
+        <motion.div
+          initial={{ opacity: 0, y: 40 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+          className="bg-white/30 backdrop-blur-lg rounded-3xl shadow-lg p-4 sm:p-6 md:p-8 w-full max-w-5xl text-black overflow-y-auto"
+        >
           {workers.length === 0 ? (
-            <p className="text-center text-base sm:text-lg font-medium">No hay trabajadores registrados.</p>
+            <p className="text-center text-white text-base sm:text-lg">
+              No hay trabajadores registrados.
+            </p>
           ) : (
             <>
-              <ul className="space-y-3 sm:space-y-4">
-                {currentWorkers.map(worker => (
-                  <motion.li key={worker.id} initial={{ opacity: 0, x: -30 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.4 }} className="bg-[#FFEFD5] hover:bg-purple-300 p-5 sm:p-6 rounded-2xl flex flex-col gap-3 shadow-md transition-all duration-300 cursor-pointer">
-                    <div className="flex items-center gap-3">
-                      <FaUserTie className="text-[#2E7D32]" size={22} />
-                      <span className="font-semibold text-base sm:text-lg text-[#101010]">{worker.name}</span>
+              <ul className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {currentWorkers.map((worker) => (
+                  <motion.li
+                    key={worker.id}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    className="bg-yellow-50 hover:bg-yellow-100 rounded-2xl p-4 sm:p-5 shadow-md transition-all duration-300"
+                  >
+                    <div className="flex items-center gap-3 mb-2">
+                      <FaUserTie className="text-purple-700" />
+                      <span className="font-semibold text-lg">{worker.name}</span>
                     </div>
-                    <div className="text-sm sm:text-base opacity-90 space-y-1 text-black">
-                      <p><b>Email:</b> {worker.email}</p>
+                    <div className="text-sm text-gray-700 space-y-1">
+                      <p>
+                        <b>Email:</b> {worker.email}
+                      </p>
                       {worker.phone && <p><b>Teléfono:</b> {worker.phone}</p>}
                       {worker.position && <p><b>Puesto:</b> {worker.position}</p>}
                       {worker.salary && <p><b>Salario:</b> {worker.salary}</p>}
-                      {worker.emergencyNumber && <p><b>Emergencia:</b> {worker.emergencyNumber}</p>}
+                      {worker.emergencyNumber && (
+                        <p><b>Emergencia:</b> {worker.emergencyNumber}</p>
+                      )}
                     </div>
-                    <div className="flex justify-end gap-3 mt-2">
-                  {/* Botón de editar azul con icono blanco */}
-                  <button
-                    onClick={() => { setEditingWorker(worker); setFormData(worker); }}
-                    className="bg-blue-500 hover:bg-blue-600 text-white p-2 rounded-full flex items-center justify-center transition-colors"
-                  >
-                    <FaEdit size={16} />
-                  </button>
-
-                  {/* Botón de eliminar rojo con icono blanco */}
-                  <button
-                    onClick={() => eliminarWorker(worker.id!)}
-                    className="bg-red-500 hover:bg-red-600 text-white p-2 rounded-full flex items-center justify-center transition-colors"
-                  >
-                    <FaTrash size={16} />
-                  </button>
-                </div>
+                    <div className="flex flex-wrap justify-end gap-2 mt-3">
+                      <button
+                        onClick={() => {
+                          setEditingWorker(worker);
+                          setFormData(worker);
+                        }}
+                        className="bg-blue-500 hover:bg-blue-600 text-white p-2 rounded-full flex items-center justify-center"
+                      >
+                        <FaEdit size={16} />
+                      </button>
+                      <button
+                        onClick={() => eliminarWorker(worker.id!)}
+                        className="bg-red-500 hover:bg-red-600 text-white p-2 rounded-full flex items-center justify-center"
+                      >
+                        <FaTrash size={16} />
+                      </button>
+                    </div>
                   </motion.li>
                 ))}
               </ul>
 
               {/* Paginación */}
-              <div className="flex justify-center items-center gap-4 mt-6">
-                <button onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))} disabled={currentPage === 1} className="px-3 py-1 bg-purple-500 hover:bg-purple-600 rounded-md text-black disabled:opacity-40 disabled:cursor-not-allowed">Anterior</button>
-                <span className="text-sm text-black">Página {currentPage} de {totalPages}</span>
-                <button onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))} disabled={currentPage === totalPages} className="px-3 py-1 bg-purple-500 hover:bg-purple-600 rounded-md text-black disabled:opacity-40 disabled:cursor-not-allowed">Siguiente</button>
+              <div className="flex justify-center items-center gap-3 mt-6 flex-wrap">
+                <button
+                  onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
+                  disabled={currentPage === 1}
+                  className="px-3 py-1 bg-purple-500 hover:bg-purple-600 text-white rounded-md disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
+                >
+                  Anterior
+                </button>
+                <span className="text-white text-sm">
+                  Página {currentPage} de {totalPages}
+                </span>
+                <button
+                  onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
+                  disabled={currentPage === totalPages}
+                  className="px-3 py-1 bg-purple-500 hover:bg-purple-600 text-white rounded-md disabled:opacity-50 text-sm sm:text-base"
+                >
+                  Siguiente
+                </button>
               </div>
             </>
           )}
         </motion.div>
-      </div>
+      </main>
 
-      {/* Footer */}
-      <footer className="relative z-10 w-full bg-[#094297dc] py-2 sm:py-3 md:py-4 text-center text-[10px] sm:text-xs md:text-sm text-white">
-        <p>© 2025 INNOVASYSTEM. Todos los derechos reservados.</p>
+      {/* FOOTER */}
+      <footer className="bg-[#094297dc] text-white text-xs sm:text-sm py-3 text-center w-full z-20">
+        © 2025 INNOVASYSTEM. Todos los derechos reservados.
       </footer>
 
-      {/* Modales */}
-      {editingWorker && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-30">
-          <div className="bg-purple-300 p-6 rounded-xl w-96 text-black">
-            <h2 className="text-lg font-bold mb-4">Editar trabajador</h2>
-            {["nombre","email","telefono","posicion de trabajo","salario","Numero de emergencia"].map(field => (
-              <input key={field} type="text" placeholder={field} value={formData[field as keyof Worker] || ""} onChange={e => setFormData({ ...formData, [field]: e.target.value })} className="w-full border bg-gray-50 rounded-md p-2 mb-2 focus:outline-none focus:ring-2 focus:ring-purple-500" />
-            ))}
-            <div className="flex justify-end gap-2 mt-2">
-              <button onClick={() => setEditingWorker(null)} className="px-3 py-1 bg-gray-400 hover:bg-gray-500 font-semibold rounded-md">Cancelar</button>
-              <button onClick={guardarEdicion} className="px-3 py-1 bg-purple-500 hover:bg-purple-600 font-semibold text-black rounded-md">Guardar</button>
+      {/* MODALES */}
+      {(editingWorker || addingWorker) && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-40 px-4">
+          <div className="bg-white rounded-2xl p-5 sm:p-6 w-full max-w-md text-black overflow-y-auto max-h-[80vh]">
+            <h2 className="text-lg font-bold mb-3">
+              {editingWorker ? "Editar trabajador" : "Nuevo trabajador"}
+            </h2>
+            {["name", "email", "phone", "position", "salary", "emergencyNumber"].map(
+              (field) => (
+                <input
+                  key={field}
+                  type="text"
+                  placeholder={field}
+                  value={formData[field as keyof Worker] || ""}
+                  onChange={(e) =>
+                    setFormData({ ...formData, [field]: e.target.value })
+                  }
+                  className="w-full border rounded-md p-2 mb-2 focus:ring-2 focus:ring-purple-500 text-sm sm:text-base"
+                />
+              )
+            )}
+            <div className="flex flex-wrap justify-end gap-2 mt-3">
+              <button
+                onClick={() =>
+                  editingWorker ? setEditingWorker(null) : setAddingWorker(false)
+                }
+                className="px-3 py-1 bg-gray-400 hover:bg-gray-500 text-white rounded-md text-sm sm:text-base"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={editingWorker ? guardarEdicion : guardarNuevo}
+                className="px-3 py-1 bg-green-500 hover:bg-green-600 text-white rounded-md text-sm sm:text-base"
+              >
+                Guardar
+              </button>
             </div>
           </div>
         </div>
-      )}
-      {addingWorker && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-30">
-          <div className="bg-white p-6 rounded-xl w-96 text-black">
-            <h2 className="text-lg font-bold mb-4">Nuevo trabajador</h2>
-            {["name","email","phone","position","salary","emergencyNumber"].map(field => (
-              <input key={field} type="text" placeholder={field} value={formData[field as keyof Worker] || ""} onChange={e => setFormData({ ...formData, [field]: e.target.value })} className="w-full border rounded-md p-2 mb-2" />
-            ))}
-            <div className="flex justify-end gap-2 mt-2">
-              <button onClick={() => setAddingWorker(false)} className="px-3 py-1 bg-gray-300 rounded-md">Cancelar</button>
-              <button onClick={guardarNuevo} className="px-3 py-1 bg-green-500 text-white rounded-md">Guardar</button>
-            </div>
-          </div>
-          <footer className="w-full bg-[#099757dc] py-3 md:py-4 text-center text-xs md:text-sm text-white fixed bottom-0 z-50">
-  <p>© 2025 INNOVASYSTEM. Todos los derechos reservados.</p>
-</footer>
-        </div>
-        
       )}
     </div>
-    
   );
 }
-
-// Ya es responsivo

@@ -57,6 +57,7 @@ export default function Notificaciones() {
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
+  // 🔹 Verificar autenticación
   useEffect(() => {
     const unsub = auth.onAuthStateChanged(async (user) => {
       if (user) {
@@ -70,7 +71,7 @@ export default function Notificaciones() {
     return () => unsub();
   }, [navigate]);
 
-  // Tareas
+  // 🔹 Escuchar tareas
   useEffect(() => {
     if (!rol || !userId) return;
     let q;
@@ -97,7 +98,7 @@ export default function Notificaciones() {
     return () => unsub();
   }, [rol, userId]);
 
-  // Notificaciones (admin)
+  // 🔹 Escuchar notificaciones (admin)
   useEffect(() => {
     if (rol !== "admin") return;
     const q = query(
@@ -135,257 +136,297 @@ export default function Notificaciones() {
     return acc;
   }, {});
 
- return (
-  <div className="relative min-h-screen flex flex-col text-white overflow-x-hidden">
-    {/* Fondo */}
-    <div
-      className="absolute inset-0 bg-cover bg-center z-0"
-      style={{ backgroundImage: `url(${cow2Image})` }}
-    />
-    <div className="absolute inset-0 bg-black/50 backdrop-blur-sm z-0" />
+  return (
+    <div className="relative min-h-screen flex flex-col text-white overflow-x-hidden">
+      {/* Fondo */}
+      <div
+        className="absolute inset-0 bg-cover bg-center z-0"
+        style={{ backgroundImage: `url(${cow2Image})` }}
+      />
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm z-0" />
 
-    {/* HEADER */}
-    <header className="relative z-20 w-full py-3 px-4 md:px-6 flex justify-between items-center bg-amber-700 text-black shadow-lg">
-      <h1 className="text-lg md:text-2xl font-extrabold">Notificaciones</h1>
+      {/* HEADER */}
+      <header className="relative z-20 w-full py-3 px-4 md:px-6 flex justify-between items-center bg-amber-700 text-black shadow-lg">
+        <h1 className="text-lg md:text-2xl font-extrabold">Notificaciones</h1>
 
-      {/* Menú desktop */}
-      <div className="hidden md:flex items-center gap-4">
-        <button
-          onClick={() => navigate("/home")}
-          className="text-black hover:text-amber-500 transition"
-        >
-          <FaHome size={22} />
-        </button>
-
-        <div className="relative">
+        {/* Menú escritorio */}
+        <div className="hidden md:flex items-center gap-4">
           <button
-            onClick={() => setMenuNotificacionesOpen(!menuNotificacionesOpen)}
-            className="relative text-black text-xl hover:text-amber-500 transition"
+            onClick={() => navigate("/home")}
+            className="text-black hover:text-amber-500 transition"
           >
-            <FaBell />
-            {notificacionesNoLeidas > 0 && (
-              <span className="absolute -top-2 -right-2 bg-red-600 text-white text-xs font-bold px-1.5 py-0.5 rounded-full animate-pulse">
-                {notificacionesNoLeidas}
-              </span>
-            )}
+            <FaHome size={22} />
           </button>
 
-          {menuNotificacionesOpen && (
-            <div className="absolute right-0 mt-2 w-72 max-h-80 overflow-y-auto bg-white text-gray-800 rounded-lg shadow-lg z-50">
-              {notificaciones.length === 0 ? (
-                <p className="p-4 text-sm text-gray-500">No hay notificaciones</p>
-              ) : (
-                notificaciones.map((n) => (
-                  <div
-                    key={n.id}
-                    className={`p-3 border-b last:border-none cursor-pointer hover:bg-gray-100 transition ${
-                      !n.leido ? "bg-yellow-100 font-semibold" : ""
-                    }`}
-                    onClick={() => abrirNotificacion(n)}
-                  >
-                    <p className="text-sm">{n.titulo}</p>
-                    <p className="text-xs text-gray-500">{n.mensaje}</p>
-                  </div>
-                ))
+          <div className="relative">
+            <button
+              onClick={() => setMenuNotificacionesOpen(!menuNotificacionesOpen)}
+              className="relative text-black text-xl hover:text-amber-500 transition"
+            >
+              <FaBell />
+              {notificacionesNoLeidas > 0 && (
+                <span className="absolute -top-2 -right-2 bg-red-600 text-white text-xs font-bold px-1.5 py-0.5 rounded-full animate-pulse">
+                  {notificacionesNoLeidas}
+                </span>
               )}
-            </div>
-          )}
-        </div>
+            </button>
 
-        <button
-          onClick={handleLogout}
-          className="bg-amber-600 hover:bg-amber-800 text-black font-semibold px-3 py-1 rounded-xl "
-        >
-          Cerrar sesión
-        </button>
-      </div>
-
-      {/* Menú móvil */}
-      <button
-        className="md:hidden text-white text-2xl"
-        onClick={() => setMenuOpen(!menuOpen)}
-      >
-        {menuOpen ? <FaTimes /> : <FaBars />}
-      </button>
-    </header>
-
-    {/* MAIN */}
-    <main className="relative z-10 flex-1 flex flex-col items-center w-full px-4 py-8 md:px-10">
-      {loading ? (
-        <p className="text-center text-yellow-100">Cargando...</p>
-      ) : rol === "worker" ? (
-        /* 🔹 Sección TRABAJADOR */
-        <div className="bg-[#FFF9E6]/10 backdrop-blur-md w-full max-w-3xl p-6 md:p-8 rounded-3xl border border-[#FFEB99]/30 shadow-2xl shadow-[#B71C1C]/20">
-          <h2 className="text-3xl font-bold text-[#FFEB99] mb-6 flex items-center gap-2 drop-shadow-md">
-            📋 Mis tareas pendientes
-          </h2>
-          {tareas.length === 0 ? (
-            <p className="text-center text-yellow-200 italic">
-              No tienes tareas pendientes 🎉
-            </p>
-          ) : (
-            <ul className="space-y-6">
-              {tareas.map((t) => (
-                <li
-                  key={t.id}
-                  className="group p-4 md:p-6 rounded-3xl border border-[#FFEB99]/40 bg-[#FFF9E6]/10 shadow-lg hover:shadow-[#FFEB99]/30 transition-all duration-300 hover:scale-[1.02]"
-                >
-                  <h3 className="font-bold text-[#FFEB99] text-lg mb-2 drop-shadow-sm">
-                    {t.titulo}
-                  </h3>
-
-                  {t.reporte && (
-                    <div className="mt-2 bg-black/30 p-3 rounded-lg text-sm text-gray-100 whitespace-pre-wrap border border-[#FFEB99]/30">
-                      📝 <strong>Reporte del trabajador:</strong>
-                      <p className="mt-1 whitespace-pre-line">{t.reporte}</p>
+            {menuNotificacionesOpen && (
+              <div className="absolute right-0 mt-2 w-72 max-h-80 overflow-y-auto bg-white text-gray-800 rounded-lg shadow-lg z-50">
+                {notificaciones.length === 0 ? (
+                  <p className="p-4 text-sm text-gray-500">No hay notificaciones</p>
+                ) : (
+                  notificaciones.map((n) => (
+                    <div
+                      key={n.id}
+                      className={`p-3 border-b last:border-none cursor-pointer hover:bg-gray-100 transition ${
+                        !n.leido ? "bg-yellow-100 font-semibold" : ""
+                      }`}
+                      onClick={() => abrirNotificacion(n)}
+                    >
+                      <p className="text-sm">{n.titulo}</p>
+                      <p className="text-xs text-gray-500">{n.mensaje}</p>
                     </div>
-                  )}
-
-                  <textarea
-                    value={reporte[t.id]?.texto || ""}
-                    onChange={(e) =>
-                      setReporte((prev) => ({
-                        ...prev,
-                        [t.id]: { texto: e.target.value },
-                      }))
-                    }
-                    placeholder="Escribe tu reporte aquí..."
-                    className="w-full p-2 rounded-md text-gray-800 text-sm mb-3"
-                  />
-
-                  <div className="flex gap-3">
-                    <button
-                      onClick={async () => {
-                        await updateDoc(doc(db, "tareas", t.id), {
-                          estado: "realizada",
-                          completada: true,
-                          reporte: reporte[t.id]?.texto || "Sin detalle",
-                        });
-                        await addDoc(collection(db, "notificaciones"), {
-                          para: "admin",
-                          mensaje: `El trabajador completó la tarea "${t.titulo}".`,
-                          tareaId: t.id,
-                          leido: false,
-                          creadoEn: serverTimestamp(),
-                        });
-                      }}
-                      className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded-lg text-sm"
-                    >
-                      ✅ Completada
-                    </button>
-
-                    <button
-                      onClick={async () => {
-                        await updateDoc(doc(db, "tareas", t.id), {
-                          estado: "no realizada",
-                          completada: false,
-                          reporte: reporte[t.id]?.texto || "Sin detalle",
-                        });
-                        await addDoc(collection(db, "notificaciones"), {
-                          para: "admin",
-                          mensaje: `El trabajador NO realizó la tarea "${t.titulo}".`,
-                          tareaId: t.id,
-                          leido: false,
-                          creadoEn: serverTimestamp(),
-                        });
-                      }}
-                      className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-lg text-sm"
-                    >
-                      ❌ No realizada
-                    </button>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      ) : (
-        /* 🔹 Sección ADMIN con tabla */
-        <div className="bg-[#FFF9E6]/10 backdrop-blur-md w-full max-w-5xl p-6 md:p-8 rounded-3xl border border-[#FFEB99]/30 shadow-2xl shadow-[#B71C1C]/20 overflow-x-auto">
-          <h2 className="text-3xl font-bold text-[#FFEB99] mb-6 drop-shadow-md">
-            📋 Tareas reportadas
-          </h2>
-          {Object.keys(tareasPorTrabajador).length === 0 ? (
-            <p className="text-center text-yellow-200 italic">
-              No hay tareas reportadas aún 🎉
-            </p>
-          ) : (
-            Object.entries(tareasPorTrabajador).map(([workerId, workerTasks]) => (
-              <div key={workerId} className="mb-8">
-                <button
-                  onClick={() => toggleWorker(workerId)}
-                  className="w-full flex justify-between items-center px-5 py-3 bg-gradient-to-r from-[#B71C1C]/80 to-[#FFB300]/40 hover:from-[#B71C1C]/90 hover:to-[#FFB300]/50 transition-colors rounded-t-2xl font-bold text-[#FFEB99] text-lg drop-shadow-sm"
-                >
-                  👤 {workerId}
-                  <span
-                    className={`text-sm transform transition-transform duration-300 ${
-                      openWorkers[workerId] ? "rotate-180" : ""
-                    }`}
-                  >
-                    ▼
-                  </span>
-                </button>
-
-                {openWorkers[workerId] && (
-                  <div className="bg-[#FFF9E6]/10 rounded-b-2xl overflow-hidden border border-[#FFEB99]/20">
-                    <table className="w-full text-left border-collapse text-sm md:text-base">
-                      <thead>
-                        <tr className="bg-[#FFEB99]/20 text-[#FFEB99]">
-                          <th className="px-4 py-2">Título</th>
-                          <th className="px-4 py-2">Descripción</th>
-                          <th className="px-4 py-2">Fecha</th>
-                          <th className="px-4 py-2">Estado</th>
-                          <th className="px-4 py-2">Reporte</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {workerTasks.map((t) => (
-                          <tr
-                            key={t.id}
-                            className={`border-b border-[#FFEB99]/30 ${
-                              t.estado === "no realizada"
-                                ? "bg-red-100/10"
-                                : "bg-green-100/10"
-                            }`}
-                          >
-                            <td className="px-4 py-2 font-semibold text-[#FFEB99]">
-                              {t.titulo}
-                            </td>
-                            <td className="px-4 py-2 text-gray-200">
-                              {t.descripcion || "—"}
-                            </td>
-                            <td className="px-4 py-2 text-gray-300">{t.fecha}</td>
-                            <td className="px-4 py-2">
-                              <span
-                                className={`px-3 py-1 rounded-full text-sm font-semibold ${
-                                  t.estado === "no realizada"
-                                    ? "bg-red-200 text-red-800"
-                                    : "bg-green-200 text-green-800"
-                                }`}
-                              >
-                                {t.estado === "no realizada"
-                                  ? "❌ No realizada"
-                                  : "✅ Completada"}
-                              </span>
-                            </td>
-                            <td className="px-4 py-2 text-gray-100 whitespace-pre-wrap">
-                              {t.reporte || "Sin reporte"}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                  ))
                 )}
               </div>
-            ))
-          )}
+            )}
+          </div>
+
+          <button
+            onClick={handleLogout}
+            className="bg-amber-600 hover:bg-amber-800 text-black font-semibold px-3 py-1 rounded-xl"
+          >
+            Cerrar sesión
+          </button>
         </div>
-      )}
-    </main>
-    <footer className="w-full bg-[#099757dc] py-3 md:py-4 text-center text-xs md:text-sm text-white fixed bottom-0 z-50">
-  <p>© 2025 INNOVASYSTEM. Todos los derechos reservados.</p>
-</footer>
-  </div>
-);
+
+        {/* Menú móvil */}
+        <button
+          className="md:hidden text-white text-2xl"
+          onClick={() => setMenuOpen(!menuOpen)}
+        >
+          {menuOpen ? <FaTimes /> : <FaBars />}
+        </button>
+
+        {/* Menú desplegable móvil */}
+        <div
+          className={`absolute top-full right-0 bg-white/40 text-black w-48 rounded-b-2xl shadow-lg md:hidden flex flex-col items-center py-2 gap-2 transition-all duration-300 ${
+            menuOpen ? "opacity-100 max-h-60" : "opacity-0 max-h-0"
+          }`}
+        >
+          <button
+            onClick={() => {
+              navigate("/home");
+              setMenuOpen(false);
+            }}
+            className="w-5/6 py-2 rounded-lg bg-amber-400 hover:bg-amber-500 flex items-center justify-center gap-2 font-semibold"
+          >
+            <FaHome /> Inicio
+          </button>
+
+          <button
+            onClick={() => {
+              setMenuNotificacionesOpen(true);
+              setMenuOpen(false);
+            }}
+            className="w-5/6 py-2 rounded-lg bg-amber-400 hover:bg-amber-500 flex items-center justify-center gap-2 font-semibold"
+          >
+            <FaBell /> Notificaciones
+          </button>
+
+          <button
+            onClick={() => {
+              handleLogout();
+              setMenuOpen(false);
+            }}
+            className="w-5/6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 flex items-center justify-center gap-2 font-semibold"
+          >
+            Cerrar sesión
+          </button>
+        </div>
+      </header>
+
+      {/* MAIN */}
+      <main className="relative z-10 flex-1 flex flex-col items-center w-full px-4 py-8 md:px-10 mb-16">
+        {loading ? (
+          <p className="text-center text-yellow-100">Cargando...</p>
+        ) : rol === "worker" ? (
+          // 🔹 Trabajador
+          <div className="bg-[#FFF9E6]/10 backdrop-blur-md w-full max-w-3xl p-6 md:p-8 rounded-3xl border border-[#FFEB99]/30 shadow-2xl">
+            <h2 className="text-3xl font-bold text-[#FFEB99] mb-6 flex items-center gap-2">
+              📋 Mis tareas pendientes
+            </h2>
+            {tareas.length === 0 ? (
+              <p className="text-center text-yellow-200 italic">
+                No tienes tareas pendientes 🎉
+              </p>
+            ) : (
+              <ul className="space-y-6">
+                {tareas.map((t) => (
+                  <li
+                    key={t.id}
+                    className="group p-4 md:p-6 rounded-3xl border border-[#FFEB99]/40 bg-[#FFF9E6]/10 shadow-lg hover:shadow-[#FFEB99]/30 transition-all hover:scale-[1.02]"
+                  >
+                    <h3 className="font-bold text-[#FFEB99] text-lg mb-2">
+                      {t.titulo}
+                    </h3>
+                    {t.reporte && (
+                      <div className="mt-2 bg-black/30 p-3 rounded-lg text-sm text-gray-100 border border-[#FFEB99]/30">
+                        📝 <strong>Reporte del trabajador:</strong>
+                        <p className="mt-1 whitespace-pre-line">{t.reporte}</p>
+                      </div>
+                    )}
+
+                    <textarea
+                      value={reporte[t.id]?.texto || ""}
+                      onChange={(e) =>
+                        setReporte((prev) => ({
+                          ...prev,
+                          [t.id]: { texto: e.target.value },
+                        }))
+                      }
+                      placeholder="Escribe tu reporte aquí..."
+                      className="w-full p-2 rounded-md text-gray-800 text-sm mb-3"
+                    />
+
+                    <div className="flex flex-col sm:flex-row gap-3">
+                      <button
+                        onClick={async () => {
+                          await updateDoc(doc(db, "tareas", t.id), {
+                            estado: "realizada",
+                            completada: true,
+                            reporte: reporte[t.id]?.texto || "Sin detalle",
+                          });
+                          await addDoc(collection(db, "notificaciones"), {
+                            para: "admin",
+                            mensaje: `El trabajador completó la tarea "${t.titulo}".`,
+                            tareaId: t.id,
+                            leido: false,
+                            creadoEn: serverTimestamp(),
+                          });
+                        }}
+                        className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded-lg text-sm w-full sm:w-auto"
+                      >
+                        ✅ Completada
+                      </button>
+
+                      <button
+                        onClick={async () => {
+                          await updateDoc(doc(db, "tareas", t.id), {
+                            estado: "no realizada",
+                            completada: false,
+                            reporte: reporte[t.id]?.texto || "Sin detalle",
+                          });
+                          await addDoc(collection(db, "notificaciones"), {
+                            para: "admin",
+                            mensaje: `El trabajador NO realizó la tarea "${t.titulo}".`,
+                            tareaId: t.id,
+                            leido: false,
+                            creadoEn: serverTimestamp(),
+                          });
+                        }}
+                        className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-lg text-sm w-full sm:w-auto"
+                      >
+                        ❌ No realizada
+                      </button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        ) : (
+          // 🔹 Admin
+          <div className="bg-[#FFF9E6]/10 backdrop-blur-md w-full max-w-5xl p-6 md:p-8 rounded-3xl border border-[#FFEB99]/30 shadow-2xl overflow-x-auto">
+            <h2 className="text-3xl font-bold text-[#FFEB99] mb-6">
+              📋 Tareas reportadas
+            </h2>
+            {Object.keys(tareasPorTrabajador).length === 0 ? (
+              <p className="text-center text-yellow-200 italic">
+                No hay tareas reportadas aún 🎉
+              </p>
+            ) : (
+              Object.entries(tareasPorTrabajador).map(([workerId, workerTasks]) => (
+                <div key={workerId} className="mb-8">
+                  <button
+                    onClick={() => toggleWorker(workerId)}
+                    className="w-full flex justify-between items-center px-5 py-3 bg-gradient-to-r from-[#B71C1C]/80 to-[#FFB300]/40 hover:from-[#B71C1C]/90 hover:to-[#FFB300]/50 transition rounded-t-2xl font-bold text-[#FFEB99] text-lg"
+                  >
+                    👤 {workerId}
+                    <span
+                      className={`text-sm transform transition-transform ${
+                        openWorkers[workerId] ? "rotate-180" : ""
+                      }`}
+                    >
+                      ▼
+                    </span>
+                  </button>
+
+                  {openWorkers[workerId] && (
+                    <div className="bg-[#FFF9E6]/10 rounded-b-2xl overflow-hidden border border-[#FFEB99]/20">
+                      <table className="w-full text-left border-collapse text-sm md:text-base">
+                        <thead>
+                          <tr className="bg-[#FFEB99]/20 text-[#FFEB99]">
+                            <th className="px-4 py-2">Título</th>
+                            <th className="px-4 py-2">Descripción</th>
+                            <th className="px-4 py-2">Fecha</th>
+                            <th className="px-4 py-2">Estado</th>
+                            <th className="px-4 py-2">Reporte</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {workerTasks.map((t) => (
+                            <tr
+                              key={t.id}
+                              className={`border-b border-[#FFEB99]/30 ${
+                                t.estado === "no realizada"
+                                  ? "bg-red-100/10"
+                                  : "bg-green-100/10"
+                              }`}
+                            >
+                              <td className="px-4 py-2 font-semibold text-[#FFEB99]">
+                                {t.titulo}
+                              </td>
+                              <td className="px-4 py-2 text-gray-200">
+                                {t.descripcion || "—"}
+                              </td>
+                              <td className="px-4 py-2 text-gray-300">
+                                {t.fecha}
+                              </td>
+                              <td className="px-4 py-2">
+                                <span
+                                  className={`px-3 py-1 rounded-full text-sm font-semibold ${
+                                    t.estado === "no realizada"
+                                      ? "bg-red-200 text-red-800"
+                                      : "bg-green-200 text-green-800"
+                                  }`}
+                                >
+                                  {t.estado === "no realizada"
+                                    ? "❌ No realizada"
+                                    : "✅ Completada"}
+                                </span>
+                              </td>
+                              <td className="px-4 py-2 text-gray-100 whitespace-pre-wrap">
+                                {t.reporte || "Sin reporte"}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              ))
+            )}
+          </div>
+        )}
+      </main>
+
+      {/* FOOTER */}
+      <footer className="w-full bg-[#099757dc] py-3 md:py-4 text-center text-xs md:text-sm text-white fixed bottom-0 z-50">
+        <p>© 2025 INNOVASYSTEM. Todos los derechos reservados.</p>
+      </footer>
+    </div>
+  );
 }

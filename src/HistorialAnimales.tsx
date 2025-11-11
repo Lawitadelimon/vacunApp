@@ -1,9 +1,8 @@
 import autoTable from "jspdf-autotable";
 import { useState, useEffect } from "react";
-import { collection, doc, getDocs } from "firebase/firestore";
+import { collection, getDocs } from "firebase/firestore";
 import { db } from "./firebase";
 import logoRancho from "./assets/logo.jpg";
-
 import {
   startOfMonth,
   endOfMonth,
@@ -26,7 +25,6 @@ import jsPDF from "jspdf";
 import "jspdf-autotable";
 import { useNavigate } from "react-router-dom";
 import { getAuth, signOut } from "firebase/auth";
-import { useState as useMenuState } from "react";
 import { FaHome, FaBell, FaTimes, FaBars } from "react-icons/fa";
 import cowsBackground from "./assets/cows2.jpg";
 
@@ -50,7 +48,7 @@ export default function Estadisticas() {
   const [mesSeleccionado, setMesSeleccionado] = useState(() => new Date());
   const [resumen, setResumen] = useState<DiaResumen[]>([]);
   const [loading, setLoading] = useState(true);
-  const [menuAbierto, setMenuAbierto] = useMenuState(false);
+  const [menuAbierto, setMenuAbierto] = useState(false);
 
   const navigate = useNavigate();
   const auth = getAuth();
@@ -126,86 +124,74 @@ export default function Estadisticas() {
   };
 
   const exportarPDF = () => {
-  const doc = new jsPDF("p", "mm", "a4");
-  const margin = 14;
+    const doc = new jsPDF("p", "mm", "a4");
+    const margin = 14;
 
-  // 🔹 Encabezado con logo y título
-  doc.addImage(logoRancho, "PNG", margin, 10, 25, 25);
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(18);
-  doc.text("Rancho El Paraíso", margin + 30, 18);
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(12);
-  doc.text("Reporte mensual de animales", margin + 30, 26);
-  doc.setFontSize(10);
-  doc.text(`Fecha: ${format(new Date(), "dd/MM/yyyy")}`, 195, 18, { align: "right" });
+    doc.addImage(logoRancho, "PNG", margin, 10, 25, 25);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(18);
+    doc.text("Rancho El Paraíso", margin + 30, 18);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(12);
+    doc.text("Reporte mensual de animales", margin + 30, 26);
+    doc.setFontSize(10);
+    doc.text(`Fecha: ${format(new Date(), "dd/MM/yyyy")}`, 195, 18, { align: "right" });
 
-  // 🔹 Subtítulo
-  doc.setFontSize(12);
-  doc.text(
-    `Mes: ${format(mesSeleccionado, "MMMM yyyy", { locale: es })}`,
-    margin,
-    42
-  );
+    doc.setFontSize(12);
+    doc.text(`Mes: ${format(mesSeleccionado, "MMMM yyyy", { locale: es })}`, margin, 42);
 
-  // 🔹 Tabla con los datos
-  const tableData = resumen.map((r) => [
-    r.dia,
-    r.muertos,
-    r.codigosMuertos,
-    r.vendidos,
-    r.codigosVendidos,
-  ]);
+    const tableData = resumen.map((r) => [
+      r.dia,
+      r.muertos,
+      r.codigosMuertos,
+      r.vendidos,
+      r.codigosVendidos,
+    ]);
 
-  autoTable(doc, {
-    head: [["Día", "Muertos", "Códigos Muertos", "Vendidos", "Códigos Vendidos"]],
-    body: tableData,
-    startY: 48,
-    styles: { fontSize: 9, cellPadding: 2 },
-    headStyles: { fillColor: [255, 145, 0], textColor: 255, halign: "center" },
-    alternateRowStyles: { fillColor: [245, 245, 245] },
-    columnStyles: {
-      0: { halign: "center", cellWidth: 25 },
-      1: { halign: "center", cellWidth: 20 },
-      3: { halign: "center", cellWidth: 20 },
-    },
-  });
+    autoTable(doc, {
+      head: [["Día", "Muertos", "Códigos Muertos", "Vendidos", "Códigos Vendidos"]],
+      body: tableData,
+      startY: 48,
+      styles: { fontSize: 9, cellPadding: 2 },
+      headStyles: { fillColor: [255, 145, 0], textColor: 255, halign: "center" },
+      alternateRowStyles: { fillColor: [245, 245, 245] },
+      columnStyles: {
+        0: { halign: "center", cellWidth: 25 },
+        1: { halign: "center", cellWidth: 20 },
+        3: { halign: "center", cellWidth: 20 },
+      },
+    });
 
-  // 🔹 Totales generales
-  const finalY = (doc as any).lastAutoTable.finalY || 48;
-  const totalMuertos = resumen.reduce((sum, r) => sum + r.muertos, 0);
-  const totalVendidos = resumen.reduce((sum, r) => sum + r.vendidos, 0);
+    const finalY = (doc as any).lastAutoTable.finalY || 48;
+    const totalMuertos = resumen.reduce((sum, r) => sum + r.muertos, 0);
+    const totalVendidos = resumen.reduce((sum, r) => sum + r.vendidos, 0);
 
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(12);
-  doc.text(
-    `Totales del mes — Muertos: ${totalMuertos} | Vendidos: ${totalVendidos}`,
-    margin,
-    finalY + 10
-  );
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(12);
+    doc.text(
+      `Totales del mes — Muertos: ${totalMuertos} | Vendidos: ${totalVendidos}`,
+      margin,
+      finalY + 10
+    );
 
-  // 🔹 Pie de página
-  const pageHeight = doc.internal.pageSize.height;
-  doc.setFont("helvetica", "italic");
-  doc.setFontSize(9);
-  doc.text(
-    `Generado automáticamente por Animanager – ${format(new Date(), "dd/MM/yyyy")}`,
-    105,
-    pageHeight - 10,
-    { align: "center" }
-  );
+    const pageHeight = doc.internal.pageSize.height;
+    doc.setFont("helvetica", "italic");
+    doc.setFontSize(9);
+    doc.text(
+      `Generado automáticamente por Animanager – ${format(new Date(), "dd/MM/yyyy")}`,
+      105,
+      pageHeight - 10,
+      { align: "center" }
+    );
 
-  // 🔹 Guardar el PDF
-  doc.save(`Reporte_Rancho_${format(mesSeleccionado, "MM_yyyy")}.pdf`);
-};
-
-
+    doc.save(`Reporte_Rancho_${format(mesSeleccionado, "MM_yyyy")}.pdf`);
+  };
 
   if (loading)
     return <div className="text-center py-10 text-white">Cargando...</div>;
 
   return (
-    <div className="relative min-h-screen">
+    <div className="relative min-h-screen flex flex-col">
       {/* Fondo */}
       <div
         className="absolute inset-0 bg-cover bg-center blur-[2px]"
@@ -215,73 +201,85 @@ export default function Estadisticas() {
 
       {/* Navbar */}
       <nav className="sticky top-0 z-50 bg-orange-500 text-black flex items-center justify-between p-4 shadow-lg">
-        <div className="flex items-center gap-4">
-          <h1 className="text-2xl font-extrabold"> Estadísticas animales muertos y vendidos</h1>
-        </div>
-        <div className="flex items-center gap-4">
-          <button
-            onClick={() => navigate("/home")}
-            className="hover:text-orange-300 transition"
-            title="Inicio"
-          >
+        <h1 className="text-lg md:text-2xl font-extrabold text-center md:text-left">
+          Estadísticas de animales 
+        </h1>
+
+        {/* Desktop menu */}
+        <div className="hidden md:flex items-center gap-4">
+          <button onClick={() => navigate("/home")} className="hover:text-orange-300 transition">
             <FaHome size={20} />
           </button>
-          <button
-            onClick={() => navigate("/notificaciones")}
-            className="hover:text-orange-300 transition"
-            title="Notificaciones"
-          >
+          <button onClick={() => navigate("/notificaciones")} className="hover:text-orange-300 transition">
             <FaBell size={20} />
-          </button>
-          
-          <button
-            onClick={() => setMenuAbierto(!menuAbierto)}
-            className="md:hidden hover:text-orange-300"
-          >
-            {menuAbierto ? <FaTimes size={22} /> : <FaBars size={22} />}
           </button>
           <button
             onClick={handleLogout}
-            className="hidden md:inline bg-orange-400 text-black font-semibold px-3 py-1 rounded-xl hover:bg-orange-600"
+            className="bg-orange-600 text-black font-semibold px-3 py-1 rounded-xl hover:bg-orange-300 transition"
           >
             Cerrar sesión
           </button>
         </div>
+
+        {/* Mobile menu button */}
+        <button
+          onClick={() => setMenuAbierto(!menuAbierto)}
+          className="md:hidden hover:text-orange-300 transition"
+        >
+          {menuAbierto ? <FaTimes size={22} /> : <FaBars size={22} />}
+        </button>
+
+        {/* Mobile dropdown */}
         {menuAbierto && (
-          <div className="absolute top-full right-0 bg-white text-black w-48 rounded-b-lg shadow-lg md:hidden">
+          <div className="absolute top-full right-2 bg-white/40 text-black rounded-xl shadow-lg md:hidden flex flex-col items-center py-3 gap-3 w-48 animate-fadeIn">
             <button
-              onClick={() => navigate("/notificaciones")}
-              className="w-full text-left px-4 py-2 hover:bg-gray-200"
+              onClick={() => {
+                navigate("/home");
+                setMenuAbierto(false);
+              }}
+              className="w-4/5 py-2 rounded-lg bg-orange-500 hover:bg-orange-600 flex items-center justify-center gap-2 font-semibold"
             >
-              🔔 Notificaciones
+              <FaHome /> Inicio
             </button>
             <button
-              onClick={handleLogout}
-              className="w-full text-left px-4 py-2 hover:bg-gray-200"
+              onClick={() => {
+                navigate("/notificaciones");
+                setMenuAbierto(false);
+              }}
+              className="w-4/5 py-2 rounded-lg bg-orange-500 hover:bg-orange-600 flex items-center justify-center gap-2 font-semibold"
             >
-              🚪 Cerrar sesión
+              <FaBell /> Notificaciones
+            </button>
+            <button
+              onClick={() => {
+                handleLogout();
+                setMenuAbierto(false);
+              }}
+              className="w-4/5 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 flex items-center justify-center gap-2 font-semibold"
+            >
+              Cerrar sesión
             </button>
           </div>
         )}
       </nav>
 
       {/* Contenido */}
-      <div className="relative p-6 md:p-10">
-        <div className="bg-white/30 backdrop-blur-md border border-white/40 p-6 rounded-3xl shadow-lg">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-lg font-bold">📊 Reporte Mensual</h2>
-            <div className="flex gap-4">
+      <main className="relative flex-1 overflow-y-auto p-4 md:p-10 pb-20">
+        <div className="bg-white/30 backdrop-blur-md border border-white/40 p-4 md:p-6 rounded-3xl shadow-lg">
+          <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
+            <h2 className="text-lg md:text-xl font-bold text-center md:text-left">
+              Reporte mensual 📊
+            </h2>
+            <div className="flex flex-col md:flex-row gap-3 items-center">
               <input
                 type="month"
                 value={format(mesSeleccionado, "yyyy-MM")}
-                onChange={(e) =>
-                  setMesSeleccionado(new Date(e.target.value + "-01"))
-                }
-                className="px-2 py-1 rounded text-black"
+                onChange={(e) => setMesSeleccionado(new Date(e.target.value + "-01"))}
+                className="px-3 py-1 rounded text-black font-semibold bg-white/70"
               />
               <button
                 onClick={exportarPDF}
-                className="bg-orange-500 px-4 py-2 rounded-2xl hover:bg-orange-600 text-white"
+                className="bg-orange-500 px-4 py-2 rounded-xl hover:bg-orange-600 text-white font-semibold transition"
               >
                 📄 Descargar PDF
               </button>
@@ -294,32 +292,17 @@ export default function Estadisticas() {
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="dia" />
                 <YAxis />
-                <Tooltip
-                  formatter={(value, name) => [
-                    value,
-                    name === "muertos" ? "Muertos" : "Vendidos",
-                  ]}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="muertos"
-                  stroke="#ef4444"
-                  name="Muertos"
-                />
-                <Line
-                  type="monotone"
-                  dataKey="vendidos"
-                  stroke="#f97316"
-                  name="Vendidos"
-                />
+                <Tooltip />
+                <Line type="monotone" dataKey="muertos" stroke="#ef4444" name="Muertos" />
+                <Line type="monotone" dataKey="vendidos" stroke="#f97316" name="Vendidos" />
               </LineChart>
             </ResponsiveContainer>
           </div>
 
           <div className="bg-gray-600 p-4 rounded overflow-x-auto">
-            <table className="w-full text-white border-collapse">
+            <table className="w-full min-w-[600px] text-white border-collapse text-sm md:text-base">
               <thead>
-                <tr className="bg-orange-500">
+                <tr className="bg-orange-500 text-black">
                   <th className="p-2 border">Día</th>
                   <th className="p-2 border">Muertos</th>
                   <th className="p-2 border">Códigos Muertos</th>
@@ -329,29 +312,29 @@ export default function Estadisticas() {
               </thead>
               <tbody>
                 {resumen.map((r) => (
-                  <tr key={r.dia} className="even:bg-gray-700">
+                  <tr key={r.dia} className="even:bg-gray-700 text-center">
                     <td className="p-2 border">{r.dia}</td>
                     <td className="p-2 border">{r.muertos}</td>
-                    <td className="p-2 border">{r.codigosMuertos}</td>
+                    <td className="p-2 border break-words">{r.codigosMuertos}</td>
                     <td className="p-2 border">{r.vendidos}</td>
-                    <td className="p-2 border">{r.codigosVendidos}</td>
+                    <td className="p-2 border break-words">{r.codigosVendidos}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
 
-            {/* Total general */}
-            <div className="mt-6 text-right text-xl font-bold text-white">
-              Total Muertos:{" "}
-              {resumen.reduce((sum, r) => sum + r.muertos, 0)} | Total Vendidos:{" "}
+            <div className="mt-6 text-right text-lg md:text-xl font-bold text-white">
+              Total Muertos: {resumen.reduce((sum, r) => sum + r.muertos, 0)} | Total Vendidos:{" "}
               {resumen.reduce((sum, r) => sum + r.vendidos, 0)}
             </div>
           </div>
         </div>
-      </div>
-      <footer className="w-full bg-[#099757dc] py-3 md:py-4 text-center text-xs md:text-sm text-white fixed bottom-0 z-50">
-  <p>© 2025 INNOVASYSTEM. Todos los derechos reservados.</p>
-</footer>
+      </main>
+
+      {/* Footer */}
+      <footer className="w-full bg-[#099757dc] py-3 md:py-4 text-center text-xs md:text-sm text-white">
+        © 2025 INNOVASYSTEM. Todos los derechos reservados.
+      </footer>
     </div>
   );
 }

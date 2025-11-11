@@ -330,32 +330,64 @@ export default function Salud() {
                 <h1 className="text-2xl font-extrabold">Vacunas</h1>
               </div>
       
-              <div className="flex items-center gap-4">
-                <button onClick={() => navigate("/home")} className="hover:text-red-300 transition">
-                  <FaHome size={20} />
-                </button>
-                <button onClick={() => navigate("/notificaciones")} className="hover:text-red-300 transition">
-                  <FaBell size={20} />
-                </button>
-                <button onClick={() => setMenuAbierto(!menuAbierto)} className="md:hidden hover:text-red-300">
-                {menuAbierto ? <FaTimes size={22} /> : <FaBars size={22} />}
-                </button>
-                <button onClick={handleLogout} className="hidden md:inline bg-red-400 text-black font-semibold px-3 py-1 rounded-xl hover:bg-red-600">
-                  Cerrar sesión
-                </button>
-              </div>
-              {menuAbierto && (
-                <div className="absolute top-full right-0 bg-white text-black w-48 rounded-b-lg shadow-lg md:hidden">
-                  <button onClick={() => navigate("/notificaciones")} className="w-full text-left px-4 py-2 hover:bg-gray-200">🔔 Notificaciones</button>
-                  <button onClick={handleLogout} className="w-full text-left px-4 py-2 hover:bg-gray-200">🚪 Cerrar sesión</button>
-                </div>
-              )}
+               {/* 🔹 Visible solo en escritorio */}
+        <div className="hidden md:flex items-center gap-4">
+          <button onClick={() => navigate("/home")} className="hover:text-red-600 transition">
+            <FaHome size={20} />
+          </button>
+          <button onClick={() => navigate("/notificaciones")} className="hover:text-red-600 transition">
+            <FaBell size={20} />
+          </button>
+          <button onClick={handleLogout} className="bg-red-600 text-black font-semibold px-3 py-1 rounded-xl hover:bg-red-700">
+            Cerrar sesión
+          </button>
+        </div>
+
+        {/* 🔹 Menú hamburguesa solo móvil */}
+        <button onClick={() => setMenuAbierto(!menuAbierto)} className="md:hidden hover:text-red-600">
+          {menuAbierto ? <FaTimes size={22} /> : <FaBars size={22} />}
+        </button>
+
+        {/* 🔹 Menú desplegable móvil */}
+        <div className={`absolute top-full right-0 bg-white/40 text-black w-50 rounded-b-2xl shadow-lg md:hidden flex flex-col items-center py-2 gap-2 animate-fadeIn ${
+            menuAbierto ? "max-h-60 opacity-100" : "max-h-0 opacity-0"
+          }`}
+        >
+          <div></div>
+          <button
+            onClick={() => {
+              navigate("/home");
+              setMenuAbierto(false);
+            }}
+            className="w-5/7 py-2 rounded-lg bg-red-500 hover:bg-red-600 flex items-center font-semibold justify-center gap-2"
+          >
+            <FaHome/> Inicio
+          </button>
+          <button
+            onClick={() => {
+              navigate("/notificaciones");
+              setMenuAbierto(false);
+            }}
+            className="w-5/7 py-2 rounded-xl bg-red-500 hover:bg-red-600 flex items-center font-semibold justify-center gap-2"
+          >
+            <FaBell/> Notificaciones
+          </button>
+          <button
+            onClick={() => {
+              handleLogout();
+              setMenuAbierto(false);
+            }}
+            className="w-5/7 py-2 bg-red-600 text-white rounded-xl hover:bg-red-700 flex items-center font-semibold justify-center gap-2"
+          >
+            Cerrar sesión
+          </button>
+        </div>
             </nav>
       
         <div className="relative p-6 flex flex-col gap-6">
           {/* Vacunas generales */}
           <div className="bg-white/30 backdrop-blur-md border border-white/50 p-4 rounded-xl shadow">
-            <h2 className="text-xl font-bold mb-3 text-red-700">
+            <h2 className="text-xl font-bold mb-3 text-black">
               Vacunas del lote {loteSeleccionado?.nombre}
             </h2>
             <div className="flex flex-col md:flex-row gap-3">
@@ -387,7 +419,7 @@ export default function Salud() {
               />
               <button
                 onClick={agregarVacunaGeneral}
-                className="bg-red-500 text-white px-4 py-2 rounded-2xl font-semibold hover:bg-red-600 transition flex items-center gap-2"
+                className=" w-6/24 bg-red-500 text-white px-2 py-2 rounded-2xl font-semibold hover:bg-red-600 transition flex items-center gap-2"
               >
                 <FaPlus /> Agregar
               </button>
@@ -414,7 +446,7 @@ export default function Salud() {
   
           {/* Animales */}
           <div className="bg-white/30 backdrop-blur-md border border-white/50 p-6 rounded-xl shadow-md">
-            <h2 className="text-xl font-bold mb-4 text-red-900">
+            <h2 className="text-xl font-bold mb-4 text-black">
               Animales del lote {loteSeleccionado?.nombre}
             </h2>
   
@@ -490,7 +522,7 @@ export default function Salud() {
       return (
         <tr
           key={a.id}
-          className={`border-b hover:bg-white/20 transition-all
+          className={`hover:bg-teal-100 transition text-black
             ${bloqueado ? "opacity-60 blur-[1px] line-through select-none" : ""}
           `}
         >
@@ -526,7 +558,7 @@ export default function Salud() {
                 </h3>
                 <table className="w-full border-collapse text-left">
                   <thead>
-                    <tr className="bg-gray-200">
+                    <tr className="bg-red-500 text-white">
                       <th className="p-2 border">Vacuna</th>
                       <th className="p-2 border">Dosis</th>
                       <th className="p-2 border">Recordatorio</th>
@@ -539,28 +571,49 @@ export default function Salud() {
                         <td className="p-2 border">{v.nombre}</td>
                         <td className="p-2 border">
                           <div className="flex flex-wrap gap-2">
-                            {v.dosisAplicadas.map((d, i) => (
-                              <div key={i} className="flex items-center gap-1">
-                                <input
-                                  type="checkbox"
-                                  checked={d}
-                                  onChange={() => toggleDosis(v, i)}
-                                />
-                                <input
-                                  type="date"
-                                  value={v.fechasAplicacion[i] || ""}
-                                  onChange={(e) => actualizarFechaDosis(v, i, e.target.value)}
-                                  className="border rounded p-1 text-sm"
-                                />
-                              </div>
-                            ))}
+                            {v.dosisAplicadas.map((d, i) => {
+  const hoy = new Date().toISOString().split("T")[0];
+  const fechaSeleccionada = v.fechasAplicacion[i] || "";
+
+  // Desactivar checkbox si la fecha está en el pasado
+  const deshabilitado = fechaSeleccionada && fechaSeleccionada < hoy;
+
+  return (
+    <div key={i} className="flex items-center gap-1">
+      <input
+        type="checkbox"
+        checked={d}
+        onChange={() => toggleDosis(v, i)}
+        disabled={!!deshabilitado}
+        title={
+          deshabilitado
+            ? "No puedes aplicar una dosis con fecha anterior a hoy."
+            : "Marcar dosis como aplicada"
+        }
+        className={`cursor-pointer ${
+          deshabilitado ? "opacity-50 cursor-not-allowed" : ""
+        }`}
+      />
+
+      <input
+        type="date"
+        value={fechaSeleccionada}
+        onChange={(e) => actualizarFechaDosis(v, i, e.target.value)}
+        min={hoy} // 🔹 no permite fechas pasadas
+        className="border rounded p-1 text-sm"
+      />
+    </div>
+  );
+})}
+
+                            
                           </div>
                         </td>
                         <td className="p-2 border">{v.recordatorio}</td>
                         <td className="p-2 border text-center">
                           <button
                             onClick={() => toggleAsignacion(v)}
-                            className={`px-3 py-1 rounded ${
+                            className={`px-3 py-1 rounded-xl ${
                               v.asignada ? "bg-red-600 text-white" : "bg-green-600 text-white"
                             }`}
                           >

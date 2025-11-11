@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { collection, addDoc, getDocs, doc, setDoc, deleteDoc } from "firebase/firestore";
 import { db } from "./firebase";
-import { FaTrash, FaEdit, FaArrowLeft, FaPlus, FaHome, FaBell, FaTimes, FaBars } from "react-icons/fa";
+import { FaTrash, FaEdit, FaPlus, FaHome, FaBell, FaTimes, FaBars } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import cowsBackground from "./assets/cows2.jpg";
 import { getAuth, signOut } from "firebase/auth";
@@ -38,36 +38,40 @@ export default function NacimientosPorLote() {
   const [busqueda, setBusqueda] = useState("");
   const ITEMS_PAGINA = 40;
   const navigate = useNavigate();
-  
+
   const [menuAbierto, setMenuAbierto] = useState(false);
-  
-    const auth = getAuth();
-    const handleLogout = async () => {
-      await signOut(auth);
-      navigate("/");
-    };
+
+  const auth = getAuth();
+  const handleLogout = async () => {
+    await signOut(auth);
+    navigate("/");
+  };
 
   const cargarLotes = async () => {
     const snaps = await getDocs(collection(db, "lotes_nuevos"));
-    const lista: Lote[] = snaps.docs.map(doc => ({ id: doc.id, ...(doc.data() as Lote) }));
+    const lista: Lote[] = snaps.docs.map((doc) => ({ id: doc.id, ...(doc.data() as Lote) }));
     setLotes(lista);
   };
 
-  useEffect(() => { cargarLotes(); }, []);
+  useEffect(() => {
+    cargarLotes();
+  }, []);
 
   const cargarNacimientos = async () => {
     if (!loteSeleccionado?.id) return;
     const snaps = await getDocs(collection(db, "lotes_nuevos", loteSeleccionado.id, "nacimientos"));
-    const lista: Nacimiento[] = snaps.docs.map(doc => ({ id: doc.id, ...(doc.data() as Nacimiento) }));
+    const lista: Nacimiento[] = snaps.docs.map((doc) => ({ id: doc.id, ...(doc.data() as Nacimiento) }));
     setNacimientos(lista);
   };
 
-  useEffect(() => { cargarNacimientos(); }, [loteSeleccionado]);
+  useEffect(() => {
+    cargarNacimientos();
+  }, [loteSeleccionado]);
 
   const guardarNacimiento = async () => {
     if (!loteSeleccionado?.id) return;
     const campos = Object.values(formData);
-    if (campos.some(c => c === "")) return alert("Completa todos los campos");
+    if (campos.some((c) => c === "")) return alert("Completa todos los campos");
 
     if (formData.id) {
       await setDoc(doc(db, "lotes_nuevos", loteSeleccionado.id, "nacimientos", formData.id), formData);
@@ -103,7 +107,7 @@ export default function NacimientosPorLote() {
     if (!nombre) return;
     const ref = await addDoc(collection(db, "lotes_nuevos"), { nombre });
     const nuevoLote = { id: ref.id, nombre };
-    setLotes(prev => [...prev, nuevoLote]);
+    setLotes((prev) => [...prev, nuevoLote]);
     setLoteSeleccionado(nuevoLote);
   };
 
@@ -111,7 +115,7 @@ export default function NacimientosPorLote() {
     const nombre = prompt("Nuevo nombre del lote", lote.nombre);
     if (!nombre || !lote.id) return;
     await setDoc(doc(db, "lotes_nuevos", lote.id), { nombre });
-    setLotes(prev => prev.map(l => l.id === lote.id ? { ...l, nombre } : l));
+    setLotes((prev) => prev.map((l) => (l.id === lote.id ? { ...l, nombre } : l)));
     if (loteSeleccionado?.id === lote.id) setLoteSeleccionado({ ...lote, nombre });
   };
 
@@ -119,102 +123,143 @@ export default function NacimientosPorLote() {
     if (!lote.id) return;
     if (!confirm(`Eliminar lote ${lote.nombre}?`)) return;
     await deleteDoc(doc(db, "lotes_nuevos", lote.id));
-    setLotes(prev => prev.filter(l => l.id !== lote.id));
+    setLotes((prev) => prev.filter((l) => l.id !== lote.id));
     if (loteSeleccionado?.id === lote.id) setLoteSeleccionado(null);
   };
 
-  const nacimientosFiltrados = nacimientos.filter(n =>
-    Object.values(n).some(val => val.toString().toLowerCase().includes(busqueda.toLowerCase()))
+  const nacimientosFiltrados = nacimientos.filter((n) =>
+    Object.values(n).some((val) => val.toString().toLowerCase().includes(busqueda.toLowerCase()))
   );
   const totalPaginas = Math.ceil(nacimientosFiltrados.length / ITEMS_PAGINA);
   const paginaActual = nacimientosFiltrados.slice((pagina - 1) * ITEMS_PAGINA, pagina * ITEMS_PAGINA);
 
-  const inputClasses = "border px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500";
+  const inputClasses = "border px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500 bg-white/50";
 
   return (
     <div className="relative min-h-screen">
       <div className="absolute inset-0 bg-cover bg-center blur-[2px]" style={{ backgroundImage: `url(${cowsBackground})` }}></div>
       <div className="absolute inset-0 bg-white/20"></div>
 
-      <nav className="sticky top-0 z-50 bg-pink-500 text-black flex items-center justify-between p-4 shadow-lg">
-        <div className="flex items-center gap-4">
-          <h1 className="text-2xl font-extrabold">Nacimientos </h1>
-        </div>
-      
-        <div className="flex items-center gap-4">
+      {/* NAVBAR */}
+      <nav className="sticky top-0 z-50 bg-pink-500 text-black flex items-center justify-between px-4 py-3 md:px-8 shadow-lg">
+        <h1 className="text-xl md:text-2xl font-extrabold">Nacimientos</h1>
+
+        {/* 🔹 Visible solo en escritorio */}
+        <div className="hidden md:flex items-center gap-4">
           <button onClick={() => navigate("/home")} className="hover:text-pink-300 transition">
             <FaHome size={20} />
           </button>
-          <button onClick={() => navigate("/notificaciones")} className="relative hover:text-pink-300 transition">
+          <button onClick={() => navigate("/notificaciones")} className="hover:text-pink-300 transition">
             <FaBell size={20} />
           </button>
-          <button onClick={() => setMenuAbierto(!menuAbierto)} className="md:hidden hover:text-pink-300">
-            {menuAbierto ? <FaTimes size={22} /> : <FaBars size={22} />}
-          </button>
-          <button onClick={handleLogout} className="hidden md:inline bg-pink-600 text-black font-semibold px-3 py-1 rounded-xl hover:bg-pink-300">
+          <button onClick={handleLogout} className="bg-pink-600 text-black font-semibold px-3 py-1 rounded-xl hover:bg-pink-300">
             Cerrar sesión
           </button>
         </div>
-      
-        {menuAbierto && (
-          <div className="absolute top-full right-0 bg-white text-black w-48 rounded-b-lg shadow-lg md:hidden">
-            <button onClick={() => navigate("/notificaciones")} className="w-full text-left px-4 py-2 hover:bg-gray-200">🔔 Notificaciones</button>
-            <button onClick={handleLogout} className="w-full text-left px-4 py-2 hover:bg-gray-200">🚪 Cerrar sesión</button>
-          </div>
-        )}
+
+        {/* 🔹 Menú hamburguesa solo móvil */}
+        <button onClick={() => setMenuAbierto(!menuAbierto)} className="md:hidden hover:text-pink-300">
+          {menuAbierto ? <FaTimes size={22} /> : <FaBars size={22} />}
+        </button>
+
+        {/* 🔹 Menú desplegable móvil */}
+        <div className={`absolute top-full right-0 bg-white/40 text-black w-50 rounded-b-2xl shadow-lg md:hidden flex flex-col items-center py-2 gap-2 animate-fadeIn ${
+            menuAbierto ? "max-h-60 opacity-100" : "max-h-0 opacity-0"
+          }`}
+        >
+          
+          <button
+            onClick={() => {
+              navigate("/home");
+              setMenuAbierto(false);
+            }}
+            className="w-5/7 py-2 rounded-xl bg-pink-400 hover:bg-pink-500 flex items-center font-semibold justify-center gap-2"
+          >
+            <FaHome/> Inicio
+          </button>
+          <button
+            onClick={() => {
+              navigate("/notificaciones");
+              setMenuAbierto(false);
+            }}
+            className="w-5/7 py-2 rounded-xl bg-pink-400 hover:bg-pink-500 flex items-center font-semibold justify-center gap-2"
+          >
+            <FaBell/> Notificaciones
+          </button>
+          <button
+            onClick={() => {
+              handleLogout();
+              setMenuAbierto(false);
+            }}
+            className="w-5/7 py-2 bg-red-600 text-white rounded-xl hover:bg-red-700 flex items-center font-semibold justify-center gap-2"
+          >
+            Cerrar sesión
+          </button>
+        </div>
       </nav>
 
-      <div className="relative p-9 flex gap-9">
+      {/* CONTENIDO */}
+      <div className="relative p-4 md:p-9 flex flex-col md:flex-row gap-6 md:gap-9">
         {/* Lotes */}
-        <div className="w-1/6 bg-white/30 backdrop-blur-md border border-white/50 p-4 rounded-xl shadow-xl h-[calc(100vh-6rem)] sticky top-24 flex flex-col gap-2 overflow-y-auto">
-          <h2 className="text-xl font-bold mb-4">Lotes</h2>
+        <div className="w-full md:w-1/6 bg-white/30 backdrop-blur-md border border-white/50 p-4 rounded-xl shadow-xl h-auto md:h-[calc(100vh-6rem)] sticky top-24 flex flex-col gap-2 overflow-y-auto">
+          <h2 className="text-black text-xl font-bold mb-4">Lotes</h2>
 
-          {lotes.map(lote => (
+          {lotes.map((lote) => (
             <div key={lote.id} className="flex items-center justify-between gap-2">
               <button
-                className={`flex-1 px-4 py-2 rounded-lg font-semibold text-left ${loteSeleccionado?.id === lote.id ? "bg-pink-600 text-white" : "bg-pink-500 text-white"}`}
+                className={`flex-1 px-4 py-2 rounded-xl font-semibold text-center ${
+                  loteSeleccionado?.id === lote.id ? "bg-pink-600 text-black" : "bg-pink-500 text-white"
+                } hover:bg-pink-600 transition`}
                 onClick={() => setLoteSeleccionado(lote)}
               >
                 {lote.nombre}
               </button>
               <div className="flex items-center gap-2">
-                <button onClick={() => editarLote(lote)} className="bg-blue-600 text-white p-2 rounded-full hover:bg-blue-700 transition flex items-center justify-center"><FaEdit size={14} /></button>
-                <button onClick={() => eliminarLote(lote)} className="bg-red-600 text-white p-2 rounded-full hover:bg-red-700 transition flex items-center justify-center"><FaTrash size={14} /></button>
+                <button onClick={() => editarLote(lote)} className="bg-blue-600 text-white p-2 rounded-full hover:bg-blue-700 transition">
+                  <FaEdit size={14} />
+                </button>
+                <button onClick={() => eliminarLote(lote)} className="bg-red-600 text-white p-2 rounded-full hover:bg-red-700 transition">
+                  <FaTrash size={14} />
+                </button>
               </div>
             </div>
           ))}
 
-          <button onClick={agregarLote} className="mt-2 bg-green-600 text-white px-3 py-1 gap-1 rounded-lg flex items-center justify-center"><FaPlus /> Agregar Lote</button>
+          <button onClick={agregarLote} className="mt-2 bg-green-600 text-white px-3 py-2 rounded-xl font-semibold flex items-center justify-center gap-2 hover:bg-green-700 transition">
+            <FaPlus /> Agregar Lote
+          </button>
         </div>
 
         {/* Nacimientos */}
-        <div className="w-5/6 flex flex-col gap-6">
+        <div className="w-full md:w-5/6 flex flex-col gap-6">
           {loteSeleccionado && (
             <div className="bg-white/30 backdrop-blur-md border border-white/50 p-6 rounded-xl shadow-xl">
-              <h2 className="text-xl font-bold mb-4">Registrar Nacimiento - {loteSeleccionado.nombre}</h2>
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <input type="text" placeholder="Código" value={formData.codigo} onChange={e => setFormData(f => ({ ...f, codigo: e.target.value }))} className={inputClasses} />
-                <input type="text" placeholder="Código madre" value={formData.codigoMadre} onChange={e => setFormData(f => ({ ...f, codigoMadre: e.target.value }))} className={inputClasses} />
-                <input type="text" placeholder="Código padre" value={formData.codigoPadre} onChange={e => setFormData(f => ({ ...f, codigoPadre: e.target.value }))} className={inputClasses} />
-                <input type="date" max={new Date().toISOString().split("T")[0]} value={formData.fechaNacimiento} onChange={e => setFormData(f => ({ ...f, fechaNacimiento: e.target.value }))} className={inputClasses} />
-                <input type="text" placeholder="Raza" value={formData.raza} onChange={e => setFormData(f => ({ ...f, raza: e.target.value }))} className={inputClasses} />
-                <select value={formData.sexo} onChange={e => setFormData(f => ({ ...f, sexo: e.target.value as "Macho" | "Hembra" }))} className={inputClasses}>
+              <h2 className="text-black text-xl font-bold mb-4">Registrar Nacimiento - {loteSeleccionado.nombre}</h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                <input type="text" placeholder="Código" value={formData.codigo} onChange={(e) => setFormData((f) => ({ ...f, codigo: e.target.value }))} className={inputClasses} />
+                <input type="text" placeholder="Código madre" value={formData.codigoMadre} onChange={(e) => setFormData((f) => ({ ...f, codigoMadre: e.target.value }))} className={inputClasses} />
+                <input type="text" placeholder="Código padre" value={formData.codigoPadre} onChange={(e) => setFormData((f) => ({ ...f, codigoPadre: e.target.value }))} className={inputClasses} />
+                <input type="date" max={new Date().toISOString().split("T")[0]} value={formData.fechaNacimiento} onChange={(e) => setFormData((f) => ({ ...f, fechaNacimiento: e.target.value }))} className={inputClasses} />
+                <input type="text" placeholder="Raza" value={formData.raza} onChange={(e) => setFormData((f) => ({ ...f, raza: e.target.value }))} className={inputClasses} />
+                <select value={formData.sexo} onChange={(e) => setFormData((f) => ({ ...f, sexo: e.target.value as "Macho" | "Hembra" }))} className={inputClasses}>
                   <option value="Macho">Macho</option>
                   <option value="Hembra">Hembra</option>
                 </select>
-                <input type="text" placeholder="Peso al nacer" value={formData.peso} onChange={e => setFormData(f => ({ ...f, peso: e.target.value }))} className={inputClasses} />
-                <input type="text" placeholder="Estado de salud" value={formData.estadoSalud} onChange={e => setFormData(f => ({ ...f, estadoSalud: e.target.value }))} className={inputClasses} />
+                <input type="text" placeholder="Peso al nacer" value={formData.peso} onChange={(e) => setFormData((f) => ({ ...f, peso: e.target.value }))} className={inputClasses} />
+                <input type="text" placeholder="Estado de salud" value={formData.estadoSalud} onChange={(e) => setFormData((f) => ({ ...f, estadoSalud: e.target.value }))} className={inputClasses} />
               </div>
-              <button onClick={guardarNacimiento} className="mt-4 bg-pink-500 text-white px-6 py-2 rounded-2xl font-semibold hover:bg-pink-600 transition">Guardar</button>
+              <button onClick={guardarNacimiento} className="mt-4 bg-pink-500 text-white px-6 py-2 rounded-2xl font-semibold hover:bg-pink-600 transition">
+                Guardar
+              </button>
             </div>
           )}
 
           {loteSeleccionado && (
             <div className="bg-white/30 backdrop-blur-md border border-white/50 p-6 rounded-xl shadow-xl overflow-x-auto">
-              <h2 className="text-xl font-bold mb-4">Lista de nacimientos</h2>
-              <input type="text" placeholder="Buscar..." value={busqueda} onChange={e => setBusqueda(e.target.value)} className={`${inputClasses} mb-4 w-full`} />
+              <h2 className="text-black text-xl font-bold mb-4">Lista de nacimientos</h2>
+              <input type="text" placeholder="Buscar..." value={busqueda} onChange={(e) => setBusqueda(e.target.value)} className={`${inputClasses} mb-4 w-full`} />
 
-              <table className="w-full border-collapse text-left">
+              <table className="w-full border-collapse text-left text-sm md:text-base">
                 <thead>
                   <tr className="bg-pink-500 text-white">
                     <th className="p-2 border">#</th>
@@ -231,7 +276,7 @@ export default function NacimientosPorLote() {
                 </thead>
                 <tbody>
                   {paginaActual.map((nac, idx) => (
-                    <tr key={nac.id} className="border-b hover:bg-yellow-50">
+                    <tr key={nac.id} className="border-b hover:bg-yellow-50 transition">
                       <td className="p-2 border">{(pagina - 1) * ITEMS_PAGINA + idx + 1}</td>
                       <td className="p-2 border">{nac.codigo}</td>
                       <td className="p-2 border">{nac.codigoMadre}</td>
@@ -241,9 +286,13 @@ export default function NacimientosPorLote() {
                       <td className="p-2 border">{nac.sexo}</td>
                       <td className="p-2 border">{nac.peso}</td>
                       <td className="p-2 border">{nac.estadoSalud}</td>
-                      <td className="p-2 border flex gap-2">
-                        <button onClick={() => editarNacimiento(nac)} className="bg-blue-600 text-white p-2 rounded-full hover:bg-blue-700 transition"><FaEdit /></button>
-                        <button onClick={() => eliminarNacimiento(nac)} className="bg-red-600 text-white p-2 rounded-full hover:bg-red-700 transition"><FaTrash /></button>
+                      <td className="p-2 border flex gap-2 justify-center flex-wrap">
+                        <button onClick={() => editarNacimiento(nac)} className="bg-blue-600 text-white p-2 rounded-full hover:bg-blue-700 transition">
+                          <FaEdit />
+                        </button>
+                        <button onClick={() => eliminarNacimiento(nac)} className="bg-red-600 text-white p-2 rounded-full hover:bg-red-700 transition">
+                          <FaTrash />
+                        </button>
                       </td>
                     </tr>
                   ))}
@@ -251,11 +300,11 @@ export default function NacimientosPorLote() {
               </table>
 
               {totalPaginas > 1 && (
-                <div className="flex justify-center mt-4 gap-2">
+                <div className="flex justify-center mt-4 gap-2 flex-wrap">
                   {Array.from({ length: totalPaginas }, (_, i) => (
                     <button
                       key={i + 1}
-                      className={`px-3 py-1 rounded ${pagina === i + 1 ? "bg-pink-500 text-white" : "bg-pink-200"}`}
+                      className={`px-3 py-1 rounded ${pagina === i + 1 ? "bg-pink-500 text-white" : "bg-pink-200 hover:bg-pink-300"}`}
                       onClick={() => setPagina(i + 1)}
                     >
                       {i + 1}
@@ -267,9 +316,11 @@ export default function NacimientosPorLote() {
           )}
         </div>
       </div>
-       <footer className="w-full bg-[#099757dc] py-3 md:py-4 text-center text-xs md:text-sm text-white fixed bottom-0 z-50">
-  <p>© 2025 INNOVASYSTEM. Todos los derechos reservados.</p>
-</footer>
+
+      {/* FOOTER */}
+      <footer className="w-full bg-[#099757dc] py-3 md:py-4 text-center text-xs md:text-sm text-white fixed bottom-0 z-50">
+        <p>© 2025 INNOVASYSTEM. Todos los derechos reservados.</p>
+      </footer>
     </div>
   );
 }

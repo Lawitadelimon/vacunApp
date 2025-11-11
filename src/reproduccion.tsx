@@ -220,52 +220,104 @@ export default function ReproduccionPorHembra() {
   const paginaActualHembras = hembrasFiltradas.slice((pagina - 1) * ITEMS_PAGINA, pagina * ITEMS_PAGINA);
   const totalPaginasHembras = Math.ceil(hembrasFiltradas.length / ITEMS_PAGINA);
 
-  return (
-    <div className="relative min-h-screen">
-      <div className="absolute inset-0 bg-cover bg-center blur-[2px]" style={{ backgroundImage: `url(${cowsBackground})` }} />
-      <div className="absolute inset-0 bg-white/20" />
+ return (
+  <div className="relative min-h-screen">
+    {/* Fondo */}
+    <div
+      className="absolute inset-0 bg-cover bg-center blur-[2px]"
+      style={{ backgroundImage: `url(${cowsBackground})` }}
+    />
+    <div className="absolute inset-0 bg-white/20" />
 
-      <nav className="sticky top-0 z-50 bg-amber-400 text-black flex items-center justify-between p-4 shadow-lg">
-    <div className="flex items-center gap-4">
-    <h1 className="text-2xl font-extrabold">Reproducción por Hembra</h1>
-  </div>
+    {/* NAVBAR */}
+    <nav className="sticky top-0 z-50 bg-amber-400 text-black flex items-center justify-between p-4 shadow-lg">
+      <h1 className="text-xl md:text-2xl font-extrabold">Reproducción por Hembra</h1>
 
-  <div className="flex items-center gap-4">
-    <button onClick={() => navigate("/home")} className="hover:text-amber-200 transition">
-      <FaHome size={20} />
-    </button>
-    <button onClick={() => navigate("/notificaciones")} className="relative hover:text-amber-200 transition">
-      <FaBell size={20} />
-     
-    </button>
-    <button onClick={() => setMenuAbierto(!menuAbierto)} className="md:hidden hover:text-amber-200">
-      {menuAbierto ? <FaTimes size={22} /> : <FaBars size={22} />}
-    </button>
-    <button onClick={handleLogout} className="hidden md:inline bg-amber-300 text-black font-semibold px-3 py-1 rounded-xl hover:bg-yellow-500">
-      Cerrar sesión
-    </button>
-  </div>
+      {/* Opciones escritorio */}
+      <div className="hidden md:flex items-center gap-4">
+        <button onClick={() => navigate("/home")} className="hover:text-amber-300 transition">
+          <FaHome size={20} />
+        </button>
+        <button onClick={() => navigate("/notificaciones")} className="hover:text-amber-300 transition">
+          <FaBell size={20} />
+        </button>
+        <button
+          onClick={handleLogout}
+          className="bg-amber-600 text-black font-semibold px-3 py-1 rounded-xl hover:bg-amber-300"
+        >
+          Cerrar sesión
+        </button>
+      </div>
 
-  {menuAbierto && (
-    <div className="absolute top-full right-0 bg-white text-black w-48 rounded-b-lg shadow-lg md:hidden">
-      <button onClick={() => navigate("/notificaciones")} className="w-full text-left px-4 py-2 hover:bg-gray-200">🔔 Notificaciones</button>
-      <button onClick={handleLogout} className="w-full text-left px-4 py-2 hover:bg-gray-200">🚪 Cerrar sesión</button>
-    </div>
-  )}
-</nav>
+  {/* Menú hamburguesa móvil */}
+      <button
+        onClick={() => setMenuAbierto(!menuAbierto)}
+        className="md:hidden hover:text-amber-600"
+      >
+        {menuAbierto ? <FaTimes size={22} /> : <FaBars size={22} />}
+      </button>
+
+      {/* Menú desplegable móvil */}
+      {menuAbierto && (
+        <div className="absolute top-full right-0 bg-white/40 text-black w-48 rounded-b-2xl shadow-lg flex flex-col items-center py-2 gap-2 md:hidden animate-fadeIn">
+          <button
+            onClick={() => {
+              navigate("/home");
+              setMenuAbierto(false);
+            }}
+            className="w-4/5 py-2 rounded-xl bg-amber-400 hover:bg-amber-500 flex items-center font-semibold justify-center gap-2"
+          >
+            <FaHome /> Inicio
+          </button>
+          <button
+            onClick={() => {
+              navigate("/notificaciones");
+              setMenuAbierto(false);
+            }}
+            className="w-4/5 py-2 rounded-xl bg-amber-400 hover:bg-amber-500 flex items-center font-semibold justify-center gap-2"
+          >
+            <FaBell /> Notificaciones
+          </button>
+          <button
+            onClick={() => {
+              handleLogout();
+              setMenuAbierto(false);
+            }}
+            className="w-4/5 py-2 bg-red-600 text-white rounded-xl hover:bg-red-700 flex items-center font-semibold justify-center gap-2"
+          >
+            Cerrar sesión
+          </button>
+        </div>
+      )}
+    </nav>
 
 
-      <div className="relative flex flex-col md:flex-row p-6 gap-6">
+       <div className="relative flex flex-col md:flex-row p-4 md:p-6 gap-6 overflow-auto">
         {/* Lista de hembras */}
-        <div className="w-full md:w-1/6 bg-white/30 backdrop-blur-md border border-white/50 p-4 rounded-xl shadow-xl h-auto md:h-[calc(100vh-6rem)] sticky top-24 overflow-y-auto">
-          <h2 className="text-xl font-bold mb-4">Hembras</h2>
+        <div
+        className="
+          w-full md:w-1/4 
+          bg-white/40 backdrop-blur-md border border-white/50 
+          p-4 rounded-xl shadow-lg 
+          md:sticky md:top-24 
+          max-h-[60vh] md:max-h-[calc(100vh-8rem)]
+          overflow-y-auto
+        "
+      >
+          <h2 className="text-xl font-bold mb-4 text-black">Hembras</h2>
 
-          <div className="mb-4  focus:outline-none focus:ring-2 focus:bg-amber-400">
+
+          <div className="mb-4"> 
+           {/* focus:outline-none focus:ring-2 focus:bg-amber-400"> */}
             <select
               value={filtroEstado}
-              onChange={(e) => { setFiltroEstado(e.target.value as any); setPagina(1); }}
-              className="w-full px-2 py-1 rounded border"
-            >
+            onChange={(e) => {
+              setFiltroEstado(e.target.value as any);
+              setPagina(1);
+            }}
+              className="w-full px-2 py-1 rounded border focus:ring-2 focus:ring-amber-400"
+          >
+           
               <option value="todas">Todas</option>
               <option value="vivo">Vivas/Activas</option>
               <option value="muerto">Muertas</option>
@@ -274,37 +326,61 @@ export default function ReproduccionPorHembra() {
           </div>
 
           {paginaActualHembras.map((h) => {
-            const estaViva = h.estado === "vivo";
-            return (
-              <div
-                key={h.id}
-                className={`w-full text-left px-4 py-2 mb-2 rounded-lg flex flex-col ${!estaViva ? "bg-gray-200 text-black line-through hover:bg-amber-400" : "bg-amber-400 text-black"}`}
-              >
-                <span className="font-bold">{h.codigo} - {h.loteNombre} ({h.especie})</span>
-                <div className="flex gap-2 mt-2">
-                  <button
-                    onClick={() => setSelectedHembra(h)}
-                    className={`bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-700 transition`}
-                  >
-                    Ver registros
-                  </button>
-                  <button
-                    onClick={() => quitarDeReproduccion(h)}
-                    disabled={!estaViva}
-                    className={`px-2 py-1 rounded transition ${estaViva ? "bg-red-600 text-white hover:bg-red-700" : "bg-red-600 text-white opacity-50 cursor-not-allowed"}`}
-                  >
-                    Quitar
-                  </button>
+          const estaViva = h.estado === "vivo";
+          return (
+            <div
+              key={h.id}
+              className={`w-full text-left px-4 py-2 mb-2 rounded-lg ${
+                estaViva
+                  ? "bg-amber-400 text-black hover:bg-amber-500"
+                  : "bg-gray-200 text-gray-700 line-through"
+              }`}
+            >
+                <span className="font-bold">
+                {h.codigo} - {h.loteNombre} ({h.especie})
+              </span>
+              <div className="flex gap-2 mt-2">
+                <button
+                  onClick={() => setSelectedHembra(h)}
+                  className="bg-blue-600 text-white px-2 py-1 rounded-xl hover:bg-blue-700 transition text-sm"
+                >
+                  Ver
+                </button>
+                <button
+                  onClick={() => quitarDeReproduccion(h)}
+                  disabled={!estaViva}
+                  className={`px-2 py-1 rounded-xl text-sm transition ${
+                    estaViva
+                      ? "bg-red-600 text-white hover:bg-red-700"
+                      : "bg-red-600 text-white opacity-50 cursor-not-allowed"
+                  }`}
+                >
+                  Quitar
+                </button>
                 </div>
               </div>
             );
           })}
 
-          {totalPaginasHembras > 1 && (
-            <div className="flex justify-center mt-4 gap-2 flex-wrap">
-              <button disabled={pagina === 1} onClick={() => setPagina(p => p - 1)} className="px-3 py-1 bg-amber-400 text-white rounded-lg hover:bg-yellow-500 disabled:opacity-50">Anterior</button>
-              <span className="px-3 py-1 bg-white rounded-lg">{pagina} / {totalPaginasHembras}</span>
-              <button disabled={pagina === totalPaginasHembras} onClick={() => setPagina(p => p + 1)} className="px-3 py-1 bg-amber-400 text-white rounded-lg hover:bg-yellow-500 disabled:opacity-50">Siguiente</button>
+           {totalPaginasHembras > 1 && (
+          <div className="flex justify-center mt-4 gap-2 flex-wrap">
+            <button
+              disabled={pagina === 1}
+              onClick={() => setPagina((p) => p - 1)}
+              className="px-3 py-1 bg-amber-400 text-white rounded-lg hover:bg-yellow-500 disabled:opacity-50"
+            >
+              Anterior
+            </button>
+             <span className="px-3 py-1 bg-white rounded-lg">
+              {pagina} / {totalPaginasHembras}
+            </span>
+            <button
+              disabled={pagina === totalPaginasHembras}
+              onClick={() => setPagina((p) => p + 1)}
+              className="px-3 py-1 bg-amber-400 text-white rounded-lg hover:bg-yellow-500 disabled:opacity-50"
+            >
+              Siguiente
+            </button>
             </div>
           )}
         </div>
@@ -315,11 +391,11 @@ export default function ReproduccionPorHembra() {
             <>
               {/* Formulario */}
               <div className={`bg-white/30 backdrop-blur-md border border-white/40 p-8 rounded-3xl shadow-lg ${selectedHembra.estado !== "vivo" ? "opacity-50 pointer-events-none" : ""}`}>
-                <h2 className="text-2xl font-bold mb-6 text-gray-900">Registrar Gestación - {selectedHembra.codigo}</h2>
+                <h2 className="text-xl font-bold mb-6 text-black">Registrar gestación - {selectedHembra.codigo}</h2>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="flex flex-col">
-                    <label className="mb-2 font-medium text-gray-800">Método</label>
+                    <label className="mb-2 font-semibold text-black">Método</label>
                     <select
                       value={formData.metodo}
                       onChange={(e) => setFormData(f => ({ ...f, metodo: e.target.value as any }))}
@@ -331,7 +407,7 @@ export default function ReproduccionPorHembra() {
                   </div>
 
                   <div className="flex flex-col">
-                    <label className="mb-2 font-medium text-gray-800">Fecha de inseminación</label>
+                    <label className="mb-2 font-medium text-black">Fecha de inseminación</label>
                     <input
                       type="date"
                       max={hoy}
@@ -342,7 +418,7 @@ export default function ReproduccionPorHembra() {
                   </div>
 
                   <div className="flex flex-col">
-                    <label className="mb-2 font-medium text-gray-800">Código del toro</label>
+                    <label className="mb-2 font-medium text-black">Código del toro</label>
                     <input
                       type="text"
                       value={formData.codigoToro}
@@ -352,7 +428,7 @@ export default function ReproduccionPorHembra() {
                   </div>
 
                   <div className="flex flex-col">
-                    <label className="mb-2 font-medium text-gray-800">Quién inseminó</label>
+                    <label className="mb-2 font-medium text-black ">Quién inseminó</label>
                     <input
                       type="text"
                       value={formData.quienInsemino}
@@ -362,7 +438,7 @@ export default function ReproduccionPorHembra() {
                   </div>
 
                   <div className="flex flex-col md:col-span-2">
-                    <label className="mb-2 font-medium text-gray-800">Observaciones</label>
+                    <label className="mb-2 font-medium text-black">Observaciones</label>
                     <textarea
                       value={formData.observaciones}
                       onChange={(e) => setFormData(f => ({ ...f, observaciones: e.target.value }))}
@@ -375,7 +451,7 @@ export default function ReproduccionPorHembra() {
                 <button
                   onClick={guardarRegistro}
                   disabled={selectedHembra.estado !== "vivo"}
-                  className={`mt-6 w-full md:w-auto bg-amber-400 text-white px-6 py-3 rounded-2xl font-semibold hover:bg-yellow-500 transition-shadow shadow-md hover:shadow-xl ${selectedHembra.estado !== "vivo" ? "opacity-50 cursor-not-allowed" : ""}`}
+                  className={`mt-6 w-full md:w-auto bg-amber-500 text-white px-6 py-3 rounded-2xl font-semibold hover:bg-yellow-600 transition-shadow shadow-md hover:shadow-xl ${selectedHembra.estado !== "vivo" ? "opacity-50 cursor-not-allowed" : ""}`}
                 >
                   Guardar
                 </button>
@@ -383,7 +459,7 @@ export default function ReproduccionPorHembra() {
 
               {/* Historial */}
               <div className="bg-white/30 backdrop-blur-md border border-white/40 p-6 rounded-xl shadow-xl overflow-x-auto">
-                <h2 className="text-xl font-bold mb-4">Historial de Gestación</h2>
+                <h2 className="  text-black text-xl font-bold mb-4">Historial de gestación por hembra</h2>
                 <input
                   type="text"
                   placeholder="Buscar..."
@@ -424,7 +500,7 @@ export default function ReproduccionPorHembra() {
                             <button
                               onClick={() => editarRegistro(r)}
                               disabled={selectedHembra.estado !== "vivo"}
-                              className={`bg-blue-600 text-white p-2 rounded-full hover:bg-blue-700 transition ${selectedHembra.estado !== "vivo" ? "opacity-50 cursor-not-allowed" : ""}`}
+                              className={`bg-blue-600 text-white p-2 rounded-full hover:bg-blue-700 transition  ${selectedHembra.estado !== "vivo" ? "opacity-50 cursor-not-allowed" : ""}`}
                             >
                               <FaEdit />
                             </button>
@@ -439,13 +515,13 @@ export default function ReproduccionPorHembra() {
                               <>
                                 <button
                                   onClick={() => actualizarEstado(r, "Parió")}
-                                  className="bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700 text-sm"
+                                  className="bg-green-600 text-white font-semibold px-3 py-1 rounded-xl hover:bg-green-700 text-sm"
                                 >
                                   Parió
                                 </button>
                                 <button
                                   onClick={() => actualizarEstado(r, "Abortó")}
-                                  className="bg-orange-600 text-white px-3 py-1 rounded hover:bg-orange-700 text-sm"
+                                  className="bg-orange-600 text-white font-semibold px-3 py-1 rounded-xl hover:bg-orange-700 text-sm"
                                 >
                                   Abortó
                                 </button>

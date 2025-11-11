@@ -117,34 +117,65 @@ export default function Alimentacion() {
                 <h1 className="text-2xl font-extrabold">Alimentacion</h1>
               </div>
       
-              <div className="flex items-center gap-4">
-                <button onClick={() => navigate("/home")} className="hover:text-green-300 transition">
-                  <FaHome size={20} />
-                </button>
-                <button onClick={() => navigate("/notificaciones")} className="hover:text-green-300 transition">
-                  <FaBell size={20} />
-                </button>
-                <button onClick={() => setMenuAbierto(!menuAbierto)} className="md:hidden hover:text-green-300">
-                  {menuAbierto ? <FaTimes size={22} /> : <FaBars size={22} />}
-                </button>
-                <button onClick={handleLogout} className="hidden md:inline bg-green-400 text-black font-semibold px-3 py-1 rounded-xl hover:bg-green-600">
-                  Cerrar sesión
-                </button>
-              </div>
-      
-              {menuAbierto && (
-                <div className="absolute top-full right-0 bg-white text-black w-48 rounded-b-lg shadow-lg md:hidden">
-                  <button onClick={() => navigate("/notificaciones")} className="w-full text-left px-4 py-2 hover:bg-gray-200">🔔 Notificaciones</button>
-                  <button onClick={handleLogout} className="w-full text-left px-4 py-2 hover:bg-gray-200">🚪 Cerrar sesión</button>
-                </div>
-              )}
+              {/* 🔹 Visible solo en escritorio */}
+        <div className="hidden md:flex items-center gap-4">
+          <button onClick={() => navigate("/home")} className="hover:text-green-300 transition">
+            <FaHome size={20} />
+          </button>
+          <button onClick={() => navigate("/notificaciones")} className="hover:text-green-300 transition">
+            <FaBell size={20} />
+          </button>
+          <button onClick={handleLogout} className="bg-green-600 text-black font-semibold px-3 py-1 rounded-xl hover:bg-green-300">
+            Cerrar sesión
+          </button>
+        </div>
+
+        {/* 🔹 Menú hamburguesa solo móvil */}
+        <button onClick={() => setMenuAbierto(!menuAbierto)} className="md:hidden hover:text-green-300">
+          {menuAbierto ? <FaTimes size={22} /> : <FaBars size={22} />}
+        </button>
+
+        {/* 🔹 Menú desplegable móvil */}
+        <div className={`absolute top-full right-0 bg-white/40 text-black w-50 rounded-b-2xl shadow-lg md:hidden flex flex-col items-center py-2 gap-2 animate-fadeIn ${
+            menuAbierto ? "max-h-60 opacity-100" : "max-h-0 opacity-0"
+          }`}
+        >
+          <div></div>
+          <button
+            onClick={() => {
+              navigate("/home");
+              setMenuAbierto(false);
+            }}
+            className="w-5/7 py-2 rounded-lg bg-green-400 hover:bg-green-500 flex items-center font-semibold justify-center gap-2"
+          >
+            <FaHome/> Inicio
+          </button>
+          <button
+            onClick={() => {
+              navigate("/notificaciones");
+              setMenuAbierto(false);
+            }}
+            className="w-5/7 py-2 rounded-xl bg-green-400 hover:bg-green-500 flex items-center font-semibold justify-center gap-2"
+          >
+            <FaBell/> Notificaciones
+          </button>
+          <button
+            onClick={() => {
+              handleLogout();
+              setMenuAbierto(false);
+            }}
+            className="w-5/7 py-2 bg-red-600 text-white rounded-xl hover:bg-red-700 flex items-center font-semibold justify-center gap-2"
+          >
+            Cerrar sesión
+          </button>
+        </div>
             </nav>
       
 
       <div className="relative p-6 md:p-9 flex flex-col gap-6">
         {animal ? (
           <div className="bg-white/30 backdrop-blur-md border border-white/40 p-6 rounded-3xl shadow-lg">
-            <h2 className="text-2xl font-bold mb-4 text-gray-900">🐾 Animal en nutrición</h2>
+            <h2 className="text-2xl font-bold mb-4 text-black"> Animal en nutrición 🌾🌱</h2>
 
             {animalesDisponibles.length > 1 && (
               <div className="mb-4">
@@ -170,7 +201,7 @@ export default function Alimentacion() {
               </div>
             )}
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 text-gray-800 mb-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 text-black mb-4">
               <p><strong>Código:</strong> {animal.codigo}</p>
               <p><strong>Especie:</strong> {animal.especie}</p>
               <p><strong>Raza:</strong> {animal.raza}</p>

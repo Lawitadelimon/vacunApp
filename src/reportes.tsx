@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { db, auth } from "./firebase";
-import { serverTimestamp } from "firebase/firestore";
 import {
   collection,
   onSnapshot,
@@ -9,7 +8,6 @@ import {
   orderBy,
   doc,
   updateDoc,
-  getDoc,
 } from "firebase/firestore";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import {
@@ -20,7 +18,7 @@ import {
   FaBars,
   FaTimes,
 } from "react-icons/fa";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import cow2Image from "./assets/cows2.jpg";
 
 interface Reporte {
@@ -32,8 +30,6 @@ interface Reporte {
   fecha: string;
   estado: "realizada" | "no realizada" | "pendiente";
   reporte: any;
-  
-  // creadoEn puede ser un Timestamp de Firestore, un objeto, o el valor especial devuelto por serverTimestamp()
   creadoEn?: any;
 }
 
@@ -41,7 +37,7 @@ interface Notificacion {
   id: string;
   titulo: string;
   mensaje: string;
-  reporteId?: string; // Id del reporte asociado
+  reporteId?: string;
   leido: boolean;
   creadoEn?: any;
 }
@@ -54,7 +50,6 @@ export default function Reportes() {
   const [hayNotificaciones, setHayNotificaciones] = useState(false);
   const [notificaciones, setNotificaciones] = useState<Notificacion[]>([]);
   const [menuNotificacionesOpen, setMenuNotificacionesOpen] = useState(false);
-
   const [filtroCategoria, setFiltroCategoria] = useState<string>("todas");
   const [filtroFechaInicio, setFiltroFechaInicio] = useState<string>("");
   const [filtroFechaFin, setFiltroFechaFin] = useState<string>("");
@@ -77,7 +72,7 @@ export default function Reportes() {
     return () => unsubAuth();
   }, []);
 
-  // 🔹 Cargar notificaciones en tiempo real (solo admin)
+  // 🔹 Notificaciones (solo admin)
   useEffect(() => {
     if (userRole !== "admin") return;
     const q = query(
@@ -86,162 +81,141 @@ export default function Reportes() {
       orderBy("creadoEn", "desc")
     );
     const unsub = onSnapshot(q, (snap) => {
-      const data = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as Notificacion[];
+      const data = snap.docs.map(
+        (doc) => ({ id: doc.id, ...doc.data() } as Notificacion)
+      );
       setNotificaciones(data);
       setHayNotificaciones(data.some((n) => !n.leido));
     });
     return () => unsub();
   }, [userRole]);
 
-  // 🔹 Función para marcar notificación como leída y abrir reporte
-  const abrirNotificacion = async (n: Notificacion) => {
-    if (!n.leido) {
-      await updateDoc(doc(db, "notificaciones", n.id), { leido: true });
-    }
-    if (n.reporteId) {
-      navigate(`/reportes/${n.reporteId}`);
-    }
-    setMenuNotificacionesOpen(false);
-  };
-
-  
+  // 🔹 Cargar reportes y tareas
   useEffect(() => {
-  if (!userId || !userRole) return;
+    if (!userId || !userRole) return;
 
-  const reportesRef = collection(db, "reportes");
-  const tareasRef = collection(db, "tareas");
+    const reportesRef = collection(db, "reportes");
+    const tareasRef = collection(db, "tareas");
 
-  let qReportes;
-  let qTareas;
+    let qReportes;
+    let qTareas;
 
-  if (userRole === "worker") {
-    // Solo reportes del worker actual
-    qReportes = query(reportesRef, where("trabajadorId", "==", userId), orderBy("creadoEn", "desc"));
-    // Solo tareas asignadas al worker actual
-    qTareas = query(tareasRef, where("para", "==", userId), orderBy("fecha", "desc"));
-  } else {
-    // Admin ve todo
-    qReportes = query(reportesRef, orderBy("creadoEn", "desc"));
-    qTareas = query(tareasRef, orderBy("fecha", "desc"));
-  }
+    if (userRole === "worker") {
+      qReportes = query(
+        reportesRef,
+        where("trabajadorId", "==", userId),
+        orderBy("creadoEn", "desc")
+      );
+      qTareas = query(
+        tareasRef,
+        where("para", "==", userId),
+        orderBy("fecha", "desc")
+      );
+    } else {
+      qReportes = query(reportesRef, orderBy("creadoEn", "desc"));
+      qTareas = query(tareasRef, orderBy("fecha", "desc"));
+    }
 
-  const unsubReportes = onSnapshot(qReportes, (snap) => {
-    const rpts = snap.docs.map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
-    } as Reporte));
-    setReportes(rpts);
-  });
-
-  const unsubTareas = onSnapshot(qTareas, (snap) => {
-    const tareasData = snap.docs.map((doc) => {
-      const t = doc.data();
-      return {
-        id: doc.id,
-        titulo: t.titulo,
-        categoria: t.categoria,
-        trabajadorId: t.para,
-        trabajadorNombre: t.paraNombre,
-        fecha: t.fecha,
-        estado: t.estado || "pendiente",
-        reporte: t.reporte || "",
-        creadoEn: t.fecha,
-      } as Reporte;
+    const unsubReportes = onSnapshot(qReportes, (snap) => {
+      const rpts = snap.docs.map(
+        (doc) => ({ id: doc.id, ...doc.data() } as Reporte)
+      );
+      setReportes(rpts);
     });
 
-    // Solo agregar tareas si no estamos duplicando reportes
-    setReportes((prev) => {
-      const idsPrev = new Set(prev.map((r) => r.id));
-      const nuevasTareas = tareasData.filter((t) => !idsPrev.has(t.id));
-      return [...prev, ...nuevasTareas];
+    const unsubTareas = onSnapshot(qTareas, (snap) => {
+      const tareasData = snap.docs.map((doc) => {
+        const t = doc.data();
+        return {
+          id: doc.id,
+          titulo: t.titulo,
+          categoria: t.categoria,
+          trabajadorId: t.para,
+          trabajadorNombre: t.paraNombre,
+          fecha: t.fecha,
+          estado: t.estado || "pendiente",
+          reporte: t.reporte || "",
+          creadoEn: t.fecha,
+        } as Reporte;
+      });
+
+      setReportes((prev) => {
+        const idsPrev = new Set(prev.map((r) => r.id));
+        const nuevasTareas = tareasData.filter((t) => !idsPrev.has(t.id));
+        return [...prev, ...nuevasTareas];
+      });
     });
-  });
 
-  return () => {
-    unsubReportes();
-    unsubTareas();
-  };
-}, [userId, userRole]);
+    return () => {
+      unsubReportes();
+      unsubTareas();
+    };
+  }, [userId, userRole]);
 
-
+  // 🔹 Filtrado
   const reportesFiltrados = reportes.filter((r) => {
-    const cumpleCategoria = filtroCategoria === "todas" || r.categoria === filtroCategoria;
+    const cumpleCategoria =
+      filtroCategoria === "todas" || r.categoria === filtroCategoria;
     let cumpleFecha = true;
     if (filtroFechaInicio) cumpleFecha = cumpleFecha && r.fecha >= filtroFechaInicio;
     if (filtroFechaFin) cumpleFecha = cumpleFecha && r.fecha <= filtroFechaFin;
     return cumpleCategoria && cumpleFecha;
   });
 
- const formatearReporteVisual = (r: any) => {
-  if (!r || (typeof r === "string" && r.trim() === "")) {
-    return <span className="italic text-gray-500">Sin reporte</span>;
-  }
-
-  // 🟦 Si el reporte es texto plano
-  if (typeof r === "string") {
-    const texto = r.trim();
-
-    // 🔹 Si contiene guiones o saltos de línea, lo tratamos como lista
-    if (texto.includes("\n") || texto.includes("-")) {
-      // separa por saltos de línea o guiones
-      const lineas = texto
-        .split(/\r?\n|-/)
-        .map((l) => l.trim())
-        .filter((l) => l !== "");
-
-      return (
-        <ul className="list-disc list-inside space-y-1">
-          {lineas.map((linea, idx) => (
-            <li key={idx}>{linea}</li>
-          ))}
-        </ul>
-      );
+  // 🔹 Utilidades
+  const formatearReporteVisual = (r: any) => {
+    if (!r || (typeof r === "string" && r.trim() === "")) {
+      return <span className="italic text-gray-500">Sin reporte</span>;
     }
 
-    // 🔹 Si es solo un texto simple
-    return <div className="whitespace-pre-line">{texto}</div>;
-  }
+    if (typeof r === "string") {
+      const texto = r.trim();
+      if (texto.includes("\n") || texto.includes("-")) {
+        const lineas = texto
+          .split(/\r?\n|-/)
+          .map((l) => l.trim())
+          .filter((l) => l !== "");
+        return (
+          <ul className="list-disc list-inside space-y-1">
+            {lineas.map((linea, idx) => (
+              <li key={idx}>{linea}</li>
+            ))}
+          </ul>
+        );
+      }
+      return <div className="whitespace-pre-line">{texto}</div>;
+    }
 
-  // 🟨 Si el reporte es objeto (con campos clave-valor)
-  const entries = Object.entries(r).filter(([_, v]) => v && v.toString().trim() !== "");
-  return entries.length === 0 ? (
-    <span className="italic text-gray-500">Sin reporte</span>
-  ) : (
-    <ul className="list-disc list-inside space-y-1">
-      {entries.map(([k, v]) => (
-        <li key={k}>
-          <strong className="capitalize">{k}:</strong> {v}
-        </li>
-      ))}
-    </ul>
-  );
-};
-
+    const entries = Object.entries(r).filter(
+      ([_, v]) => v && v.toString().trim() !== ""
+    );
+    return entries.length === 0 ? (
+      <span className="italic text-gray-500">Sin reporte</span>
+    ) : (
+      <ul className="list-disc list-inside space-y-1">
+        {entries.map(([k, v]) => (
+          <li key={k}>
+            <strong className="capitalize">{k}:</strong> {v}
+          </li>
+        ))}
+      </ul>
+    );
+  };
 
   const formatearFecha = (fecha: any) => {
-  if (!fecha) return "Sin fecha";
-
-  try {
-    // Si es un Timestamp de Firestore
-    if (fecha.toDate) return fecha.toDate().toLocaleString();
-
-    // Si es un string tipo "2025-11-09" o ISO
-    if (typeof fecha === "string") {
-      const parsed = new Date(fecha);
-      if (!isNaN(parsed.getTime())) return parsed.toLocaleString();
+    if (!fecha) return "Sin fecha";
+    try {
+      if (fecha.toDate) return fecha.toDate().toLocaleString();
+      if (typeof fecha === "string") {
+        const parsed = new Date(fecha);
+        if (!isNaN(parsed.getTime())) return parsed.toLocaleString();
+      }
+      if (typeof fecha === "number") return new Date(fecha).toLocaleString();
+      return "Fecha no válida";
+    } catch {
+      return "Error de fecha";
     }
-
-    // Si es un número (timestamp UNIX)
-    if (typeof fecha === "number") {
-      return new Date(fecha).toLocaleString();
-    }
-
-    return "Fecha no válida";
-  } catch (e) {
-    return "Error de fecha";
-  }
-};
-
+  };
 
   const categorias = Array.from(new Set(reportes.map((r) => r.categoria)));
 
@@ -258,80 +232,89 @@ export default function Reportes() {
         style={{ backgroundImage: `url(${cow2Image})` }}
       />
       <div className="absolute inset-0 z-0 bg-black/40 backdrop-blur-[2px]" />
+
       {/* Header */}
-<header className="w-screen py-3 px-4 md:py-4 md:px-6 flex justify-between items-center shadow-md bg-indigo-500 text-black relative z-20">
-  <h1 className="text-lg md:text-2xl font-extrabold">Reportes de tareas</h1>
+      <header className="w-screen py-3 px-4 md:py-4 md:px-6 flex justify-between items-center shadow-md bg-indigo-500 text-black relative z-20">
+        <h1 className="text-xl md:text-2xl font-extrabold">
+          Reportes de tareas
+        </h1>
 
-  {/* Menú desktop */}
-  <div className="hidden md:flex items-center gap-4">
-    <button onClick={() => navigate("/home")} className="text-black hover:text-indigo-300 transition">
-      <FaHome size={22} />
-    </button>
+        {/* 🔹 Visible solo en escritorio */}
+        <div className="hidden md:flex items-center gap-4">
+          <button
+            onClick={() => navigate("/home")}
+            className="hover:text-indigo-300 transition"
+          >
+            <FaHome size={20} />
+          </button>
+          <button
+            onClick={() => navigate("/notificaciones")}
+            className="hover:text-indigo-300 transition relative"
+          >
+            <FaBell size={20} />
+            {hayNotificaciones && (
+              <span className="absolute -top-1 -right-1 text-xs animate-bounce">
+                🐮
+              </span>
+            )}
+          </button>
+          <button
+            onClick={handleLogout}
+            className="bg-indigo-600 text-black font-semibold px-3 py-1 rounded-xl hover:bg-indigo-300"
+          >
+            Cerrar sesión
+          </button>
+        </div>
 
-    <div className="relative">
-      <button onClick={() => navigate("/notificaciones")} className="text-black hover:text-indigo-300 text-xl transition">
-        <FaBell />
-      </button>
-      {hayNotificaciones && (
-        <span className="absolute -top-2 -right-2 bg-red-600 text-white text-xs font-bold px-1.5 py-0.5 rounded-full animate-pulse">
-          {notificaciones.filter(n => !n.leido).length}
-        </span>
-      )}
-    </div>
-
-    <button onClick={handleLogout} className="bg-indigo-400 hover:bg-indigo-600 text-black font-semibold px-3 py-1 rounded-xl ">
-      Cerrar sesión
-    </button>
-  </div>
-
-  {/* Menú hamburguesa móvil */}
-  <button
-    className="md:hidden text-white text-2xl hover:text-yellow-400 transition"
-    onClick={() => setMenuOpen(!menuOpen)}
-  >
-    {menuOpen ? <FaTimes /> : <FaBars />}
-  </button>
-
-  {menuOpen && (
-    <div className="absolute top-full right-2 mt-2 w-56 bg-black/90 backdrop-blur-md rounded-lg shadow-lg flex flex-col p-3 space-y-2 md:hidden z-50">
-      {/* Inicio */}
-      <button
-        onClick={() => { navigate("/home"); setMenuOpen(false); }}
-        className="flex items-center gap-2 text-white hover:text-gray-300"
-      >
-        <FaHome /> Inicio
-      </button>
-
-      {/* Notificaciones */}
-      <div className="relative">
+        {/* 🔹 Menú hamburguesa solo móvil */}
         <button
-          onClick={() => setMenuOpen(false) || navigate("/notificaciones")}
-          className="flex items-center gap-2 text-white hover:text-gray-300 w-full"
+          onClick={() => setMenuOpen(!menuOpen)}
+          className="md:hidden hover:text-indigo-300"
         >
-          <FaBell /> Notificaciones
-          {hayNotificaciones && (
-            <span className="ml-1 bg-red-600 text-white text-xs font-bold px-1.5 py-0.5 rounded-full animate-pulse">
-              {notificaciones.filter(n => !n.leido).length}
-            </span>
-          )}
+          {menuOpen ? <FaTimes size={22} /> : <FaBars size={22} />}
         </button>
-      </div>
 
-      {/* Cerrar sesión */}
-      <button
-        onClick={() => { handleLogout(); setMenuOpen(false); }}
-        className="flex items-center gap-2 text-red-400 hover:text-red-600"
-      >
-        🚪 Cerrar sesión
-      </button>
-    </div>
-  )}
-</header>
-      {/* Contenido */}
-      <main className="relative z-10 p-6 md:p-10">
+        {/* 🔹 Menú desplegable móvil */}
+        <div
+          className={`absolute top-full right-0 bg-white/40 text-black w-52 rounded-b-2xl shadow-lg md:hidden flex flex-col items-center py-2 gap-2 transition-all duration-300 ${
+            menuOpen ? "max-h-60 opacity-100" : "max-h-0 opacity-0"
+          }`}
+        >
+          <button
+            onClick={() => {
+              navigate("/home");
+              setMenuOpen(false);
+            }}
+            className="w-5/6 py-2 rounded-lg bg-indigo-400 hover:bg-indigo-500 flex items-center font-semibold justify-center gap-2"
+          >
+            <FaHome /> Inicio
+          </button>
+          <button
+            onClick={() => {
+              navigate("/notificaciones");
+              setMenuOpen(false);
+            }}
+            className="w-5/6 py-2 rounded-lg bg-indigo-400 hover:bg-indigo-500 flex items-center font-semibold justify-center gap-2"
+          >
+            <FaBell /> Notificaciones
+          </button>
+          <button
+            onClick={() => {
+              handleLogout();
+              setMenuOpen(false);
+            }}
+            className="w-5/6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 flex items-center font-semibold justify-center gap-2"
+          >
+            Cerrar sesión
+          </button>
+        </div>
+      </header>
+
+      {/* Main */}
+      <main className="relative z-10 p-6 md:p-10 pb-20">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6 gap-3">
-          <h2 className="text-3xl font-extrabold text-yellow-300 drop-shadow-md flex items-center gap-3">
-            📋 Reportes
+          <h2 className="text-xl font-extrabold text-yellow-500 drop-shadow-md flex items-center gap-3">
+            Reportes de trabajadores📋 
             <span className="text-sm text-yellow-100 bg-yellow-500/20 px-3 py-1 rounded-full">
               {reportesFiltrados.length} encontrados
             </span>
@@ -342,23 +325,31 @@ export default function Reportes() {
               <select
                 value={filtroCategoria}
                 onChange={(e) => setFiltroCategoria(e.target.value)}
-                className="p-2 rounded-lg bg-indigo-500 text-white border border-yellow-300/50 focus:outline-none focus:ring-2 focus:ring-yellow-400 transition-all"
+                className="p-2 rounded-xl font-semibold bg-indigo-500 text-white border border-yellow-300 focus:outline-none focus:ring-2 focus:ring-yellow-400 transition-all"
               >
-                <option className="bg-gray-100 text-indigo-500" value="todas">
-                  Todas las categorías
-                </option>
+                <option value="todas">Todas las categorías</option>
                 {categorias.map((c) => (
-                  <option key={c} className="bg-white text-indigo-500" value={c}>{c}</option>
+                  <option key={c} value={c} className="   text-whithe ">
+                    {c}
+                  </option>
                 ))}
               </select>
 
-              <input type="date" value={filtroFechaInicio} onChange={(e) => setFiltroFechaInicio(e.target.value)}
-                className="p-2 rounded-lg bg-black/40 bg-indigo-500 border border-yellow-300/50 focus:outline-none focus:ring-2 focus:ring-yellow-400 transition-all" />
+              <input
+                type="date"
+                value={filtroFechaInicio}
+                onChange={(e) => setFiltroFechaInicio(e.target.value)}
+                className="p-2 rounded-xl bg-indigo-500 border border-yellow-300 focus:outline-none focus:ring-2 focus:ring-yellow-400 transition-all text-white font-semibold"
+              />
 
-              
-
-              <button onClick={() => { setFiltroCategoria("todas"); setFiltroFechaInicio(""); setFiltroFechaFin(""); }}
-                className="px-4 py-2 bg-yellow-400/80 hover:bg-yellow-600 text-black font-semibold rounded-lg shadow-md transition-all">
+              <button
+                onClick={() => {
+                  setFiltroCategoria("todas");
+                  setFiltroFechaInicio("");
+                  setFiltroFechaFin("");
+                }}
+                className="px-4 py-2 bg-yellow-400/80 hover:bg-yellow-600 text-black font-semibold rounded-xl shadow-md transition-all"
+              >
                 Limpiar filtros
               </button>
             </div>
@@ -366,7 +357,9 @@ export default function Reportes() {
         </div>
 
         {reportesFiltrados.length === 0 ? (
-          <p className="text-center text-lg text-yellow-100 italic mt-10">No hay reportes disponibles por el momento 🐄</p>
+          <p className="text-center text-lg text-yellow-100 italic mt-10">
+            No hay reportes disponibles por el momento 🐄
+          </p>
         ) : (
           <ul className="grid gap-8 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
             {reportesFiltrados.map((r) => {
@@ -379,20 +372,45 @@ export default function Reportes() {
                 : "bg-yellow-500/20 text-yellow-200 border-yellow-400/40";
 
               return (
-                <li key={r.id} className={`relative overflow-hidden p-6 rounded-2xl bg-gradient-to-br from-indigo-600/40 to-indigo-400/30 border ${estadoColor} shadow-lg hover:shadow-2xl transition-all duration-300 backdrop-blur-md hover:scale-[1.03]`}>
-                  <div className={`absolute left-0 top-0 h-full w-1.5 ${esRealizada ? "bg-green-400" : esNoRealizada ? "bg-red-400" : "bg-yellow-400"}`} />
+                <li
+                  key={r.id}
+                  className={`relative overflow-hidden p-6 rounded-2xl bg-gradient-to-br from-indigo-600/40 to-indigo-400/30 border ${estadoColor} shadow-lg hover:shadow-2xl transition-all duration-300 backdrop-blur-md hover:scale-[1.03]`}
+                >
+                  <div
+                    className={`absolute left-0 top-0 h-full w-1.5 ${
+                      esRealizada
+                        ? "bg-green-400"
+                        : esNoRealizada
+                        ? "bg-red-400"
+                        : "bg-yellow-400"
+                    }`}
+                  />
 
                   <div className="flex justify-between items-start mb-3">
                     <h3 className="text-xl font-bold text-white">{r.titulo}</h3>
-                    {esRealizada && <FaCheckCircle className="text-green-400 text-2xl" />}
-                    {esNoRealizada && <FaTimesCircle className="text-red-400 text-2xl" />}
+                    {esRealizada && (
+                      <FaCheckCircle className="text-green-400 text-2xl" />
+                    )}
+                    {esNoRealizada && (
+                      <FaTimesCircle className="text-red-400 text-2xl" />
+                    )}
                   </div>
 
                   <div className="space-y-1 text-sm text-gray-100">
-                    <div>🏷️ Categoría: <span className="font-semibold">{r.categoria}</span></div>
-                    <div>📅 Fecha: <span>{r.fecha}</span></div>
+                    <div>
+                      🏷️ Categoría:{" "}
+                      <span className="font-semibold">{r.categoria}</span>
+                    </div>
+                    <div>
+                      📅 Fecha: <span>{r.fecha}</span>
+                    </div>
                     {userRole === "admin" && (
-                      <div>👷‍♂️ Trabajador: <span className="font-semibold text-yellow-300">{r.trabajadorNombre || r.trabajadorId}</span></div>
+                      <div>
+                        👷‍♂️ Trabajador:{" "}
+                        <span className="font-semibold text-yellow-300">
+                          {r.trabajadorNombre || r.trabajadorId}
+                        </span>
+                      </div>
                     )}
                   </div>
 
@@ -400,17 +418,20 @@ export default function Reportes() {
                     {formatearReporteVisual(r.reporte)}
                   </div>
 
-                  <div className="text-xs text-gray-300 mt-3 italic text-right">⏰ Creado en: {formatearFecha(r.creadoEn)}</div>
+                  <div className="text-xs text-gray-300 mt-3 italic text-right">
+                    ⏰ Creado en: {formatearFecha(r.creadoEn)}
+                  </div>
                 </li>
               );
             })}
           </ul>
         )}
       </main>
+
+      {/* Footer */}
       <footer className="w-full bg-[#099757dc] py-3 md:py-4 text-center text-xs md:text-sm text-white fixed bottom-0 z-50">
-  <p>© 2025 INNOVASYSTEM. Todos los derechos reservados.</p>
-</footer>
+        <p>© 2025 INNOVASYSTEM. Todos los derechos reservados.</p>
+      </footer>
     </div>
   );
 }
-

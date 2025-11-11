@@ -77,12 +77,14 @@ export default function Pendientes() {
   const navigate = useNavigate();
   const categoriasGranja = ["Vacunación", "Alimentación", "Limpieza", "Revisión"];
   const hoy = new Date(Date.now() - new Date().getTimezoneOffset() * 60000)
-  .toISOString()
-  .split("T")[0];
+    .toISOString()
+    .split("T")[0];
   const tareasPorPagina = 5;
 
   const toggleTarea = (id: string) => {
-    setAbiertas(prev => prev.includes(id) ? prev.filter(tid => tid !== id) : [...prev, id]);
+    setAbiertas((prev) =>
+      prev.includes(id) ? prev.filter((tid) => tid !== id) : [...prev, id]
+    );
   };
 
   useEffect(() => {
@@ -118,7 +120,7 @@ export default function Pendientes() {
     return () => unsub();
   }, []);
 
-  // Notificaciones en tiempo real
+  // Notificaciones
   useEffect(() => {
     if (!userId) return;
     const q = query(
@@ -127,28 +129,36 @@ export default function Pendientes() {
       orderBy("creadoEn", "desc")
     );
     const unsub = onSnapshot(q, (snapshot) => {
-      const lista = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Notificacion));
+      const lista = snapshot.docs.map(
+        (doc) => ({ id: doc.id, ...doc.data() } as Notificacion)
+      );
       setNotificaciones(lista);
-      setHayNotificaciones(lista.some(n => !n.leido));
+      setHayNotificaciones(lista.some((n) => !n.leido));
     });
     return () => unsub();
   }, [userId]);
 
-  const abrirNotificacion = async (n: Notificacion) => {
-    if (!n.leido) await updateDoc(doc(db, "notificaciones", n.id), { leido: true });
-    if (n.tareaId) navigate(`/pendientes/${n.tareaId}`);
+  const handleLogout = async () => {
+    await auth.signOut();
+    navigate("/");
   };
+
+  const indexUltimaTarea = pagina * tareasPorPagina;
+  const indexPrimeraTarea = indexUltimaTarea - tareasPorPagina;
+  const tareasMostradas = tareas.slice(indexPrimeraTarea, indexUltimaTarea);
+  const totalPaginas = Math.ceil(tareas.length / tareasPorPagina);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!tarea.trim() || !descripcion.trim() || !para || !categoria || !fecha || !userId) return alert("Completa todos los campos");
+    if (!tarea || !descripcion || !para || !categoria || !fecha || !userId)
+      return alert("Completa todos los campos");
 
-    const trabajadorSeleccionado = usuarios.find((u) => u.id === para);
-    const datosTarea: Omit<Tarea, "id"> = {
+    const trabajador = usuarios.find((u) => u.id === para);
+    const data: Omit<Tarea, "id"> = {
       titulo: tarea.trim(),
       descripcion: descripcion.trim(),
-      para: trabajadorSeleccionado?.id || "",
-      paraNombre: trabajadorSeleccionado?.nombre || trabajadorSeleccionado?.email || "",
+      para: trabajador?.id || "",
+      paraNombre: trabajador?.nombre || trabajador?.email || "",
       categoria,
       fecha,
       completada: false,
@@ -158,10 +168,10 @@ export default function Pendientes() {
     };
 
     if (editandoId) {
-      await updateDoc(doc(db, "tareas", editandoId), datosTarea);
+      await updateDoc(doc(db, "tareas", editandoId), data);
       setEditandoId(null);
     } else {
-      await addDoc(collection(db, "tareas"), datosTarea);
+      await addDoc(collection(db, "tareas"), data);
     }
 
     setTarea("");
@@ -171,128 +181,108 @@ export default function Pendientes() {
     setFecha("");
   };
 
-  const eliminarTarea = async (id: string) => {
-    if (!window.confirm("¿Seguro que deseas eliminar esta tarea?")) return;
-    await deleteDoc(doc(db, "tareas", id));
-  };
-
-  const editarTarea = (t: Tarea) => {
-    setTarea(t.titulo);
-    setDescripcion(t.descripcion || "");
-    setPara(t.para);
-    setCategoria(t.categoria);
-    setFecha(t.fecha);
-    setEditandoId(t.id);
-  };
-
-  const formatearReporteVisual = (reporte: any) => {
-    if (!reporte) return <span className="italic text-gray-500">Sin reporte</span>;
-    if (typeof reporte === "string") return <span>{reporte.trim()}</span>;
-    if (typeof reporte === "object") {
-      const entries = Object.entries(reporte).filter(([_, v]) => v && v.toString().trim() !== "");
-      if (entries.length === 0) return <span className="italic text-gray-500">Sin reporte</span>;
-      return (
-        <ul className="list-disc list-inside space-y-1">
-          {entries.map(([k, v]) => (
-            <li key={k}><strong className="capitalize">{k}:</strong> {v}</li>
-          ))}
-        </ul>
-      );
-    }
-    return <span>{reporte.toString()}</span>;
-  };
-
-  const handleLogout = async () => {
-    await auth.signOut();
-    navigate("/");
-  };
-
-  // Paginación
-  const indexUltimaTarea = pagina * tareasPorPagina;
-  const indexPrimeraTarea = indexUltimaTarea - tareasPorPagina;
-  const tareasMostradas = tareas.slice(indexPrimeraTarea, indexUltimaTarea);
-  const totalPaginas = Math.ceil(tareas.length / tareasPorPagina);
+  function setMenuAbierto(arg0: boolean) {
+    throw new Error("Function not implemented.");
+  }
 
   return (
     <div className="relative min-h-screen flex flex-col overflow-hidden">
-      <div className="absolute inset-0 z-0 bg-cover bg-center" style={{ backgroundImage: `url(${cow2Image})` }} />
+      <div
+        className="absolute inset-0 z-0 bg-cover bg-center"
+        style={{ backgroundImage: `url(${cow2Image})` }}
+      />
       <div className="absolute inset-0 z-0 bg-black/40 backdrop-blur-[2px]" />
 
-      <div className="relative z-10 flex-1 flex flex-col items-center max-w-6xl mx-auto w-full px-4">
-       {/* Header */}
-<header className="w-screen py-3 px-4 md:py-4 md:px-6 flex justify-between items-center shadow-md bg-blue-500 text-black relative z-20">
-  <h1 className="text-2xl font-extrabold">Asignacion de tareas</h1>
+      <div className="relative z-10 flex-1 flex flex-col items-center max-w-6xl mx-auto w-full px-2 sm:px-4">
+        {/* Header */}
+        <header className="w-full py-3 px-4 flex justify-between items-center shadow-md bg-blue-500 text-black relative z-20">
+          <h1 className="text-xl sm:text-2xl font-extrabold">
+            Asignación de tareas
+          </h1>
 
-  {/* Menú desktop */}
-  <div className="hidden md:flex items-center gap-4">
-    <button onClick={() => navigate("/home")} className="text-black hover:text-blue-300 transition">
-      <FaHome size={22} />
-    </button>
+          {/* Desktop menu */}
+          <div className="hidden md:flex items-center gap-4">
+            <button
+              onClick={() => navigate("/home")}
+              className="text-black hover:text-blue-300 transition"
+            >
+              <FaHome size={22} />
+            </button>
 
-    <div className="relative">
-      <button onClick={() => navigate("/notificaciones")} className="text-black hover:text-blue-300 text-xl transition">
-        <FaBell />
-      </button>
-      {hayNotificaciones && (
-        <span className="absolute -top-2 -right-2 bg-red-600 text-black text-xs font-bold px-1.5 py-0.5 rounded-full animate-pulse">
-          {notificaciones.filter(n => !n.leido).length}
-        </span>
-      )}
-    </div>
+            <div className="relative">
+              <button
+                onClick={() => navigate("/notificaciones")}
+                className="text-black hover:text-blue-300 text-xl transition"
+              >
+                <FaBell />
+              </button>
+              {hayNotificaciones && (
+                <span className="absolute -top-2 -right-2 bg-red-600 text-white text-xs font-bold px-1.5 py-0.5 rounded-full animate-pulse">
+                  {notificaciones.filter((n) => !n.leido).length}
+                </span>
+              )}
+            </div>
 
-    <button onClick={handleLogout} className="bg-blue-400 hover:bg-blue-700 text-black font-semibold px-3 py-1 rounded-xl">
-      Cerrar sesión
-    </button>
-  </div>
+            <button
+              onClick={handleLogout}
+              className="bg-blue-400 hover:bg-blue-700 text-white font-semibold px-3 py-1 rounded-xl"
+            >
+              Cerrar sesión
+            </button>
+          </div>
 
-  {/* Menú hamburguesa móvil */}
-  <button
-    className="md:hidden text-white text-2xl hover:text-blue-400 transition"
-    onClick={() => setMenuOpen(!menuOpen)}
-  >
-    {menuOpen ? <FaTimes /> : <FaBars />}
-  </button>
+          {/* Mobile hamburger */}
+          <button
+            className="md:hidden text-black text-2xl hover:text-blue-300 transition"
+            onClick={() => setMenuOpen(!menuOpen)}
+          >
+            {menuOpen ? <FaTimes /> : <FaBars />}
+          </button>
 
-  {menuOpen && (
-    <div className="absolute top-full right-2 mt-2 w-56 bg-black/90 backdrop-blur-md rounded-lg shadow-lg flex flex-col p-3 space-y-2 md:hidden z-50">
-      {/* Inicio */}
-      <button
-        onClick={() => { navigate("/home"); setMenuOpen(false); }}
-        className="flex items-center gap-2 text-white hover:text-gray-300"
-      >
-        <FaHome /> Inicio
-      </button>
+          {/* Dropdown mobile */}
+          {menuOpen && (
+            <div className="absolute top-full right-0  w-50 bg-white/40  text-black  backdrop-blur-md rounded-b-2xl shadow-lg flex flex-col items-center p-2 gap-2 space-y-2 md:hidden animate-fadeIn">
+              <button
+            onClick={() => {
+              navigate("/home");
+              setMenuAbierto(false);
+            }}
+            className="w-5/7 py-2 rounded-xl bg-blue-400  hover:bg-blue-500 flex items-center font-semibold justify-center gap-2"
+          >
+            <FaHome/> Inicio
+          </button>
 
-      {/* Notificaciones */}
-      <div className="relative">
-        <button
-          onClick={() => setMenuOpen(false) || navigate("/notificaciones")}
-          className="flex items-center gap-2 text-white hover:text-gray-300 w-full"
-        >
-          <FaBell /> Notificaciones
-          {hayNotificaciones && (
-            <span className="ml-1 bg-red-600 text-white text-xs font-bold px-1.5 py-0.5 rounded-full animate-pulse">
-              {notificaciones.filter(n => !n.leido).length}
-            </span>
+              <button
+                onClick={() => {
+                  navigate("/notificaciones");
+                  setMenuOpen(false);
+                }}
+                className="w-5/7 py-2 rounded-xl bg-blue-400  hover:bg-blue-500 flex items-center font-semibold justify-center gap-2"
+              >
+                <FaBell /> Notificaciones
+                {hayNotificaciones && (
+                  <span className="ml-1 bg-red-600 text-white text-xs font-bold px-1.5 py-0.5 rounded-full animate-pulse">
+                    {notificaciones.filter((n) => !n.leido).length}
+                  </span>
+                )}
+              </button>
+
+              <button
+                onClick={() => {
+                  handleLogout();
+                  setMenuOpen(false);
+                }}
+                className="w-5/7 py-2 bg-red-600 text-white rounded-xl hover:bg-red-700 flex items-center font-semibold justify-center gap-2flex items-center gap-2 text-red-400 hover:text-red-600"
+              >
+                Cerrar sesión
+              </button>
+            </div>
           )}
-        </button>
-      </div>
-
-      {/* Cerrar sesión */}
-      <button
-        onClick={() => { handleLogout(); setMenuOpen(false); }}
-        className="flex items-center gap-2 text-red-400 hover:text-red-600"
-      >
-        🚪 Cerrar sesión
-      </button>
-    </div>
-  )}
-</header>
-
+        </header>
 
         {/* Leyenda */}
-        <div className="flex justify-center gap-6 mt-6 text-sm md:text-base font-medium">
-          <div className="flex items-center gap-2 text-gray-700 bg-white/60 backdrop-blur-md px-3 py-1 rounded-full shadow">
+        <div className="flex flex-wrap justify-center gap-3 sm:gap-6 mt-6 text-xs sm:text-sm font-medium">
+          <div className="flex items-center gap-2 text-gray-700 bg-white/60 px-3 py-1 rounded-full shadow">
             <FaClock className="text-gray-500" /> Pendiente
           </div>
           <div className="flex items-center gap-2 text-green-700 bg-green-100 px-3 py-1 rounded-full shadow">
@@ -303,107 +293,166 @@ export default function Pendientes() {
           </div>
         </div>
 
-        <main className="flex flex-col md:flex-row justify-center gap-8 p-6 w-full">
-          {/* Lista de tareas */}
-          <section className="bg-white/90 backdrop-blur-md rounded-2xl shadow-lg p-6 w-full md:w-1/2 border border-yellow-100 transition-all hover:shadow-2xl hover:scale-[1.01] max-h-[600px] overflow-y-auto scrollbar-hide">
-            <h2 className="text-xl font-bold flex items-center gap-2 text-black mb-6 border-b border-blue-500 pb-2">
+        {/* Contenido principal */}
+        <main className="flex flex-col md:flex-row justify-center gap-6 sm:gap-8 p-4 sm:p-6 w-full">
+          {/* Lista */}
+          <section className="bg-white/90 rounded-2xl shadow-lg p-4 sm:p-6 w-full md:w-1/2 border border-yellow-100 transition-all hover:shadow-2xl max-h-[600px] overflow-y-auto">
+            <h2 className="text-lg sm:text-xl font-bold flex items-center gap-2 text-black mb-4 border-b border-blue-500 pb-2">
               <FaClipboardList className="text-blue-600" /> Tareas Registradas
             </h2>
 
             {tareas.length === 0 ? (
-              <p className="text-center text-gray-600 italic">No hay tareas registradas aún 🐄</p>
+              <p className="text-center text-gray-600 italic">
+                No hay tareas registradas aún 🐄
+              </p>
             ) : (
-              <>
-                <ul className="space-y-4">
-                  {tareasMostradas.map((t) => {
-                    const pendiente = t.estado === "pendiente";
-                    const noRealizada = t.estado === "no realizada";
-                    const realizada = t.estado === "realizada";
-                    const abierta = abiertas.includes(t.id);
+              tareasMostradas.map((t) => {
+                const abierta = abiertas.includes(t.id);
+                const pendiente = t.estado === "pendiente";
+                const noRealizada = t.estado === "no realizada";
+                const realizada = t.estado === "realizada";
 
-                    return (
-                      <li key={t.id} className={`group p-4 rounded-xl shadow-md border transition-all duration-300 transform hover:scale-[1.02] ${pendiente ? "bg-gray-50 border-gray-300 hover:bg-gray-100" : noRealizada ? "bg-red-100 border-red-400 hover:bg-red-200" : "bg-green-100 border-green-400 hover:bg-green-200"}`}>
-                        <div className="flex items-center justify-between cursor-pointer" onClick={() => toggleTarea(t.id)}>
-                          <div className="flex items-center gap-3">
-                            {pendiente && <FaClock className="text-gray-500 text-2xl" />}
-                            {noRealizada && <FaTimesCircle className="text-red-600 text-2xl" />}
-                            {realizada && <FaCheckCircle className="text-green-600 text-2xl" />}
-                            <div className="font-semibold text-gray-800">{t.titulo} <span className="text-sm text-gray-600">({t.categoria})</span></div>
-                          </div>
-                          <div className="flex flex-col gap-2">
-                            <button onClick={(e) => { e.stopPropagation(); editarTarea(t); }} className="text-blue-600 hover:text-blue-800 transition-transform hover:scale-125"><FaEdit /></button>
-                            <button onClick={(e) => { e.stopPropagation(); eliminarTarea(t.id); }} className="text-red-600 hover:text-red-800 transition-transform hover:scale-125"><FaTrash /></button>
-                          </div>
+                return (
+                  <div
+                    key={t.id}
+                    className={`p-4 mb-3 rounded-xl border shadow-md transition-all ${
+                      pendiente
+                        ? "bg-gray-50 border-gray-300 hover:bg-gray-100"
+                        : noRealizada
+                        ? "bg-red-100 border-red-400 hover:bg-red-200"
+                        : "bg-green-100 border-green-400 hover:bg-green-200"
+                    }`}
+                  >
+                    <div
+                      className="flex items-center justify-between"
+                      onClick={() => toggleTarea(t.id)}
+                    >
+                      <div className="flex items-center gap-3">
+                        {pendiente && <FaClock className="text-gray-500" />}
+                        {noRealizada && <FaTimesCircle className="text-red-600" />}
+                        {realizada && <FaCheckCircle className="text-green-600" />}
+                        <div>
+                          <p className="font-semibold">{t.titulo}</p>
+                          <p className="text-xs text-gray-600">{t.categoria}</p>
                         </div>
+                      </div>
 
-                        {abierta && (
-                          <div className="mt-2 ml-9">
-                            {t.descripcion && <div className="text-xs text-gray-700">{t.descripcion}</div>}
-                            <div className="text-sm text-gray-800 mt-1">👨‍🌾 Asignada a: <span className="font-medium text-blue-800">{t.paraNombre || t.para}</span></div>
-                            <div className="text-xs text-blue-700 mt-1">📅 Fecha: {t.fecha}</div>
-                            {pendiente && <div className="mt-2 p-3 rounded-md border border-gray-300 bg-white/70 text-gray-700 italic">⏳ Esperando reporte del trabajador</div>}
-                            {!pendiente && (
-                              <div className={`mt-3 p-3 rounded-md border ${noRealizada ? "bg-red-50 border-red-300 text-red-900" : "bg-green-50 border-green-300 text-green-900"} transition-opacity`}>
-                                <strong>Reporte del trabajador:</strong>
-                                <div className="mt-1 font-semibold">{noRealizada ? "❌ Tarea no realizada" : "✅ Tarea realizada"}</div>
-                                <div className="mt-1 p-2 bg-white/60 border rounded-md text-sm">
-                                  <strong>📝 Detalle:</strong>
-                                  <div className="mt-1 text-gray-800">{formatearReporteVisual(t.reporte)}</div>
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </li>
-                    );
-                  })}
-                </ul>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setEditandoId(t.id);
+                            setTarea(t.titulo);
+                            setDescripcion(t.descripcion || "");
+                            setPara(t.para);
+                            setCategoria(t.categoria);
+                            setFecha(t.fecha);
+                          }}
+                          className="text-blue-600 hover:text-blue-800"
+                        >
+                          <FaEdit />
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (
+                              window.confirm("¿Seguro que deseas eliminar esta tarea?")
+                            )
+                              deleteDoc(doc(db, "tareas", t.id));
+                          }}
+                          className="text-red-600 hover:text-red-800"
+                        >
+                          <FaTrash />
+                        </button>
+                      </div>
+                    </div>
 
-                {/* Paginación */}
-                {totalPaginas > 1 && (
-                  <div className="flex justify-center gap-2 mt-4">
-                    {Array.from({ length: totalPaginas }, (_, i) => i + 1).map(num => (
-                      <button key={num} onClick={() => setPagina(num)} className={`px-3 py-1 rounded ${num === pagina ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-700 hover:bg-blue-300"}`}>{num}</button>
-                    ))}
+                    {abierta && (
+                      <div className="mt-2 ml-8 text-sm text-gray-700">
+                        {t.descripcion && <p>{t.descripcion}</p>}
+                        <p>👨‍🌾 {t.paraNombre}</p>
+                        <p>📅 {t.fecha}</p>
+                      </div>
+                    )}
                   </div>
-                )}
-              </>
+                );
+              })
+            )}
+
+            {/* Paginación */}
+            {totalPaginas > 1 && (
+              <div className="flex justify-center gap-2 mt-4">
+                {Array.from({ length: totalPaginas }, (_, i) => i + 1).map((n) => (
+                  <button
+                    key={n}
+                    onClick={() => setPagina(n)}
+                    className={`px-3 py-1 rounded ${
+                      n === pagina
+                        ? "bg-blue-600 text-white"
+                        : "bg-gray-200 text-gray-700 hover:bg-blue-300"
+                    }`}
+                  >
+                    {n}
+                  </button>
+                ))}
+              </div>
             )}
           </section>
 
           {/* Formulario */}
-          <section className="bg-white/90 backdrop-blur-md rounded-2xl shadow-lg p-6 w-full md:w-1/2 border border-blue-500 transition-all hover:shadow-2xl hover:scale-[1.01]">
-            <h2 className="text-xl font-bold text-blue-800 mb-6 border-b border-blue-500 pb-2">
+          <section className="bg-white/90 rounded-2xl shadow-lg p-4 sm:p-6 w-full md:w-1/2 border border-blue-500 transition-all hover:shadow-2xl">
+            <h2 className="text-lg sm:text-xl font-bold text-blue-800 mb-4 border-b border-blue-500 pb-2">
               {editandoId ? "✏️ Editar tarea" : "🧾 Añadir nueva tarea"}
             </h2>
-            <form className="space-y-5" onSubmit={handleSubmit}>
-              <div className="flex flex-col">
-                <label className="text-sm font-semibold text-blue-800">Tarea:</label>
-                <input type="text" value={tarea} onChange={(e) => setTarea(e.target.value)} className="mt-1 p-2 border rounded-lg focus:ring-2 focus:ring-blue-400 outline-none transition-all" placeholder="Ej. Alimentar ganado" />
-              </div>
-              <div className="flex flex-col">
-                <label className="text-sm font-semibold text-blue-800">Descripción:</label>
-                <textarea value={descripcion} onChange={(e) => setDescripcion(e.target.value)} className="mt-1 p-2 border rounded-lg focus:ring-2 focus:ring-blue-400 outline-none transition-all" placeholder="Detalles adicionales..."></textarea>
-              </div>
-              <div className="flex flex-col">
-                <label className="text-sm font-semibold text-blue-800">Asignar a trabajador:</label>
-                <select value={para} onChange={(e) => setPara(e.target.value)} className="mt-1 p-2 border rounded-lg focus:ring-2 focus:ring-blue-400 outline-none transition-all">
-                  <option value="">Seleccionar trabajador</option>
-                  {usuarios.map((u) => (<option key={u.id} value={u.id}>{u.nombre || u.email}</option>))}
-                </select>
-              </div>
-              <div className="flex flex-col">
-                <label className="text-sm font-semibold text-blue-800">Categoría:</label>
-                <select value={categoria} onChange={(e) => setCategoria(e.target.value)} className="mt-1 p-2 border rounded-lg focus:ring-2 focus:ring-blue-400 outline-none transition-all">
-                  <option value="">Seleccionar categoría</option>
-                  {categoriasGranja.map((cat) => (<option key={cat} value={cat}>{cat}</option>))}
-                </select>
-              </div>
-              <div className="flex flex-col">
-                <label className="text-sm font-semibold text-blue-800">Fecha:</label>
-                <input type="date" value={fecha} min={hoy} onChange={(e) => setFecha(e.target.value)} className="mt-1 p-2 border rounded-lg focus:ring-2 focus:ring-blue-400 outline-none transition-all" />
-              </div>
-              <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-transform hover:scale-[1.03]">
+            <form className="space-y-4" onSubmit={handleSubmit}>
+              <input
+                type="text"
+                value={tarea}
+                onChange={(e) => setTarea(e.target.value)}
+                placeholder="Tarea..."
+                className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-400"
+              />
+              <textarea
+                value={descripcion}
+                onChange={(e) => setDescripcion(e.target.value)}
+                placeholder="Descripción..."
+                className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-400"
+              />
+              <select
+                value={para}
+                onChange={(e) => setPara(e.target.value)}
+                className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-400"
+              >
+                <option value="">Seleccionar trabajador</option>
+                {usuarios.map((u) => (
+                  <option key={u.id} value={u.id}>
+                    {u.nombre || u.email}
+                  </option>
+                ))}
+              </select>
+              <select
+                value={categoria}
+                onChange={(e) => setCategoria(e.target.value)}
+                className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-400"
+              >
+                <option value="">Seleccionar categoría</option>
+                {categoriasGranja.map((cat) => (
+                  <option key={cat} value={cat}>
+                    {cat}
+                  </option>
+                ))}
+              </select>
+              <input
+                type="date"
+                min={hoy}
+                value={fecha}
+                onChange={(e) => setFecha(e.target.value)}
+                className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-400"
+              />
+              <button
+                type="submit"
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 rounded-lg"
+              >
                 {editandoId ? "Guardar cambios" : "Añadir tarea"}
               </button>
             </form>
@@ -411,9 +460,9 @@ export default function Pendientes() {
         </main>
 
         {/* Footer */}
-        <footer className="w-full bg-[#099757dc] py-3 md:py-4 text-center text-xs md:text-sm text-white fixed bottom-0 z-50">
-  <p>© 2025 INNOVASYSTEM. Todos los derechos reservados.</p>
-</footer>
+        <footer className="w-full bg-[#099757dc] py-3 text-center text-xs sm:text-sm text-white mt-auto">
+          <p>© 2025 INNOVASYSTEM. Todos los derechos reservados.</p>
+        </footer>
       </div>
     </div>
   );
