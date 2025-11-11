@@ -117,54 +117,70 @@ export default function HomePage() {
           <header className="w-full py-3 px-4 md:py-4 md:px-6 flex justify-between items-center shadow-md bg-black/5 backdrop-blur-md text-white relative z-20">
             <h1 className="text-lg md:text-2xl font-extrabold">AniManager</h1>
 
-            {/* Botón menú (3 líneas) */}
-            <div className="relative">
-              <button
-                className="text-white text-2xl focus:outline-none"
-                onClick={() => setMenuOpen(!menuOpen)}
-              >
-                {menuOpen ? <FaTimes /> : <FaBars />}
-              </button>
+            {/* Desktop: íconos fijos */}
+  <div className="hidden md:flex items-center gap-4">
+    <button onClick={() => navigate("/home")} className="hover:text-blue-500 transition">
+      <FaHome size={22} />
+    </button>
 
-              {/* Menú desplegable */}
-              {menuOpen && (
-                <div className="absolute right-0 mt-2 w-48 bg-black/80 backdrop-blur-md rounded-xl shadow-lg py-3 flex flex-col items-center gap-2 z-50 transition-all duration-300 animate-fadeIn">
-              <button
-                onClick={() => {
-                  navigate("/home");
-                  setMenuOpen(false);
-                }}
-                className="flex items-center gap-2 bg-blue-950 hover:bg-blue-700 font-semibold text-white hover:text-gray-300 w-full justify-center py-2 rounded-xl transition-all duration-300"
-              >
-                <FaHome /> Inicio
-              </button>
+    <Link
+      to="/notificaciones"
+      className="relative hover:text-blue-500"
+    >
+      <FaBell size={22} />
+      {hayNotificaciones && (
+        <span className="absolute -top-1 -right-2 animate-bounce text-sm">🐄</span>
+      )}
+    </Link>
 
-              <Link
-                to="/notificaciones"
-                onClick={() => setMenuOpen(false)}
-                className="flex items-center gap-2 text-white w-full justify-center py-2 relative 
-                          bg-blue-950 hover:bg-blue-700 font-semibold hover:text-white transition-all duration-300 rounded-xl"
-              >
-                <FaBell /> Notificaciones
-                {hayNotificaciones && (
-                  <span className="absolute right-4 -top-1 animate-bounce">🐄</span>
-                )}
-              </Link>
+    <button
+      onClick={handleLogout}
+      className="bg-red-600 hover:bg-red-700 text-white font-semibold px-3 py-1 rounded-xl transition"
+    >
+      Cerrar sesión
+    </button>
+  </div>
 
-              <button
-                onClick={() => {
-                  handleLogout();
-                  setMenuOpen(false);
-                }}
-                className="bg-red-600 hover:bg-red-700 text-white font-semibold px-3 py-1 rounded-xl transition-all duration-300"
-              >
-                Cerrar sesión
-              </button>
-            </div>
+  {/* Mobile: 3 líneas */}
+  <div className="md:hidden relative">
+    <button
+      className="text-white text-2xl focus:outline-none"
+      onClick={() => setMenuOpen(!menuOpen)}
+    >
+      {menuOpen ? <FaTimes /> : <FaBars />}
+    </button>
 
-              )}
-            </div>
-          </header>
+    {/* Menú desplegable mobile */}
+    {menuOpen && (
+      <div className="absolute right-0 mt-2 w-48 bg-white/40 backdrop-blur-md rounded-xl shadow-lg py-3 flex flex-col items-center gap-2 z-50">
+        <button
+          onClick={() => { navigate("/home"); setMenuOpen(false); }}
+          className="w-5/7 py-2 rounded-xl bg-blue-400 hover:bg-blue-500  text-black flex items-center font-semibold justify-center gap-2"
+        >
+          <FaHome /> Inicio
+        </button>
+
+        <Link
+          to="/notificaciones"
+          onClick={() => setMenuOpen(false)}
+          className="w-5/7 py-2 rounded-xl bg-blue-400 hover:bg-blue-500 text-blackflex items-center font-semibold justify-center gap-2"
+        >
+          <FaBell /> Notificaciones
+          {hayNotificaciones && (
+            <span className="absolute right-4 -top-1 animate-bounce">🐄</span>
+          )}
+        </Link>
+
+        <button
+          onClick={() => { handleLogout(); setMenuOpen(false); }}
+          className="bg-red-600 hover:bg-red-700 text-white font-semibold px-3 py-1 rounded-xl"
+        >
+          Cerrar sesión
+        </button>
+      </div>
+    )}
+  </div>
+</header>
 
           {/* Bienvenida */}
           <div className="mt-5 md:mt-9 text-white text-center font-semibold md:text-xl max-w-2xl px-5">

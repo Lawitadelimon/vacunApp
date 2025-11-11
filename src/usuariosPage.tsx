@@ -22,6 +22,7 @@ import {
 } from "react-icons/fa";
 import { motion } from "framer-motion";
 import { signOut } from "firebase/auth";
+import Swal from "sweetalert2";
 import cowsBackground from "./assets/cows2.jpg";
 
 interface Worker {
@@ -50,7 +51,7 @@ export default function UsuariosPage() {
     emergencyNumber: "",
   });
   const [menuOpen, setMenuOpen] = useState(false);
-  const [hayNotificaciones, setHayNotificaciones] = useState(true);
+  const [hayNotificaciones, setHayNotificaciones] = useState(false);
   const workersPerPage = 8;
   const navigate = useNavigate();
 
@@ -69,32 +70,67 @@ export default function UsuariosPage() {
   };
 
   const eliminarWorker = async (id: string) => {
-    if (confirm("¿Seguro que quieres eliminar este trabajador?")) {
+    const result = await Swal.fire({
+      title: '¿Seguro que quieres eliminar este trabajador?',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#3085d6',
+      confirmButtonText: 'Sí, eliminar',
+      cancelButtonText: 'Cancelar',
+    });
+
+    if (result.isConfirmed) {
       await deleteDoc(doc(db, "users", id));
       setWorkers((prev) => prev.filter((w) => w.id !== id));
+      Swal.fire({
+        icon: 'success',
+        title: 'Trabajador eliminado',
+        showConfirmButton: false,
+        timer: 1500
+      });
     }
   };
 
   const guardarEdicion = async () => {
     if (editingWorker) {
       const ref = doc(db, "users", editingWorker.id!);
-      await updateDoc(ref, formData);
+      const { id, ...dataToUpdate } = formData;
+      const cleanData = Object.fromEntries(
+        Object.entries(dataToUpdate).filter(([, value]) => value !== undefined && value !== "")
+      );
+      await updateDoc(ref, cleanData);
       setWorkers((prev) =>
         prev.map((w) => (w.id === editingWorker.id ? { ...w, ...formData } : w))
       );
       setEditingWorker(null);
+      Swal.fire({
+        icon: 'success',
+        title: 'Trabajador actualizado',
+        showConfirmButton: false,
+        timer: 1500
+      });
     }
   };
 
   const guardarNuevo = async () => {
     if (!formData.name || !formData.email) {
-      alert("El nombre y el correo son obligatorios.");
-      return;
+      return Swal.fire({
+        icon: 'warning',
+        title: 'Campos incompletos',
+        text: 'El nombre y el correo son obligatorios',
+      });
     }
     const nuevo = { ...formData, role: "worker" };
     const docRef = await addDoc(collection(db, "users"), nuevo);
     setWorkers((prev) => [...prev, { id: docRef.id, ...nuevo }]);
     setAddingWorker(false);
+    Swal.fire({
+      icon: 'success',
+      title: 'Trabajador añadido',
+      showConfirmButton: false,
+      timer: 1500
+    });
   };
 
   // Paginación
@@ -112,7 +148,7 @@ export default function UsuariosPage() {
 
       {/* HEADER */}
       <header className="fixed top-0 left-0 w-full py-3 px-4 sm:px-6 flex justify-between items-center bg-purple-600 text-white shadow-md z-30">
-        <h1 className="text-2xl text-black  md:text-2xl font-extrabold">Lista de Trabajadores</h1>
+        <h1 className="text-2xl text-black md:text-2xl font-extrabold">Lista de Trabajadores</h1>
 
         {/* Desktop menu */}
         <div className="hidden sm:flex text-black items-center gap-4">
@@ -203,7 +239,7 @@ export default function UsuariosPage() {
                     key={worker.id}
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
-                    className="bg-yellow-50 hover:bg-yellow-100 rounded-2xl p-4 sm:p-5 shadow-md transition-all duration-300"
+                    className="bg-purple-50 hover:bg-purple-200 rounded-2xl p-4 sm:p-5 shadow-md transition-all duration-300"
                   >
                     <div className="flex items-center gap-3 mb-2">
                       <FaUserTie className="text-purple-700" />

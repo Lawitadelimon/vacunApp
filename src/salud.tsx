@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import {
   collection,
@@ -13,7 +12,7 @@ import {
 } from "firebase/firestore";
 import { db } from "./firebase";
 import { getAuth, signOut } from "firebase/auth";
-import { FaPlus, FaArrowLeft, FaHome, FaBell, FaTimes, FaBars } from "react-icons/fa";
+import { FaPlus, FaHome, FaBell, FaTimes, FaBars } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import cowsBackground from "./assets/cows2.jpg";
 
@@ -83,11 +82,11 @@ export default function Salud() {
   const [totalSinAsignar, setTotalSinAsignar] = useState(0);
 
   const [menuAbierto, setMenuAbierto] = useState(false);
-  
-    const handleLogout = async () => {
-      await signOut(auth);
-      navigate("/");
-    };
+
+  const handleLogout = async () => {
+    await signOut(auth);
+    navigate("/");
+  };
 
   const inputClasses = "border px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500";
 
@@ -152,7 +151,7 @@ export default function Salud() {
     return () => unsub();
   }, [loteSeleccionado]);
 
-  // 🔹 Agregar vacuna general (por lote)
+  // 🔹 Agregar vacuna general
   const agregarVacunaGeneral = async () => {
     if (!loteSeleccionado) return;
     if (!nuevaVacunaGeneral.nombre || nuevaVacunaGeneral.dosis < 1) return;
@@ -188,8 +187,6 @@ export default function Salud() {
 
     setVacunasAnimal(combinadas);
     setAnimalSeleccionado(animal);
-
-    // Guardar en el estado global de vacunas por animal
     setVacunasPorAnimal((prev) => ({ ...prev, [animal.id!]: combinadas }));
   };
 
@@ -314,23 +311,20 @@ export default function Salud() {
     setTotalSinAsignar(sinAsignar);
   }, [animales, vacunasPorAnimal]);
 
-    // 🔹 Interfaz
-    return (
-      <div className="relative min-h-screen">
-        <div
-          className="absolute inset-0 bg-cover bg-center blur-[2px]"
-          style={{ backgroundImage: `url(${cowsBackground})` }}
-        ></div>
-        <div className="absolute inset-0 bg-white/20"></div>
-  
-       {/*barra de navegación */}
-            <nav className="sticky top-0 z-50 bg-red-500 text-black flex items-center justify-between p-4 shadow-lg">
-              <div className="flex items-center gap-4">
-                
-                <h1 className="text-2xl font-extrabold">Vacunas</h1>
-              </div>
-      
-               {/* 🔹 Visible solo en escritorio */}
+  // 🔹 Interfaz
+  return (
+    <div className="relative min-h-screen">
+      <div
+        className="absolute inset-0 bg-cover bg-center blur-[2px]"
+        style={{ backgroundImage: `url(${cowsBackground})` }}
+      ></div>
+      <div className="absolute inset-0 bg-white/20"></div>
+
+      {/* Barra de navegación */}
+      <nav className="sticky top-0 z-50 bg-red-500 text-black flex items-center justify-between p-4 shadow-lg">
+        <h1 className="text-2xl font-extrabold">Vacunas</h1>
+
+        {/* Escritorio */}
         <div className="hidden md:flex items-center gap-4">
           <button onClick={() => navigate("/home")} className="hover:text-red-600 transition">
             <FaHome size={20} />
@@ -343,294 +337,186 @@ export default function Salud() {
           </button>
         </div>
 
-        {/* 🔹 Menú hamburguesa solo móvil */}
+        {/* Móvil */}
         <button onClick={() => setMenuAbierto(!menuAbierto)} className="md:hidden hover:text-red-600">
           {menuAbierto ? <FaTimes size={22} /> : <FaBars size={22} />}
         </button>
 
-        {/* 🔹 Menú desplegable móvil */}
         <div className={`absolute top-full right-0 bg-white/40 text-black w-50 rounded-b-2xl shadow-lg md:hidden flex flex-col items-center py-2 gap-2 animate-fadeIn ${
             menuAbierto ? "max-h-60 opacity-100" : "max-h-0 opacity-0"
-          }`}
-        >
-          <div></div>
-          <button
-            onClick={() => {
-              navigate("/home");
-              setMenuAbierto(false);
-            }}
-            className="w-5/7 py-2 rounded-lg bg-red-500 hover:bg-red-600 flex items-center font-semibold justify-center gap-2"
-          >
-            <FaHome/> Inicio
-          </button>
-          <button
-            onClick={() => {
-              navigate("/notificaciones");
-              setMenuAbierto(false);
-            }}
-            className="w-5/7 py-2 rounded-xl bg-red-500 hover:bg-red-600 flex items-center font-semibold justify-center gap-2"
-          >
-            <FaBell/> Notificaciones
-          </button>
-          <button
-            onClick={() => {
-              handleLogout();
-              setMenuAbierto(false);
-            }}
-            className="w-5/7 py-2 bg-red-600 text-white rounded-xl hover:bg-red-700 flex items-center font-semibold justify-center gap-2"
-          >
-            Cerrar sesión
-          </button>
+          }`}>
+          <button onClick={() => { navigate("/home"); setMenuAbierto(false); }} className="w-5/7 py-2 rounded-lg bg-red-500 hover:bg-red-600 flex items-center font-semibold justify-center gap-2"><FaHome/> Inicio</button>
+          <button onClick={() => { navigate("/notificaciones"); setMenuAbierto(false); }} className="w-5/7 py-2 rounded-xl bg-red-500 hover:bg-red-600 flex items-center font-semibold justify-center gap-2"><FaBell/> Notificaciones</button>
+          <button onClick={() => { handleLogout(); setMenuAbierto(false); }} className="w-5/7 py-2 bg-red-600 text-white rounded-xl hover:bg-red-700 flex items-center font-semibold justify-center gap-2">Cerrar sesión</button>
         </div>
-            </nav>
-      
-        <div className="relative p-6 flex flex-col gap-6">
-          {/* Vacunas generales */}
-          <div className="bg-white/30 backdrop-blur-md border border-white/50 p-4 rounded-xl shadow">
-            <h2 className="text-xl font-bold mb-3 text-black">
-              Vacunas del lote {loteSeleccionado?.nombre}
-            </h2>
-            <div className="flex flex-col md:flex-row gap-3">
-              <input
-                type="text"
-                placeholder="Nombre"
-                value={nuevaVacunaGeneral.nombre}
-                onChange={(e) => setNuevaVacunaGeneral((v) => ({ ...v, nombre: e.target.value }))}
-                className={inputClasses}
-              />
-              <input
-                type="number"
-                placeholder="Dosis"
-                value={nuevaVacunaGeneral.dosis}
-                onChange={(e) =>
-                  setNuevaVacunaGeneral((v) => ({ ...v, dosis: parseInt(e.target.value) }))
-                }
-                className={`${inputClasses} w-24`}
-                min={1}
-              />
-              <input
-                type="text"
-                placeholder="Recordatorio"
-                value={nuevaVacunaGeneral.recordatorio}
-                onChange={(e) =>
-                  setNuevaVacunaGeneral((v) => ({ ...v, recordatorio: e.target.value }))
-                }
-                className={`${inputClasses} flex-1`}
-              />
-              <button
-                onClick={agregarVacunaGeneral}
-                className=" w-6/24 bg-red-500 text-white px-2 py-2 rounded-2xl font-semibold hover:bg-red-600 transition flex items-center gap-2"
-              >
-                <FaPlus /> Agregar
-              </button>
-            </div>
-          </div>
-  
-          {/* Lotes */}
-          <div className="flex gap-4 flex-wrap">
-            {lotes.map((lote) => (
-              <button
-                key={lote.id}
-                onClick={() => {
-                  setLoteSeleccionado(lote);
-                  setAnimalSeleccionado(null);
-                }}
-                className={`px-5 py-2 rounded-xl font-semibold ${
-                  loteSeleccionado?.id === lote.id ? "bg-red-700 text-white" : "bg-red-500 text-white"
-                }`}
-              >
-                {lote.nombre.toUpperCase()}
-              </button>
-            ))}
-          </div>
-  
-          {/* Animales */}
-          <div className="bg-white/30 backdrop-blur-md border border-white/50 p-6 rounded-xl shadow-md">
-            <h2 className="text-xl font-bold mb-4 text-black">
-              Animales del lote {loteSeleccionado?.nombre}
-            </h2>
-  
-            {/* Filtro */}
-            <div className="flex flex-wrap gap-3 mb-4">
-              <button
-                onClick={() => setFiltroVacunas("todos")}
-                className={`px-4 py-2 rounded-lg font-semibold transition ${
-                  filtroVacunas === "todos"
-                    ? "bg-red-600 text-white"
-                    : "bg-white/60 text-red-600 hover:bg-white/80"
-                }`}
-              >
-                Todos ({animales.length})
-              </button>
-              <button
-                onClick={() => setFiltroVacunas("completos")}
-                className={`px-4 py-2 rounded-lg font-semibold transition ${
-                  filtroVacunas === "completos"
-                    ? "bg-green-600 text-white"
-                    : "bg-white/60 text-green-600 hover:bg-white/80"
-                }`}
-              >
-                Completos ✅ ({totalCompletos})
-              </button>
-              <button
-                onClick={() => setFiltroVacunas("incompletos")}
-                className={`px-4 py-2 rounded-lg font-semibold transition ${
-                  filtroVacunas === "incompletos"
-                    ? "bg-yellow-500 text-white"
-                    : "bg-white/60 text-yellow-600 hover:bg-white/80"
-                }`}
-              >
-                Incompletos ⚠ ({totalIncompletos})
-              </button>
-              <button
-                onClick={() => setFiltroVacunas("sinAsignar")}
-                className={`px-4 py-2 rounded-lg font-semibold transition ${
-                  filtroVacunas === "sinAsignar"
-                    ? "bg_gray-600 text-white"
-                    : "bg-white/60 text-gray-700 hover:bg-white/80"
-                }`}
-              >
-                Sin asignar 🐮 ({totalSinAsignar})
-              </button>
-            </div>
-  
-            <table className="w-full border-collapse text-left">
-              <thead>
-                <tr className="bg-red-500 text-white">
-                  <th className="p-2 border">Código</th>
-                  <th className="p-2 border">Raza</th>
-                  <th className="p-2 border">Sexo</th>
-                  <th className="p-2 border">Edad</th>
-                  <th className="p-2 border">Vacunas</th>
-                </tr>
-              </thead>
-              <tbody>
-  {animales
-    .filter((a) => {
-      const vacunas = vacunasPorAnimal[a.id!] || [];
-      const asignadas = vacunas.filter((v) => v.asignada);
-      const todasAplicadas = asignadas.every((v) => v.dosisAplicadas.every((d) => d));
+      </nav>
 
-      if (filtroVacunas === "todos") return true;
-      if (filtroVacunas === "completos") return asignadas.length > 0 && todasAplicadas;
-      if (filtroVacunas === "incompletos") return asignadas.length > 0 && !todasAplicadas;
-      if (filtroVacunas === "sinAsignar") return asignadas.length === 0;
-      return true;
-    })
-    .map((a) => {
-      const bloqueado = a.estado === "muerto" || a.estado === "vendido";
-      return (
-        <tr
-          key={a.id}
-          className={`hover:bg-teal-100 transition text-black
-            ${bloqueado ? "opacity-60 blur-[1px] line-through select-none" : ""}
-          `}
-        >
-          <td className="p-2 border">{a.codigo}</td>
-          <td className="p-2 border">{a.raza}</td>
-          <td className="p-2 border">{a.sexo}</td>
-          <td className="p-2 border">{a.edad}</td>
-          <td className="p-2 border">
+      <div className="relative p-6 flex flex-col gap-6">
+        {/* Vacunas generales */}
+        <div className="bg-white/30 backdrop-blur-md border border-white/50 p-4 rounded-xl shadow">
+          <h2 className="text-xl font-bold mb-3 text-black">
+            Vacunas del lote {loteSeleccionado?.nombre}
+          </h2>
+          <div className="flex flex-col md:flex-row gap-3">
+            <input
+              type="text"
+              placeholder="Nombre"
+              value={nuevaVacunaGeneral.nombre}
+              onChange={(e) => setNuevaVacunaGeneral((v) => ({ ...v, nombre: e.target.value }))}
+              className={inputClasses}
+            />
+            <input
+              type="number"
+              placeholder="Dosis"
+              value={nuevaVacunaGeneral.dosis}
+              onChange={(e) => setNuevaVacunaGeneral((v) => ({ ...v, dosis: parseInt(e.target.value) }))}
+              className={`${inputClasses} w-24`}
+              min={1}
+            />
+            <input
+              type="text"
+              placeholder="Recordatorio"
+              value={nuevaVacunaGeneral.recordatorio}
+              onChange={(e) => setNuevaVacunaGeneral((v) => ({ ...v, recordatorio: e.target.value }))}
+              className={`${inputClasses} flex-1`}
+            />
             <button
-              className={`text-blue-600 hover:underline ${
-                bloqueado ? "opacity-40 cursor-not-allowed pointer-events-none" : ""
-              }`}
-              onClick={() => {
-                if (bloqueado) return;
-                cargarVacunasAnimal(a);
-              }}
+              onClick={agregarVacunaGeneral}
+              className="  bg-red-500 text-white px-2 py-2 rounded-2xl font-semibold hover:bg-red-600 transition flex items-center gap-2"
             >
-              Ver / Editar Vacunas
+              <FaPlus /> Agregar
             </button>
-          </td>
-        </tr>
-      );
-    })}
-</tbody>
-
-            </table>
-  
-            {/* Vacunas por animal */}
-            {animalSeleccionado && (
-              <div className="mt-6 bg-white/40 p-4 rounded-lg">
-                <h3 className="text-lg font-bold mb-3">
-                  Vacunas del animal {animalSeleccionado.codigo}
-                </h3>
-                <table className="w-full border-collapse text-left">
-                  <thead>
-                    <tr className="bg-red-500 text-white">
-                      <th className="p-2 border">Vacuna</th>
-                      <th className="p-2 border">Dosis</th>
-                      <th className="p-2 border">Recordatorio</th>
-                      <th className="p-2 border">Acción</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {vacunasAnimal.map((v) => (
-                      <tr key={v.id} className="border-b">
-                        <td className="p-2 border">{v.nombre}</td>
-                        <td className="p-2 border">
-                          <div className="flex flex-wrap gap-2">
-                            {v.dosisAplicadas.map((d, i) => {
-  const hoy = new Date().toISOString().split("T")[0];
-  const fechaSeleccionada = v.fechasAplicacion[i] || "";
-
-  // Desactivar checkbox si la fecha está en el pasado
-  const deshabilitado = fechaSeleccionada && fechaSeleccionada < hoy;
-
-  return (
-    <div key={i} className="flex items-center gap-1">
-      <input
-        type="checkbox"
-        checked={d}
-        onChange={() => toggleDosis(v, i)}
-        disabled={!!deshabilitado}
-        title={
-          deshabilitado
-            ? "No puedes aplicar una dosis con fecha anterior a hoy."
-            : "Marcar dosis como aplicada"
-        }
-        className={`cursor-pointer ${
-          deshabilitado ? "opacity-50 cursor-not-allowed" : ""
-        }`}
-      />
-
-      <input
-        type="date"
-        value={fechaSeleccionada}
-        onChange={(e) => actualizarFechaDosis(v, i, e.target.value)}
-        min={hoy} // 🔹 no permite fechas pasadas
-        className="border rounded p-1 text-sm"
-      />
-    </div>
-  );
-})}
-
-                            
-                          </div>
-                        </td>
-                        <td className="p-2 border">{v.recordatorio}</td>
-                        <td className="p-2 border text-center">
-                          <button
-                            onClick={() => toggleAsignacion(v)}
-                            className={`px-3 py-1 rounded-xl ${
-                              v.asignada ? "bg-red-600 text-white" : "bg-green-600 text-white"
-                            }`}
-                          >
-                            {v.asignada ? "Quitar" : "Asignar"}
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
           </div>
         </div>
-        <footer className="w-full bg-[#099757dc] py-3 md:py-4 text-center text-xs md:text-sm text-white fixed bottom-0 z-50">
-  <p>© 2025 INNOVASYSTEM. Todos los derechos reservados.</p>
-</footer>
+
+        {/* Lotes */}
+        <div className="flex gap-4 flex-wrap">
+          {lotes.map((lote) => (
+            <button
+              key={lote.id}
+              onClick={() => { setLoteSeleccionado(lote); setAnimalSeleccionado(null); }}
+              className={`px-5 py-2 rounded-xl font-semibold ${
+                loteSeleccionado?.id === lote.id ? "bg-red-700 text-white" : "bg-red-500 text-white"
+              }`}
+            >
+              {lote.nombre.toUpperCase()}
+            </button>
+          ))}
+        </div>
+
+        {/* Animales */}
+        <div className="bg-white/30 backdrop-blur-md border border-white/50 p-6 rounded-xl shadow-md">
+          <h2 className="text-xl font-bold mb-4 text-black">
+            Animales del lote {loteSeleccionado?.nombre}
+          </h2>
+
+          {/* Filtros */}
+          <div className="flex flex-wrap gap-3 mb-4">
+            <button onClick={() => setFiltroVacunas("todos")} className={`px-4 py-2 rounded-lg font-semibold transition ${filtroVacunas==="todos"?"bg-red-600 text-white":"bg-white/60 text-red-600 hover:bg-white/80"}`}>Todos ({animales.length})</button>
+            <button onClick={() => setFiltroVacunas("completos")} className={`px-4 py-2 rounded-lg font-semibold transition ${filtroVacunas==="completos"?"bg-green-600 text-white":"bg-white/60 text-green-600 hover:bg-white/80"}`}>Completos ✅ ({totalCompletos})</button>
+            <button onClick={() => setFiltroVacunas("incompletos")} className={`px-4 py-2 rounded-lg font-semibold transition ${filtroVacunas==="incompletos"?"bg-yellow-500 text-white":"bg-white/60 text-yellow-600 hover:bg-white/80"}`}>Incompletos ⚠ ({totalIncompletos})</button>
+            <button onClick={() => setFiltroVacunas("sinAsignar")} className={`px-4 py-2 rounded-lg font-semibold transition ${filtroVacunas==="sinAsignar"?"bg-gray-600 text-white":"bg-white/60 text-gray-700 hover:bg-white/80"}`}>Sin asignar 🐮 ({totalSinAsignar})</button>
+          </div>
+
+          <table className="w-full border-collapse text-left">
+            <thead>
+              <tr className="bg-red-500 text-white">
+                <th className="p-2 border">Código</th>
+                <th className="p-2 border">Raza</th>
+                <th className="p-2 border">Sexo</th>
+                <th className="p-2 border">Edad</th>
+                <th className="p-2 border">Vacunas</th>
+              </tr>
+            </thead>
+            <tbody>
+              {animales.filter((a) => {
+                const vacunas = vacunasPorAnimal[a.id!] || [];
+                const asignadas = vacunas.filter((v) => v.asignada);
+                const todasAplicadas = asignadas.every((v) => v.dosisAplicadas.every((d) => d));
+                if(filtroVacunas==="todos") return true;
+                if(filtroVacunas==="completos") return asignadas.length>0 && todasAplicadas;
+                if(filtroVacunas==="incompletos") return asignadas.length>0 && !todasAplicadas;
+                if(filtroVacunas==="sinAsignar") return asignadas.length===0;
+                return true;
+              }).map((a) => {
+                const bloqueado = a.estado==="muerto" || a.estado==="vendido";
+                return (
+                  <tr key={a.id} className={`hover:bg-teal-100 transition text-black ${bloqueado?"opacity-60 blur-[1px] line-through select-none":""}`}>
+                    <td className="p-2 border">{a.codigo}</td>
+                    <td className="p-2 border">{a.raza}</td>
+                    <td className="p-2 border">{a.sexo}</td>
+                    <td className="p-2 border">{a.edad}</td>
+                    <td className="p-2 border">
+                      <button className={`text-blue-600 hover:underline ${bloqueado?"opacity-40 cursor-not-allowed pointer-events-none":""}`} onClick={()=>!bloqueado && cargarVacunasAnimal(a)}>Ver / Editar Vacunas</button>
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+
+          {/* Vacunas por animal */}
+          {animalSeleccionado && (
+            <div className="mt-6 bg-white/40 p-4 rounded-lg">
+              <h3 className="text-lg font-bold mb-3">Vacunas del animal {animalSeleccionado.codigo}</h3>
+              <table className="w-full border-collapse text-left">
+                <thead>
+                  <tr className="bg-red-500 text-white">
+                    <th className="p-2 border">Vacuna</th>
+                    <th className="p-2 border">Dosis</th>
+                    <th className="p-2 border">Recordatorio</th>
+                    <th className="p-2 border">Acción</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {vacunasAnimal.map((v) => (
+                    <tr key={v.id} className="border-b">
+                      <td className="p-2 border">{v.nombre}</td>
+                      <td className="p-2 border">
+                        <div className="flex flex-wrap gap-2">
+                          {v.dosisAplicadas.map((d,i)=>{
+                            const hoy = new Date().toISOString().split("T")[0];
+                            const fechaSeleccionada = v.fechasAplicacion[i]||"";
+                            const deshabilitado = fechaSeleccionada !== "" && fechaSeleccionada > hoy;
+
+                            return (
+                              <div key={i} className="flex items-center gap-1">
+                                <input
+                                  type="checkbox"
+                                  checked={d}
+                                  onChange={()=>toggleDosis(v,i)}
+                                  disabled={deshabilitado}
+                                  title={deshabilitado?"No puedes marcar dosis con fecha futura.":"Marcar dosis como aplicada"}
+                                  className={`cursor-pointer ${deshabilitado?"opacity-50 cursor-not-allowed":""}`}
+                                />
+                                <input
+                                  type="date"
+                                  value={fechaSeleccionada}
+                                  onChange={(e)=>actualizarFechaDosis(v,i,e.target.value)}
+                                  max={hoy}
+                                  className="border rounded p-1 text-sm"
+                                />
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </td>
+                      <td className="p-2 border">{v.recordatorio}</td>
+                      <td className="p-2 border text-center">
+                        <button onClick={()=>toggleAsignacion(v)} className={`px-3 py-1 rounded-xl ${v.asignada?"bg-red-600 text-white":"bg-green-600 text-white"}`}>{v.asignada?"Quitar":"Asignar"}</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
       </div>
-    );
-  }
+
+      <footer className="w-full bg-[#099757dc] py-3 md:py-4 text-center text-xs md:text-sm text-white fixed bottom-0 z-50">
+        <p>© 2025 INNOVASYSTEM. Todos los derechos reservados.</p>
+      </footer>
+    </div>
+  )
+}

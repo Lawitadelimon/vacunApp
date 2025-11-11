@@ -237,7 +237,7 @@ export default function Estadisticas() {
                 navigate("/home");
                 setMenuAbierto(false);
               }}
-              className="w-4/5 py-2 rounded-lg bg-orange-500 hover:bg-orange-600 flex items-center justify-center gap-2 font-semibold"
+              className="w-4/5 py-2 rounded-xl bg-orange-500 hover:bg-orange-600 flex items-center justify-center gap-2 font-semibold"
             >
               <FaHome /> Inicio
             </button>
@@ -246,7 +246,7 @@ export default function Estadisticas() {
                 navigate("/notificaciones");
                 setMenuAbierto(false);
               }}
-              className="w-4/5 py-2 rounded-lg bg-orange-500 hover:bg-orange-600 flex items-center justify-center gap-2 font-semibold"
+              className="w-4/5 py-2 rounded-xl bg-orange-500 hover:bg-orange-600 flex items-center justify-center gap-2 font-semibold"
             >
               <FaBell /> Notificaciones
             </button>
@@ -255,7 +255,7 @@ export default function Estadisticas() {
                 handleLogout();
                 setMenuAbierto(false);
               }}
-              className="w-4/5 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 flex items-center justify-center gap-2 font-semibold"
+              className="w-4/5 py-2 bg-red-600 text-white rounded-xl hover:bg-red-700 flex items-center justify-center gap-2 font-semibold"
             >
               Cerrar sesión
             </button>

@@ -2,6 +2,8 @@ import { useState } from "react";
 import { auth, db } from "./firebase";
 import { createUserWithEmailAndPassword, signOut } from "firebase/auth";
 import { doc, setDoc } from "firebase/firestore";
+import { motion } from "framer-motion";
+import { FaUser, FaEnvelope, FaLock, FaEye, FaEyeSlash } from "react-icons/fa";
 
 interface RegisterFormProps {
   onRegisterSuccess: () => void;
@@ -13,6 +15,7 @@ export function RegisterForm({ onRegisterSuccess, onValidation }: RegisterFormPr
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,27 +32,20 @@ export function RegisterForm({ onRegisterSuccess, onValidation }: RegisterFormPr
 
     setLoading(true);
     try {
-      // 📌 Crear usuario en Firebase Auth
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const newUser = userCredential.user;
 
-      // 🆕 Guardar datos en Firestore
       await setDoc(doc(db, "users", newUser.uid), {
         name,
         email,
-        role: "pending", // queda en espera de aprobación
+        role: "pending",
         createdAt: new Date().toISOString(),
       });
 
-      // ✅ Avisar que se creó el usuario
       onValidation("✅ Usuario creado correctamente. Contacta a tu administrador para obtener acceso.");
 
-      // 🚪 Cerrar sesión inmediatamente después del registro
       await signOut(auth);
-
-      // 🔁 Redirigir a la pantalla de inicio de sesión
       onRegisterSuccess();
-
     } catch (error: any) {
       console.error("Error en registro:", error);
       onValidation("❌ Error al crear usuario: " + error.message);
@@ -59,38 +55,74 @@ export function RegisterForm({ onRegisterSuccess, onValidation }: RegisterFormPr
   };
 
   return (
-    <form onSubmit={handleRegister} className="flex flex-col gap-4">
-      <input
-        type="text"
-        placeholder="Nombre completo"
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-        className="border p-2 rounded"
-        required
-      />
-      <input
-        type="email"
-        placeholder="Correo electrónico"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-        className="border p-2 rounded"
-        required
-      />
-      <input
-        type="password"
-        placeholder="Contraseña"
-        value={password}
-        onChange={(e) => setPassword(e.target.value)}
-        className="border p-2 rounded"
-        required
-      />
-      <button
+    <motion.form
+      onSubmit={handleRegister}
+      className="flex flex-col gap-4 bg-white/80 backdrop-blur-md p-6 sm:p-8 rounded-2xl shadow-lg w-full max-w-sm mx-auto"
+      initial={{ opacity: 0, y: 30 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
+    >
+      
+
+      {/* Nombre */}
+      <div className="relative">
+        <FaUser className="absolute left-3 top-3 text-gray-500" />
+        <input
+          type="text"
+          placeholder="Nombre completo"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          className="w-full pl-10 pr-3 py-2 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#099757] transition text-sm sm:text-base"
+          required
+        />
+      </div>
+
+      {/* Correo */}
+      <div className="relative">
+        <FaEnvelope className="absolute left-3 top-3 text-gray-500" />
+        <input
+          type="email"
+          placeholder="Correo electrónico"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          className="w-full pl-10 pr-3 py-2 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#099757] transition text-sm sm:text-base"
+          required
+        />
+      </div>
+
+      {/* Contraseña con mostrar/ocultar */}
+      <div className="relative">
+        <FaLock className="absolute left-3 top-3 text-gray-500" />
+        <input
+          type={showPassword ? "text" : "password"}
+          placeholder="Contraseña"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          className="w-full pl-10 pr-10 py-2 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#099757] transition text-sm sm:text-base"
+          required
+        />
+        <button
+          type="button"
+          onClick={() => setShowPassword(!showPassword)}
+          className="absolute right-3 top-2.5 text-gray-500 hover:text-[#099757] transition"
+          aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+        >
+          {showPassword ? <FaEyeSlash /> : <FaEye />}
+        </button>
+      </div>
+
+      {/* Botón principal */}
+      <motion.button
+        whileHover={{ scale: 1.05 }}
+        whileTap={{ scale: 0.97 }}
         type="submit"
         disabled={loading}
-        className={`bg-blue-600 hover:bg-blue-700 text-white py-2 rounded transition ${loading ? "opacity-50 cursor-not-allowed" : ""}`}
+        className={`${
+          loading ? "opacity-50 cursor-not-allowed" : "hover:bg-[#077848]"
+        } bg-[#099757] text-white font-semibold py-2 sm:py-3 rounded-xl shadow-md transition-all duration-300 text-sm sm:text-base`}
       >
         {loading ? "Creando cuenta..." : "Registrarse"}
-      </button>
-    </form>
+      </motion.button>
+    </motion.form>
   );
 }

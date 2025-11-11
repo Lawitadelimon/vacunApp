@@ -4,6 +4,8 @@ import { FaArrowLeft, FaBars, FaBell, FaHome, FaSave, FaTimes } from "react-icon
 import { db } from "./firebase";
 import { getAuth, signOut } from "firebase/auth";
 import { doc, getDocs, setDoc, collection } from "firebase/firestore";
+import Swal from "sweetalert2";
+import "sweetalert2/dist/sweetalert2.min.css";
 import cowsBackground from "./assets/cows2.jpg";
 
 type Animal = {
@@ -29,15 +31,13 @@ export default function Alimentacion() {
   const [loteId, setLoteId] = useState<string | null>(loteIdParam || null);
   const [planPersonalizado, setPlanPersonalizado] = useState("");
   const [guardando, setGuardando] = useState(false);
-  const [mensaje, setMensaje] = useState("");
   const [animalesDisponibles, setAnimalesDisponibles] = useState<Animal[]>([]);
-
   const [menuAbierto, setMenuAbierto] = useState(false);
-  
-    const handleLogout = async () => {
-      await signOut(auth);
-      navigate("/");
-    };
+
+  const handleLogout = async () => {
+    await signOut(auth);
+    navigate("/");
+  };
 
   const planes: Record<string, string> = {
     Bovino: "10 kg de pasto + 2 kg de concentrado diario",
@@ -56,19 +56,26 @@ export default function Alimentacion() {
 
     for (const loteDoc of lotesSnap.docs) {
       const animSnap = await getDocs(collection(db, "lotes", loteDoc.id, "animales"));
+
       animalesNutricion.push(
         ...animSnap.docs
-          .map(d => ({ id: d.id, ...(d.data() as Animal), loteId: loteDoc.id }))
-          .filter(a => a.estado === "en nutricion")
+          .map((d) => ({ id: d.id, ...(d.data() as Animal), loteId: loteDoc.id }))
+          .filter(
+            (a) =>
+              a.estado?.toLowerCase() === "en nutricion" ||
+              a.estado?.toLowerCase() === "en reproduccion y nutricion"
+          )
       );
     }
 
-    setAnimalesDisponibles(animalesNutricion);
+    const unicos = Array.from(new Map(animalesNutricion.map(a => [a.id, a])).values());
+    setAnimalesDisponibles(unicos);
 
-    if (animalesNutricion.length > 0) {
-      setAnimal(animalesNutricion[0]);
-      setLoteId(animalesNutricion[0].loteId!);
-      setPlanPersonalizado(planes[animalesNutricion[0].especie] || "");
+    if (unicos.length > 0) {
+      const primero = unicos[0];
+      setAnimal(primero);
+      setLoteId(primero.loteId!);
+      setPlanPersonalizado(planes[primero.especie] || "");
     } else {
       setAnimal(null);
       setLoteId(null);
@@ -80,6 +87,7 @@ export default function Alimentacion() {
 
   const guardarPlan = async () => {
     if (!animal?.id || !loteId) return;
+
     const user = auth.currentUser;
     if (!user) return;
 
@@ -87,21 +95,48 @@ export default function Alimentacion() {
     try {
       const ref = doc(db, "lotes", loteId, "animales", animal.id);
       await setDoc(ref, { planAlimentacion: planPersonalizado }, { merge: true });
-      setMensaje("✅ Plan guardado correctamente.");
+      
+      // ✅ SweetAlert2 para éxito
+      await Swal.fire({
+        icon: "success",
+        title: "Plan guardado",
+        text: `Plan de alimentación de ${animal.codigo} actualizado correctamente.`,
+        confirmButtonColor: "#10B981",
+      });
+
     } catch (error) {
-      console.error(error);
-      setMensaje("❌ Error al guardar el plan.");
+      // ✅ SweetAlert2 para error
+      await Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: "No se pudo guardar el plan de alimentación.",
+        confirmButtonColor: "#DC2626",
+      });
     } finally {
       setGuardando(false);
-      setTimeout(() => setMensaje(""), 3000);
     }
   };
 
   const quitarDeAlimentacion = async () => {
     if (!animal?.id || !loteId) return;
+
     const ref = doc(db, "lotes", loteId, "animales", animal.id);
-    await setDoc(ref, { estado: "vivo" }, { merge: true });
+
+    const nuevoEstado =
+      animal.estado?.toLowerCase() === "en reproduccion y nutricion"
+        ? "en reproduccion"
+        : "vivo";
+
+    await setDoc(ref, { estado: nuevoEstado }, { merge: true });
     await cargarAnimalesEnNutricion();
+
+    // ✅ SweetAlert2 para confirmación
+    await Swal.fire({
+      icon: "success",
+      title: "Animal actualizado",
+      text: `${animal.codigo} ya no está en nutrición.`,
+      confirmButtonColor: "#10B981",
+    });
   };
 
   const planBase = animal?.especie ? planes[animal.especie] : null;
@@ -112,12 +147,10 @@ export default function Alimentacion() {
       <div className="absolute inset-0 bg-white/20" />
 
       <nav className="sticky top-0 z-50 bg-green-500 text-black flex items-center justify-between p-4 shadow-lg">
-              <div className="flex items-center gap-4">
-                
-                <h1 className="text-2xl font-extrabold">Alimentacion</h1>
-              </div>
-      
-              {/* 🔹 Visible solo en escritorio */}
+        <div className="flex items-center gap-4">
+          <h1 className="text-2xl font-extrabold">Alimentacion</h1>
+        </div>
+
         <div className="hidden md:flex items-center gap-4">
           <button onClick={() => navigate("/home")} className="hover:text-green-300 transition">
             <FaHome size={20} />
@@ -130,47 +163,33 @@ export default function Alimentacion() {
           </button>
         </div>
 
-        {/* 🔹 Menú hamburguesa solo móvil */}
         <button onClick={() => setMenuAbierto(!menuAbierto)} className="md:hidden hover:text-green-300">
           {menuAbierto ? <FaTimes size={22} /> : <FaBars size={22} />}
         </button>
 
-        {/* 🔹 Menú desplegable móvil */}
         <div className={`absolute top-full right-0 bg-white/40 text-black w-50 rounded-b-2xl shadow-lg md:hidden flex flex-col items-center py-2 gap-2 animate-fadeIn ${
-            menuAbierto ? "max-h-60 opacity-100" : "max-h-0 opacity-0"
-          }`}
-        >
-          <div></div>
+          menuAbierto ? "max-h-60 opacity-100" : "max-h-0 opacity-0"
+        }`}>
           <button
-            onClick={() => {
-              navigate("/home");
-              setMenuAbierto(false);
-            }}
-            className="w-5/7 py-2 rounded-lg bg-green-400 hover:bg-green-500 flex items-center font-semibold justify-center gap-2"
+            onClick={() => { navigate("/home"); setMenuAbierto(false); }}
+            className="w-5/7 py-2 rounded-xl bg-green-400 hover:bg-green-500 flex items-center font-semibold justify-center gap-2"
           >
             <FaHome/> Inicio
           </button>
           <button
-            onClick={() => {
-              navigate("/notificaciones");
-              setMenuAbierto(false);
-            }}
+            onClick={() => { navigate("/notificaciones"); setMenuAbierto(false); }}
             className="w-5/7 py-2 rounded-xl bg-green-400 hover:bg-green-500 flex items-center font-semibold justify-center gap-2"
           >
             <FaBell/> Notificaciones
           </button>
           <button
-            onClick={() => {
-              handleLogout();
-              setMenuAbierto(false);
-            }}
+            onClick={() => { handleLogout(); setMenuAbierto(false); }}
             className="w-5/7 py-2 bg-red-600 text-white rounded-xl hover:bg-red-700 flex items-center font-semibold justify-center gap-2"
           >
             Cerrar sesión
           </button>
         </div>
-            </nav>
-      
+      </nav>
 
       <div className="relative p-6 md:p-9 flex flex-col gap-6">
         {animal ? (
@@ -233,7 +252,6 @@ export default function Alimentacion() {
                 Quitar de nutrición
               </button>
 
-              {mensaje && <span className="text-sm text-gray-800 font-medium">{mensaje}</span>}
             </div>
 
             {planBase && (
@@ -246,9 +264,10 @@ export default function Alimentacion() {
           <p className="text-black mb-6">No hay animales en nutrición disponibles.</p>
         )}
       </div>
-       <footer className="w-full bg-[#099757dc] py-3 md:py-4 text-center text-xs md:text-sm text-white fixed bottom-0 z-50">
-  <p>© 2025 INNOVASYSTEM. Todos los derechos reservados.</p>
-</footer>
+
+      <footer className="w-full bg-[#099757dc] py-3 md:py-4 text-center text-xs md:text-sm text-white fixed bottom-0 z-50">
+        <p>© 2025 INNOVASYSTEM. Todos los derechos reservados.</p>
+      </footer>
     </div>
   );
 }

@@ -25,6 +25,7 @@ import {
   orderBy,
 } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
+import Swal from "sweetalert2";
 import cow2Image from "./assets/cows2.jpg";
 
 // Interfaces
@@ -150,8 +151,13 @@ export default function Pendientes() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!tarea || !descripcion || !para || !categoria || !fecha || !userId)
-      return alert("Completa todos los campos");
+    if (!tarea || !descripcion || !para || !categoria || !fecha || !userId) {
+      return Swal.fire({
+        icon: 'warning',
+        title: 'Campos incompletos',
+        text: 'Completa todos los campos',
+      });
+    }
 
     const trabajador = usuarios.find((u) => u.id === para);
     const data: Omit<Tarea, "id"> = {
@@ -170,8 +176,20 @@ export default function Pendientes() {
     if (editandoId) {
       await updateDoc(doc(db, "tareas", editandoId), data);
       setEditandoId(null);
+      Swal.fire({
+        icon: 'success',
+        title: 'Tarea actualizada',
+        showConfirmButton: false,
+        timer: 1500
+      });
     } else {
       await addDoc(collection(db, "tareas"), data);
+      Swal.fire({
+        icon: 'success',
+        title: 'Tarea añadida',
+        showConfirmButton: false,
+        timer: 1500
+      });
     }
 
     setTarea("");
@@ -181,9 +199,27 @@ export default function Pendientes() {
     setFecha("");
   };
 
-  function setMenuAbierto(arg0: boolean) {
-    throw new Error("Function not implemented.");
-  }
+  const handleEliminar = async (id: string) => {
+    const result = await Swal.fire({
+      title: '¿Seguro que deseas eliminar esta tarea?',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#3085d6',
+      confirmButtonText: 'Sí, eliminar',
+      cancelButtonText: 'Cancelar',
+    });
+
+    if (result.isConfirmed) {
+      await deleteDoc(doc(db, "tareas", id));
+      Swal.fire({
+        icon: 'success',
+        title: 'Tarea eliminada',
+        showConfirmButton: false,
+        timer: 1500
+      });
+    }
+  };
 
   return (
     <div className="relative min-h-screen flex flex-col overflow-hidden">
@@ -195,90 +231,81 @@ export default function Pendientes() {
 
       <div className="relative z-10 flex-1 flex flex-col items-center max-w-6xl mx-auto w-full px-2 sm:px-4">
         {/* Header */}
-        <header className="w-full py-3 px-4 flex justify-between items-center shadow-md bg-blue-500 text-black relative z-20">
-          <h1 className="text-xl sm:text-2xl font-extrabold">
-            Asignación de tareas
-          </h1>
+<header className="w-full py-3 px-4 flex justify-between items-center shadow-md bg-blue-500 text-black relative z-20">
+  <h1 className="text-xl sm:text-2xl font-extrabold">
+    Asignación de tareas
+  </h1>
 
-          {/* Desktop menu */}
-          <div className="hidden md:flex items-center gap-4">
-            <button
-              onClick={() => navigate("/home")}
-              className="text-black hover:text-blue-300 transition"
-            >
-              <FaHome size={22} />
-            </button>
+  {/* Desktop menu */}
+  <div className="hidden md:flex items-center gap-4">
+    <button
+      onClick={() => navigate("/home")}
+      className="text-black hover:text-blue-300 transition"
+    >
+      <FaHome size={22} />
+    </button>
 
-            <div className="relative">
-              <button
-                onClick={() => navigate("/notificaciones")}
-                className="text-black hover:text-blue-300 text-xl transition"
-              >
-                <FaBell />
-              </button>
-              {hayNotificaciones && (
-                <span className="absolute -top-2 -right-2 bg-red-600 text-white text-xs font-bold px-1.5 py-0.5 rounded-full animate-pulse">
-                  {notificaciones.filter((n) => !n.leido).length}
-                </span>
-              )}
-            </div>
+    <div className="relative">
+      <button
+        onClick={() => navigate("/notificaciones")}
+        className="text-black hover:text-blue-300 transition"
+      >
+        <FaBell size={22} />
+      </button>
+      {hayNotificaciones && (
+        <span className="absolute -top-2 -right-2 bg-red-600 text-white text-xs font-bold px-1.5 py-0.5 rounded-full animate-pulse">
+          {notificaciones.filter((n) => !n.leido).length}
+        </span>
+      )}
+    </div>
 
-            <button
-              onClick={handleLogout}
-              className="bg-blue-400 hover:bg-blue-700 text-white font-semibold px-3 py-1 rounded-xl"
-            >
-              Cerrar sesión
-            </button>
-          </div>
+    <button
+      onClick={handleLogout}
+      className="bg-blue-400 hover:bg-blue-700 text-white font-semibold px-3 py-1 rounded-xl"
+    >
+      Cerrar sesión
+    </button>
+  </div>
 
-          {/* Mobile hamburger */}
-          <button
-            className="md:hidden text-black text-2xl hover:text-blue-300 transition"
-            onClick={() => setMenuOpen(!menuOpen)}
-          >
-            {menuOpen ? <FaTimes /> : <FaBars />}
-          </button>
+  {/* Mobile hamburger */}
+  <div className="md:hidden relative">
+    <button
+      className="text-black text-2xl hover:text-blue-300 transition"
+      onClick={() => setMenuOpen(!menuOpen)}
+    >
+      {menuOpen ? <FaTimes /> : <FaBars />}
+    </button>
 
-          {/* Dropdown mobile */}
-          {menuOpen && (
-            <div className="absolute top-full right-0  w-50 bg-white/40  text-black  backdrop-blur-md rounded-b-2xl shadow-lg flex flex-col items-center p-2 gap-2 space-y-2 md:hidden animate-fadeIn">
-              <button
-            onClick={() => {
-              navigate("/home");
-              setMenuAbierto(false);
-            }}
-            className="w-5/7 py-2 rounded-xl bg-blue-400  hover:bg-blue-500 flex items-center font-semibold justify-center gap-2"
-          >
-            <FaHome/> Inicio
-          </button>
-
-              <button
-                onClick={() => {
-                  navigate("/notificaciones");
-                  setMenuOpen(false);
-                }}
-                className="w-5/7 py-2 rounded-xl bg-blue-400  hover:bg-blue-500 flex items-center font-semibold justify-center gap-2"
-              >
-                <FaBell /> Notificaciones
-                {hayNotificaciones && (
-                  <span className="ml-1 bg-red-600 text-white text-xs font-bold px-1.5 py-0.5 rounded-full animate-pulse">
-                    {notificaciones.filter((n) => !n.leido).length}
-                  </span>
-                )}
-              </button>
-
-              <button
-                onClick={() => {
-                  handleLogout();
-                  setMenuOpen(false);
-                }}
-                className="w-5/7 py-2 bg-red-600 text-white rounded-xl hover:bg-red-700 flex items-center font-semibold justify-center gap-2flex items-center gap-2 text-red-400 hover:text-red-600"
-              >
-                Cerrar sesión
-              </button>
-            </div>
+    {menuOpen && (
+      <div className="absolute right-0 mt-2 w-48 bg-white/40 rounded-xl shadow-lg py-3 flex flex-col items-center gap-2 z-50">
+        <button
+          onClick={() => { navigate("/home"); setMenuOpen(false); }}
+          className="w-5/7 py-2 rounded-xl bg-blue-400 hover:bg-blue-500 flex items-center font-semibold justify-center gap-2"
+        >
+          <FaHome /> Inicio
+        </button>
+        <button
+          onClick={() => { navigate("/notificaciones"); setMenuOpen(false); }}
+          className="w-5/7 py-2 rounded-xl bg-blue-400 hover:bg-blue-500 flex items-center font-semibold justify-center gap-2"
+        >
+          <FaBell /> Notificaciones
+          {hayNotificaciones && (
+            <span className="w-5/7 py-2 bg-red-600 text-white rounded-xl hover:bg-red-700 flex items-center font-semibold justify-center gap-2">
+              {notificaciones.filter((n) => !n.leido).length}
+            </span>
           )}
-        </header>
+        </button>
+        <button
+          onClick={() => { handleLogout(); setMenuOpen(false); }}
+          className="bg-red-600 hover:bg-red-700 text-white font-semibold px-3 py-1 rounded-xl w-full"
+        >
+          Cerrar sesión
+        </button>
+      </div>
+    )}
+  </div>
+</header>
+
 
         {/* Leyenda */}
         <div className="flex flex-wrap justify-center gap-3 sm:gap-6 mt-6 text-xs sm:text-sm font-medium">
@@ -355,10 +382,7 @@ export default function Pendientes() {
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            if (
-                              window.confirm("¿Seguro que deseas eliminar esta tarea?")
-                            )
-                              deleteDoc(doc(db, "tareas", t.id));
+                            handleEliminar(t.id);
                           }}
                           className="text-red-600 hover:text-red-800"
                         >

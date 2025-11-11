@@ -8,6 +8,8 @@ import {
 } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import cowsBackground from "./assets/cows2.jpg";
+import Swal from "sweetalert2";
+import "sweetalert2/dist/sweetalert2.min.css";
 
 type Animal = {
   id?: string;
@@ -18,8 +20,11 @@ type Animal = {
   fechaNacimiento: string;
   edad: string;
   enReproduccion?: boolean;
-  estado?: "vivo" | "muerto" | "vendido" | "en nutricion";
+  enNutricion?: boolean;
+  estado?: "vivo" | "muerto" | "vendido" | "en nutricion" | "en reproduccion";
   precio?: number;
+  fechaReproduccion?: string;
+  fechaNutricion?: string;
 };
 
 type Lote = { id?: string; nombre: string };
@@ -76,57 +81,106 @@ export default function AnimalesPorLote() {
   useEffect(() => { cargarLotes(); }, []);
   useEffect(() => { cargarAnimales(); setPagina(1); }, [loteSeleccionado]);
 
+  // ---------- FUNCIONES DE ALERTAS ----------
+  const showError = (title: string, text: string) => Swal.fire({ icon: "error", title, text, confirmButtonColor: "#DC2626" });
+  const showSuccess = (title: string, text?: string) => Swal.fire({ icon: "success", title, text, confirmButtonColor: "#10B981" });
+  const showInfo = (title: string, text?: string) => Swal.fire({ icon: "info", title, text, confirmButtonColor: "#6B7280" });
+  const showConfirm = async (title: string, text: string) => {
+    const result = await Swal.fire({ title, text, icon: "warning", showCancelButton: true, confirmButtonText: "Sí", cancelButtonText: "Cancelar", confirmButtonColor: "#DC2626", cancelButtonColor: "#64748B" });
+    return result.isConfirmed;
+  };
+
+  // ---------- FUNCIONES CRUD ----------
   const guardarAnimal = async () => {
     if (!loteSeleccionado) return;
     const user = auth.currentUser; if (!user) return;
-    if (!formData.especie || !formData.codigo || !formData.raza || !formData.sexo || !formData.fechaNacimiento) return alert("Completa todos los campos");
-    if (new Date(formData.fechaNacimiento) > new Date()) return alert("La fecha no puede ser futura");
+
+    if (!formData.especie || !formData.codigo || !formData.raza || !formData.sexo || !formData.fechaNacimiento) return showError("Campos incompletos", "Completa todos los campos");
+    if (new Date(formData.fechaNacimiento) > new Date()) return showError("Fecha inválida", "La fecha de nacimiento no puede ser futura");
 
     const edad = calcularEdad(formData.fechaNacimiento);
     const datos: Animal & { uid: string } = { ...formData, edad, uid: user.uid, estado: formData.estado || "vivo" };
 
-    if (formData.id) await setDoc(doc(db, "lotes", loteSeleccionado.id!, "animales", formData.id), datos);
-    else await addDoc(collection(db, "lotes", loteSeleccionado.id!, "animales"), datos);
+    try {
+      if (formData.id) await setDoc(doc(db, "lotes", loteSeleccionado.id!, "animales", formData.id), datos);
+      else await addDoc(collection(db, "lotes", loteSeleccionado.id!, "animales"), datos);
 
-    setFormData({ especie: "", codigo: "", raza: "", sexo: "macho", fechaNacimiento: "", edad: "", estado: "vivo" });
-    cargarAnimales();
+      setFormData({ especie: "", codigo: "", raza: "", sexo: "macho", fechaNacimiento: "", edad: "", estado: "vivo" });
+      cargarAnimales();
+      showSuccess("¡Animal registrado!", `${datos.codigo} se guardó correctamente`);
+    } catch {
+      showError("Error", "No se pudo guardar el animal");
+    }
   };
 
   const editarAnimal = (animal: Animal) => setFormData(animal);
 
   const eliminarAnimal = async (animal: Animal) => {
     if (!loteSeleccionado || !animal.id) return;
-    if (!confirm(`Eliminar ${animal.codigo}?`)) return;
+    const confirm = await showConfirm(`Eliminar ${animal.codigo}?`, "Esta acción no se puede deshacer");
+    if (!confirm) return;
     await deleteDoc(doc(db, "lotes", loteSeleccionado.id!, "animales", animal.id));
     cargarAnimales();
+    showSuccess("¡Eliminado!", `${animal.codigo} fue eliminado correctamente`);
   };
 
-  const marcarComoMuerto = async (animal: Animal) => {
-    if (!loteSeleccionado || !animal.id) return;
-    if (!confirm(`¿Marcar ${animal.codigo} como muerto?`)) return;
-    await setDoc(doc(db, "lotes", loteSeleccionado.id!, "animales", animal.id), { estado: "muerto", fechaMuerte: new Date().toISOString().split("T")[0] }, { merge: true });
-    cargarAnimales();
-  };
+ const marcarComoMuerto = async (animal: Animal) => {
+  if (!loteSeleccionado || !animal.id) return;
+
+  if (animal.estado === "muerto") return showError("Operación inválida", `${animal.codigo} ya está marcado como muerto`);
+  if (animal.estado === "vendido") return showError("Operación inválida", `${animal.codigo} ya fue vendido`);
+
+  const confirm = await showConfirm(`¿Marcar ${animal.codigo} como muerto?`, "");
+  if (!confirm) return;
+
+  await setDoc(doc(db, "lotes", loteSeleccionado.id!, "animales", animal.id), 
+    { estado: "muerto", fechaMuerte: new Date().toISOString().split("T")[0] }, 
+    { merge: true }
+  );
+
+  cargarAnimales();
+  showInfo("Animal marcado como muerto");
+};
 
   const marcarComoVendido = async (animal: Animal) => {
-    if (!loteSeleccionado || !animal.id) return;
-    if (!confirm(`¿Marcar ${animal.codigo} como vendido?`)) return;
-    await setDoc(doc(db, "lotes", loteSeleccionado.id!, "animales", animal.id), { estado: "vendido", fechaVenta: new Date().toISOString().split("T")[0] }, { merge: true });
-    cargarAnimales();
-  };
+  if (!loteSeleccionado || !animal.id) return;
+
+  if (animal.estado === "vendido") return showError("Operación inválida", `${animal.codigo} ya está vendido`);
+  if (animal.estado === "muerto") return showError("Operación inválida", `${animal.codigo} está muerto y no se puede vender`);
+
+  const confirm = await showConfirm(`¿Marcar ${animal.codigo} como vendido?`, "");
+  if (!confirm) return;
+
+  await setDoc(doc(db, "lotes", loteSeleccionado.id!, "animales", animal.id), 
+    { estado: "vendido", fechaVenta: new Date().toISOString().split("T")[0] }, 
+    { merge: true }
+  );
+
+  cargarAnimales();
+  showSuccess("Animal vendido");
+};
 
   const mandarAReproduccion = async (animal: Animal) => {
     if (!loteSeleccionado || !animal.id) return;
-    await setDoc(doc(db, "lotes", loteSeleccionado.id!, "animales", animal.id), { ...animal, enReproduccion: true }, { merge: true });
-    cargarAnimales();
+    if (animal.estado === "muerto" || animal.estado === "vendido") return showError("Operación inválida", "No se puede modificar un animal muerto o vendido");
+    const nuevoEstado: Animal = { ...animal, enReproduccion: true, estado: "en reproduccion", fechaReproduccion: new Date().toISOString().split("T")[0] };
+    await setDoc(doc(db, "lotes", loteSeleccionado.id!, "animales", animal.id), nuevoEstado, { merge: true });
+    setAnimales(prev => prev.map(a => a.id === animal.id ? nuevoEstado : a));
+    showSuccess("Animal en reproducción");
   };
 
   const mandarAAlimentacion = async (animal: Animal) => {
     if (!loteSeleccionado || !animal.id) return;
-    await setDoc(doc(db, "lotes", loteSeleccionado.id!, "animales", animal.id), { ...animal, estado: "en nutricion" }, { merge: true });
-    setAnimales(prev => prev.map(a => (a.id === animal.id ? { ...a, estado: "en nutricion" } : a)));
+    if (animal.estado === "muerto" || animal.estado === "vendido") return showError("Operación inválida", "No se puede modificar un animal muerto o vendido");
+
+    const estadoNuevo: Animal["estado"] = "en nutricion";
+    const nuevoEstado: Animal = { ...animal, enNutricion: true, estado: estadoNuevo, fechaNutricion: new Date().toISOString().split("T")[0] };
+    await setDoc(doc(db, "lotes", loteSeleccionado.id!, "animales", animal.id), nuevoEstado, { merge: true });
+    setAnimales(prev => prev.map(a => a.id === animal.id ? nuevoEstado : a));
+    showSuccess("Animal en nutrición");
   };
 
+  // ---------- FILTRADO Y ORDEN ----------
   const toggleOrden = (campo: keyof Animal) => setOrden(prev => ({ campo, asc: prev.campo === campo ? !prev.asc : true }));
   const mostrarFlecha = (campo: keyof Animal) => orden.campo !== campo ? "⇅" : orden.asc ? "▲" : "▼";
 
@@ -192,21 +246,81 @@ export default function AnimalesPorLote() {
 
       {/* Contenido principal */}
       <div className="relative flex flex-col md:flex-row gap-6 p-4 md:p-9 flex-1 overflow-hidden">
-        {/* Lotes */}
-        <div className="w-full md:w-1/6 bg-white/30 backdrop-blur-md border border-white/40 p-4 rounded-3xl shadow-lg flex flex-col gap-2 overflow-y-auto">
-        
-          <h2 className="  text-black text-xl font-bold mb-4">Lotes </h2>
-          {lotes.map(lote => (
-            <button
-              key={lote.id}
-              className={` px-4 py-2 rounded-xl font-semibold text-left ${loteSeleccionado?.id === lote.id ? "bg-teal-700 text-black  " : "bg-teal-500 text-white"} hover:bg-teal-600 transition`}
-              onClick={() => { setLoteSeleccionado(lote); setPagina(1); }}
-            >
-              {lote.nombre}
-            </button>
-          ))}
-          <button className=" w-6/24 mt-2 bg-green-600 text-white font-semibold px-3 py-1 rounded-xl flex items-center gap-2 hover:bg-green-700 transition"><FaPlus /> Agregar Lote</button>
-        </div>
+       {/* Lotes */}
+<div className="w-full md:w-1/6 bg-white/30 backdrop-blur-md border border-white/40 p-4 rounded-3xl shadow-lg flex flex-col gap-2 overflow-y-auto">
+
+  <h2 className="text-black text-xl font-bold mb-4">Lotes </h2>
+
+  {lotes.map(lote => (
+    <div
+      key={lote.id}
+      className={`flex items-center justify-between px-4 py-2 rounded-xl font-semibold ${loteSeleccionado?.id === lote.id ? "bg-teal-700 text-black" : "bg-teal-500 text-white"} hover:bg-teal-600 transition`}
+    >
+      <button
+        className="text-left flex-1"
+        onClick={() => { setLoteSeleccionado(lote); setPagina(1); }}
+      >
+        {lote.nombre}
+      </button>
+      
+      <div className="flex gap-2">
+        <button
+          onClick={async () => {
+            const { value: nombreNuevo } = await Swal.fire({
+              title: 'Editar Lote',
+              input: 'text',
+              inputLabel: 'Nombre del lote',
+              inputValue: lote.nombre,
+              showCancelButton: true,
+              confirmButtonText: 'Guardar',
+              cancelButtonText: 'Cancelar',
+              inputValidator: (value) => !value && 'El nombre no puede estar vacío'
+            });
+            if (nombreNuevo) {
+              await setDoc(doc(db, "lotes", lote.id!), { nombre: nombreNuevo }, { merge: true });
+              cargarLotes();
+              Swal.fire('¡Editado!', 'El lote fue actualizado', 'success');
+            }
+          }}
+          className="text-blue-600 hover:text-blue-800"
+          title="Editar Lote"
+        >
+          <FaEdit />
+        </button>
+
+        <button
+          onClick={async () => {
+            const confirm = await Swal.fire({
+              title: 'Eliminar lote',
+              text: `¿Eliminar el lote ${lote.nombre}? Esta acción no se puede deshacer`,
+              icon: 'warning',
+              showCancelButton: true,
+              confirmButtonColor: '#DC2626',
+              cancelButtonColor: '#64748B',
+              confirmButtonText: 'Sí',
+              cancelButtonText: 'Cancelar'
+            });
+            if (confirm.isConfirmed && lote.id) {
+              await deleteDoc(doc(db, "lotes", lote.id));
+              if (loteSeleccionado?.id === lote.id) setLoteSeleccionado(null);
+              cargarLotes();
+              Swal.fire('¡Eliminado!', 'El lote fue eliminado', 'success');
+            }
+          }}
+          className="text-red-600 hover:text-red-800"
+          title="Eliminar Lote"
+        >
+          <FaTrash />
+        </button>
+      </div>
+    </div>
+  ))}
+
+  <button className="mt-2 bg-green-600 text-white font-semibold px-3 py-1 rounded-xl flex items-center gap-2 hover:bg-green-700 transition">
+    <FaPlus /> Agregar Lote
+  </button>
+</div>
+
 
         {/* Contenido derecho */}
         <div className="w-full md:w-3/4 flex flex-col gap-6 overflow-y-auto pb-20">
@@ -285,45 +399,63 @@ export default function AnimalesPorLote() {
       <td className="p-3 border">{a.edad}</td>
       <td className="p-3 border text-center capitalize">{a.estado}</td>
       <td className="p-3 border text-center">
-        <div className="flex flex-wrap gap-1 justify-center">
-          <button
-            onClick={() => editarAnimal(a)}
-            className="text-blue-600 hover:text-blue-800"
-          >
-            <FaEdit />
-          </button>
-          <button
-            onClick={() => eliminarAnimal(a)}
-            className="text-red-600 hover:text-red-800"
-          >
-            <FaTrash />
-          </button>
-          <button
-            onClick={() => mandarAReproduccion(a)}
-            className="text-pink-600 hover:text-pink-800"
-          >
-            <FaHeart />
-          </button>
-          <button
-            onClick={() => marcarComoMuerto(a)}
-            className="text-gray-700 hover:text-gray-900"
-          >
-            <FaSkull />
-          </button>
-          <button
-            onClick={() => marcarComoVendido(a)}
-            className="text-green-700 hover:text-green-900"
-          >
-            <FaMoneyBillWave />
-          </button>
-          <button
-            onClick={() => mandarAAlimentacion(a)}
-            className="text-orange-600 hover:text-orange-800"
-          >
-            <FaAppleAlt />
-          </button>
-        </div>
-      </td>
+  <div className="flex flex-wrap gap-1 justify-center">
+    <button
+      onClick={() => editarAnimal(a)}
+      className={`text-blue-600 hover:text-blue-800 ${a.estado === "muerto" || a.estado === "vendido" ? "opacity-50 cursor-not-allowed" : ""}`}
+      title="Editar"
+      disabled={a.estado === "muerto" || a.estado === "vendido"}
+    >
+      <FaEdit />
+    </button>
+
+    <button
+      onClick={() => eliminarAnimal(a)}
+      className={`text-red-600 hover:text-red-800 ${a.estado === "muerto" || a.estado === "vendido" ? "opacity-50 cursor-not-allowed" : ""}`}
+      title="Eliminar"
+      disabled={a.estado === "muerto" || a.estado === "vendido"}
+    >
+      <FaTrash />
+    </button>
+
+    <button
+      onClick={() => mandarAReproduccion(a)}
+      className={`text-pink-600 hover:text-pink-800 ${a.estado === "muerto" || a.estado === "vendido" ? "opacity-50 cursor-not-allowed" : ""}`}
+      title="Mandar a reproducción"
+      disabled={a.estado === "muerto" || a.estado === "vendido"}
+    >
+      <FaHeart />
+    </button>
+
+    <button
+      onClick={() => marcarComoMuerto(a)}
+      className={`text-gray-700 hover:text-gray-900 ${a.estado === "muerto" || a.estado === "vendido" ? "opacity-50 cursor-not-allowed" : ""}`}
+      title="Marcar como muerto"
+      disabled={a.estado === "muerto" || a.estado === "vendido"}
+    >
+      <FaSkull />
+    </button>
+
+    <button
+      onClick={() => marcarComoVendido(a)}
+      className={`text-green-700 hover:text-green-900 ${a.estado === "muerto" || a.estado === "vendido" ? "opacity-50 cursor-not-allowed" : ""}`}
+      title="Marcar como vendido"
+      disabled={a.estado === "muerto" || a.estado === "vendido"}
+    >
+      <FaMoneyBillWave />
+    </button>
+
+    <button
+      onClick={() => mandarAAlimentacion(a)}
+      className={`text-orange-600 hover:text-orange-800 ${a.estado === "muerto" || a.estado === "vendido" ? "opacity-50 cursor-not-allowed" : ""}`}
+      title="Mandar a nutricion"
+      disabled={a.estado === "muerto" || a.estado === "vendido"}
+    >
+      <FaAppleAlt />
+    </button>
+  </div>
+</td>
+
     </tr>
   ))}
 </tbody>

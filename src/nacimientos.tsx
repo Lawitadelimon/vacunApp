@@ -5,6 +5,8 @@ import { FaTrash, FaEdit, FaPlus, FaHome, FaBell, FaTimes, FaBars } from "react-
 import { useNavigate } from "react-router-dom";
 import cowsBackground from "./assets/cows2.jpg";
 import { getAuth, signOut } from "firebase/auth";
+import Swal from "sweetalert2";
+import "sweetalert2/dist/sweetalert2.min.css";
 
 type Nacimiento = {
   id?: string;
@@ -38,24 +40,55 @@ export default function NacimientosPorLote() {
   const [busqueda, setBusqueda] = useState("");
   const ITEMS_PAGINA = 40;
   const navigate = useNavigate();
-
   const [menuAbierto, setMenuAbierto] = useState(false);
-
   const auth = getAuth();
+  const hayNotificaciones = false; // Set to true when there are notifications
+
+  // ---------- SweetAlert2 helpers ----------
+  const showError = (title: string, text: string) =>
+    Swal.fire({ icon: "error", title, text, confirmButtonColor: "#DC2626" });
+  const showSuccess = (title: string, text?: string) =>
+    Swal.fire({ icon: "success", title, text, confirmButtonColor: "#10B981" });
+  const showConfirm = async (title: string, text: string) => {
+    const result = await Swal.fire({
+      title,
+      text,
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Sí",
+      cancelButtonText: "Cancelar",
+      confirmButtonColor: "#DC2626",
+      cancelButtonColor: "#64748B",
+    });
+    return result.isConfirmed;
+  };
+  const showInput = async (title: string, inputLabel: string, inputValue: string = "") => {
+    const { value } = await Swal.fire({
+      title,
+      input: "text",
+      inputLabel,
+      inputValue,
+      showCancelButton: true,
+      confirmButtonText: "Guardar",
+      cancelButtonText: "Cancelar",
+      inputValidator: (value) => !value && "El valor no puede estar vacío",
+    });
+    return value;
+  };
+
+  // ---------- Logout ----------
   const handleLogout = async () => {
     await signOut(auth);
     navigate("/");
   };
 
+  // ---------- Carga de lotes y nacimientos ----------
   const cargarLotes = async () => {
     const snaps = await getDocs(collection(db, "lotes_nuevos"));
     const lista: Lote[] = snaps.docs.map((doc) => ({ id: doc.id, ...(doc.data() as Lote) }));
     setLotes(lista);
+    if (lista.length > 0 && !loteSeleccionado) setLoteSeleccionado(lista[0]);
   };
-
-  useEffect(() => {
-    cargarLotes();
-  }, []);
 
   const cargarNacimientos = async () => {
     if (!loteSeleccionado?.id) return;
@@ -64,69 +97,84 @@ export default function NacimientosPorLote() {
     setNacimientos(lista);
   };
 
-  useEffect(() => {
-    cargarNacimientos();
-  }, [loteSeleccionado]);
+  useEffect(() => { cargarLotes(); }, []);
+  useEffect(() => { cargarNacimientos(); setPagina(1); }, [loteSeleccionado]);
 
+  // ---------- CRUD Nacimientos ----------
   const guardarNacimiento = async () => {
     if (!loteSeleccionado?.id) return;
+
     const campos = Object.values(formData);
-    if (campos.some((c) => c === "")) return alert("Completa todos los campos");
+    if (campos.some((c) => c === "")) return showError("Campos incompletos", "Completa todos los campos");
 
-    if (formData.id) {
-      await setDoc(doc(db, "lotes_nuevos", loteSeleccionado.id, "nacimientos", formData.id), formData);
-    } else {
-      await addDoc(collection(db, "lotes_nuevos", loteSeleccionado.id, "nacimientos"), formData);
+    try {
+      if (formData.id) {
+        await setDoc(doc(db, "lotes_nuevos", loteSeleccionado.id, "nacimientos", formData.id), formData);
+        showSuccess("¡Nacimiento actualizado!", `Código: ${formData.codigo}`);
+      } else {
+        await addDoc(collection(db, "lotes_nuevos", loteSeleccionado.id, "nacimientos"), formData);
+        showSuccess("¡Nacimiento registrado!", `Código: ${formData.codigo}`);
+      }
+
+      setFormData({
+        codigo: "",
+        codigoMadre: "",
+        codigoPadre: "",
+        fechaNacimiento: "",
+        raza: "",
+        sexo: "Macho",
+        peso: "",
+        estadoSalud: "",
+      });
+
+      cargarNacimientos();
+    } catch {
+      showError("Error", "No se pudo guardar el nacimiento");
     }
-
-    setFormData({
-      codigo: "",
-      codigoMadre: "",
-      codigoPadre: "",
-      fechaNacimiento: "",
-      raza: "",
-      sexo: "Macho",
-      peso: "",
-      estadoSalud: "",
-    });
-
-    cargarNacimientos();
   };
 
   const editarNacimiento = (nac: Nacimiento) => setFormData(nac);
 
   const eliminarNacimiento = async (nac: Nacimiento) => {
     if (!loteSeleccionado?.id || !nac.id) return;
-    if (!confirm(`Eliminar nacimiento ${nac.codigo}?`)) return;
+    const confirmado = await showConfirm("Eliminar nacimiento", `¿Eliminar nacimiento ${nac.codigo}?`);
+    if (!confirmado) return;
     await deleteDoc(doc(db, "lotes_nuevos", loteSeleccionado.id, "nacimientos", nac.id));
     cargarNacimientos();
+    showSuccess("¡Nacimiento eliminado!", nac.codigo);
   };
 
+  // ---------- CRUD Lotes ----------
   const agregarLote = async () => {
-    const nombre = prompt("Nombre del lote");
+    const nombre = await showInput("Agregar lote", "Nombre del lote");
     if (!nombre) return;
     const ref = await addDoc(collection(db, "lotes_nuevos"), { nombre });
     const nuevoLote = { id: ref.id, nombre };
     setLotes((prev) => [...prev, nuevoLote]);
     setLoteSeleccionado(nuevoLote);
+    showSuccess("¡Lote agregado!", nombre);
   };
 
   const editarLote = async (lote: Lote) => {
-    const nombre = prompt("Nuevo nombre del lote", lote.nombre);
+    const nombre = await showInput("Editar lote", "Nuevo nombre del lote", lote.nombre);
     if (!nombre || !lote.id) return;
     await setDoc(doc(db, "lotes_nuevos", lote.id), { nombre });
     setLotes((prev) => prev.map((l) => (l.id === lote.id ? { ...l, nombre } : l)));
     if (loteSeleccionado?.id === lote.id) setLoteSeleccionado({ ...lote, nombre });
+    showSuccess("¡Lote editado!", nombre);
   };
 
   const eliminarLote = async (lote: Lote) => {
     if (!lote.id) return;
-    if (!confirm(`Eliminar lote ${lote.nombre}?`)) return;
+    const confirmado = await showConfirm("Eliminar lote", `¿Eliminar lote ${lote.nombre}?`);
+    if (!confirmado) return;
     await deleteDoc(doc(db, "lotes_nuevos", lote.id));
     setLotes((prev) => prev.filter((l) => l.id !== lote.id));
     if (loteSeleccionado?.id === lote.id) setLoteSeleccionado(null);
+    showSuccess("¡Lote eliminado!", lote.nombre);
   };
 
+  // ---------- Filtrado y paginación ----------
   const nacimientosFiltrados = nacimientos.filter((n) =>
     Object.values(n).some((val) => val.toString().toLowerCase().includes(busqueda.toLowerCase()))
   );
@@ -135,6 +183,7 @@ export default function NacimientosPorLote() {
 
   const inputClasses = "border px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500 bg-white/50";
 
+  // ---------- Render ----------
   return (
     <div className="relative min-h-screen">
       <div className="absolute inset-0 bg-cover bg-center blur-[2px]" style={{ backgroundImage: `url(${cowsBackground})` }}></div>
@@ -142,118 +191,102 @@ export default function NacimientosPorLote() {
 
       {/* NAVBAR */}
       <nav className="sticky top-0 z-50 bg-pink-500 text-black flex items-center justify-between px-4 py-3 md:px-8 shadow-lg">
-        <h1 className="text-xl md:text-2xl font-extrabold">Nacimientos</h1>
+  <h1 className="text-xl md:text-2xl font-extrabold">Nacimientos</h1>
 
-        {/* 🔹 Visible solo en escritorio */}
-        <div className="hidden md:flex items-center gap-4">
-          <button onClick={() => navigate("/home")} className="hover:text-pink-300 transition">
-            <FaHome size={20} />
-          </button>
-          <button onClick={() => navigate("/notificaciones")} className="hover:text-pink-300 transition">
-            <FaBell size={20} />
-          </button>
-          <button onClick={handleLogout} className="bg-pink-600 text-black font-semibold px-3 py-1 rounded-xl hover:bg-pink-300">
-            Cerrar sesión
-          </button>
-        </div>
+  {/* Desktop */}
+  <div className="hidden md:flex items-center gap-4">
+    <button onClick={() => navigate("/home")} className="hover:text-pink-300 transition">
+      <FaHome size={20} />
+    </button>
 
-        {/* 🔹 Menú hamburguesa solo móvil */}
-        <button onClick={() => setMenuAbierto(!menuAbierto)} className="md:hidden hover:text-pink-300">
-          {menuAbierto ? <FaTimes size={22} /> : <FaBars size={22} />}
+    <button onClick={() => navigate("/notificaciones")} className="relative hover:text-pink-300 transition">
+      <FaBell size={20} />
+      {/** Si hay notificaciones, se muestra el punto */}
+      {hayNotificaciones && (
+        <span className="absolute -top-1 -right-1 animate-bounce text-sm">🐄</span>
+      )}
+    </button>
+
+    <button
+      onClick={handleLogout}
+      className="bg-pink-600 text-black font-semibold px-3 py-1 rounded-xl hover:bg-pink-300"
+    >
+      Cerrar sesión
+    </button>
+  </div>
+
+  {/* Mobile */}
+  <div className="md:hidden relative">
+    <button onClick={() => setMenuAbierto(!menuAbierto)} className="hover:text-pink-300">
+      {menuAbierto ? <FaTimes size={22}/> : <FaBars size={22}/>}
+    </button>
+
+    {menuAbierto && (
+      <div className="absolute right-0 mt-2 w-48 bg-white/40 rounded-xl shadow-lg py-3 flex flex-col items-center gap-2 z-50">
+        <button onClick={() => { navigate("/home"); setMenuAbierto(false); }} className="w-5/7 py-2 rounded-xl bg-pink-400 hover:bg-pink-500 flex items-center font-semibold justify-center gap-2"> 
+          <FaHome /> Inicio
         </button>
+        <button onClick={() => { navigate("/notificaciones"); setMenuAbierto(false); }} className="w-5/7 py-2 rounded-xl bg-pink-400 hover:bg-pink-500 flex items-center font-semibold justify-center gap-2">
+          <FaBell /> Notificaciones
+          {hayNotificaciones && (
+            <span className="absolute -top-1 -right-2 animate-bounce text-sm">🐄</span>
+          )}
+        </button>
+        <button onClick={() => { handleLogout(); setMenuAbierto(false); }} className="w-5/7 py-2 rounded-xl text-white bg-red-500 hover:bg-red-600 flex items-center font-semibold justify-center gap-2">
+          Cerrar sesión
+        </button>
+      </div>
+    )}
+  </div>
+</nav>
 
-        {/* 🔹 Menú desplegable móvil */}
-        <div className={`absolute top-full right-0 bg-white/40 text-black w-50 rounded-b-2xl shadow-lg md:hidden flex flex-col items-center py-2 gap-2 animate-fadeIn ${
-            menuAbierto ? "max-h-60 opacity-100" : "max-h-0 opacity-0"
-          }`}
-        >
-          
-          <button
-            onClick={() => {
-              navigate("/home");
-              setMenuAbierto(false);
-            }}
-            className="w-5/7 py-2 rounded-xl bg-pink-400 hover:bg-pink-500 flex items-center font-semibold justify-center gap-2"
-          >
-            <FaHome/> Inicio
-          </button>
-          <button
-            onClick={() => {
-              navigate("/notificaciones");
-              setMenuAbierto(false);
-            }}
-            className="w-5/7 py-2 rounded-xl bg-pink-400 hover:bg-pink-500 flex items-center font-semibold justify-center gap-2"
-          >
-            <FaBell/> Notificaciones
-          </button>
-          <button
-            onClick={() => {
-              handleLogout();
-              setMenuAbierto(false);
-            }}
-            className="w-5/7 py-2 bg-red-600 text-white rounded-xl hover:bg-red-700 flex items-center font-semibold justify-center gap-2"
-          >
-            Cerrar sesión
-          </button>
-        </div>
-      </nav>
 
       {/* CONTENIDO */}
       <div className="relative p-4 md:p-9 flex flex-col md:flex-row gap-6 md:gap-9">
         {/* Lotes */}
         <div className="w-full md:w-1/6 bg-white/30 backdrop-blur-md border border-white/50 p-4 rounded-xl shadow-xl h-auto md:h-[calc(100vh-6rem)] sticky top-24 flex flex-col gap-2 overflow-y-auto">
           <h2 className="text-black text-xl font-bold mb-4">Lotes</h2>
-
           {lotes.map((lote) => (
             <div key={lote.id} className="flex items-center justify-between gap-2">
               <button
-                className={`flex-1 px-4 py-2 rounded-xl font-semibold text-center ${
-                  loteSeleccionado?.id === lote.id ? "bg-pink-600 text-black" : "bg-pink-500 text-white"
-                } hover:bg-pink-600 transition`}
+                className={`flex-1 px-4 py-2 rounded-xl font-semibold text-center ${loteSeleccionado?.id === lote.id ? "bg-pink-600 text-black" : "bg-pink-500 text-white"} hover:bg-pink-600 transition`}
                 onClick={() => setLoteSeleccionado(lote)}
               >
                 {lote.nombre}
               </button>
               <div className="flex items-center gap-2">
-                <button onClick={() => editarLote(lote)} className="bg-blue-600 text-white p-2 rounded-full hover:bg-blue-700 transition">
-                  <FaEdit size={14} />
-                </button>
-                <button onClick={() => eliminarLote(lote)} className="bg-red-600 text-white p-2 rounded-full hover:bg-red-700 transition">
-                  <FaTrash size={14} />
-                </button>
+                <button onClick={() => editarLote(lote)} className="bg-blue-600 text-white p-2 rounded-full hover:bg-blue-700 transition"><FaEdit size={14} /></button>
+                <button onClick={() => eliminarLote(lote)} className="bg-red-600 text-white p-2 rounded-full hover:bg-red-700 transition"><FaTrash size={14} /></button>
               </div>
             </div>
           ))}
-
-          <button onClick={agregarLote} className="mt-2 bg-green-600 text-white px-3 py-2 rounded-xl font-semibold flex items-center justify-center gap-2 hover:bg-green-700 transition">
-            <FaPlus /> Agregar Lote
-          </button>
+          <button onClick={agregarLote} className="mt-2 bg-green-600 text-white px-3 py-2 rounded-xl font-semibold flex items-center justify-center gap-2 hover:bg-green-700 transition"><FaPlus /> Agregar Lote</button>
         </div>
 
         {/* Nacimientos */}
         <div className="w-full md:w-5/6 flex flex-col gap-6">
+          {/* Formulario */}
           {loteSeleccionado && (
             <div className="bg-white/30 backdrop-blur-md border border-white/50 p-6 rounded-xl shadow-xl">
               <h2 className="text-black text-xl font-bold mb-4">Registrar Nacimiento - {loteSeleccionado.nombre}</h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-                <input type="text" placeholder="Código" value={formData.codigo} onChange={(e) => setFormData((f) => ({ ...f, codigo: e.target.value }))} className={inputClasses} />
-                <input type="text" placeholder="Código madre" value={formData.codigoMadre} onChange={(e) => setFormData((f) => ({ ...f, codigoMadre: e.target.value }))} className={inputClasses} />
-                <input type="text" placeholder="Código padre" value={formData.codigoPadre} onChange={(e) => setFormData((f) => ({ ...f, codigoPadre: e.target.value }))} className={inputClasses} />
-                <input type="date" max={new Date().toISOString().split("T")[0]} value={formData.fechaNacimiento} onChange={(e) => setFormData((f) => ({ ...f, fechaNacimiento: e.target.value }))} className={inputClasses} />
-                <input type="text" placeholder="Raza" value={formData.raza} onChange={(e) => setFormData((f) => ({ ...f, raza: e.target.value }))} className={inputClasses} />
-                <select value={formData.sexo} onChange={(e) => setFormData((f) => ({ ...f, sexo: e.target.value as "Macho" | "Hembra" }))} className={inputClasses}>
+                <input type="text" placeholder="Código" value={formData.codigo} onChange={(e) => setFormData(f => ({ ...f, codigo: e.target.value }))} className={inputClasses} />
+                <input type="text" placeholder="Código madre" value={formData.codigoMadre} onChange={(e) => setFormData(f => ({ ...f, codigoMadre: e.target.value }))} className={inputClasses} />
+                <input type="text" placeholder="Código padre" value={formData.codigoPadre} onChange={(e) => setFormData(f => ({ ...f, codigoPadre: e.target.value }))} className={inputClasses} />
+                <input type="date" max={new Date().toISOString().split("T")[0]} value={formData.fechaNacimiento} onChange={(e) => setFormData(f => ({ ...f, fechaNacimiento: e.target.value }))} className={inputClasses} />
+                <input type="text" placeholder="Raza" value={formData.raza} onChange={(e) => setFormData(f => ({ ...f, raza: e.target.value }))} className={inputClasses} />
+                <select value={formData.sexo} onChange={(e) => setFormData(f => ({ ...f, sexo: e.target.value as "Macho" | "Hembra" }))} className={inputClasses}>
                   <option value="Macho">Macho</option>
                   <option value="Hembra">Hembra</option>
                 </select>
-                <input type="text" placeholder="Peso al nacer" value={formData.peso} onChange={(e) => setFormData((f) => ({ ...f, peso: e.target.value }))} className={inputClasses} />
-                <input type="text" placeholder="Estado de salud" value={formData.estadoSalud} onChange={(e) => setFormData((f) => ({ ...f, estadoSalud: e.target.value }))} className={inputClasses} />
+                <input type="text" placeholder="Peso al nacer" value={formData.peso} onChange={(e) => setFormData(f => ({ ...f, peso: e.target.value }))} className={inputClasses} />
+                <input type="text" placeholder="Estado de salud" value={formData.estadoSalud} onChange={(e) => setFormData(f => ({ ...f, estadoSalud: e.target.value }))} className={inputClasses} />
               </div>
-              <button onClick={guardarNacimiento} className="mt-4 bg-pink-500 text-white px-6 py-2 rounded-2xl font-semibold hover:bg-pink-600 transition">
-                Guardar
-              </button>
+              <button onClick={guardarNacimiento} className="mt-4 bg-pink-500 text-white px-6 py-2 rounded-2xl font-semibold hover:bg-pink-600 transition">Guardar</button>
             </div>
           )}
 
+          {/* Tabla */}
           {loteSeleccionado && (
             <div className="bg-white/30 backdrop-blur-md border border-white/50 p-6 rounded-xl shadow-xl overflow-x-auto">
               <h2 className="text-black text-xl font-bold mb-4">Lista de nacimientos</h2>
@@ -287,12 +320,8 @@ export default function NacimientosPorLote() {
                       <td className="p-2 border">{nac.peso}</td>
                       <td className="p-2 border">{nac.estadoSalud}</td>
                       <td className="p-2 border flex gap-2 justify-center flex-wrap">
-                        <button onClick={() => editarNacimiento(nac)} className="bg-blue-600 text-white p-2 rounded-full hover:bg-blue-700 transition">
-                          <FaEdit />
-                        </button>
-                        <button onClick={() => eliminarNacimiento(nac)} className="bg-red-600 text-white p-2 rounded-full hover:bg-red-700 transition">
-                          <FaTrash />
-                        </button>
+                        <button onClick={() => editarNacimiento(nac)} className="bg-blue-600 text-white p-2 rounded-full hover:bg-blue-700 transition"><FaEdit /></button>
+                        <button onClick={() => eliminarNacimiento(nac)} className="bg-red-600 text-white p-2 rounded-full hover:bg-red-700 transition"><FaTrash /></button>
                       </td>
                     </tr>
                   ))}
