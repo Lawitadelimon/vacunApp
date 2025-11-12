@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { FaArrowLeft, FaBars, FaBell, FaHome, FaSave, FaTimes } from "react-icons/fa";
+import { FaBars,  FaHome, FaSave, FaTimes } from "react-icons/fa";
 import { db } from "./firebase";
 import { getAuth, signOut } from "firebase/auth";
 import { doc, getDocs, setDoc, collection } from "firebase/firestore";
@@ -155,9 +155,7 @@ export default function Alimentacion() {
           <button onClick={() => navigate("/home")} className="hover:text-green-300 transition">
             <FaHome size={20} />
           </button>
-          <button onClick={() => navigate("/notificaciones")} className="hover:text-green-300 transition">
-            <FaBell size={20} />
-          </button>
+         
           <button onClick={handleLogout} className="bg-green-600 text-black font-semibold px-3 py-1 rounded-xl hover:bg-green-300">
             Cerrar sesión
           </button>
@@ -175,12 +173,6 @@ export default function Alimentacion() {
             className="w-5/7 py-2 rounded-xl bg-green-400 hover:bg-green-500 flex items-center font-semibold justify-center gap-2"
           >
             <FaHome/> Inicio
-          </button>
-          <button
-            onClick={() => { navigate("/notificaciones"); setMenuAbierto(false); }}
-            className="w-5/7 py-2 rounded-xl bg-green-400 hover:bg-green-500 flex items-center font-semibold justify-center gap-2"
-          >
-            <FaBell/> Notificaciones
           </button>
           <button
             onClick={() => { handleLogout(); setMenuAbierto(false); }}

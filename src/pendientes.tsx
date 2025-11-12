@@ -1,4 +1,4 @@
-import { Link, useNavigate } from "react-router-dom"; 
+import {  useNavigate } from "react-router-dom"; 
 import {
   FaClipboardList,
   FaTrash,
@@ -7,7 +7,6 @@ import {
   FaCheckCircle,
   FaTimesCircle,
   FaClock,
-  FaBell,
   FaBars,
   FaTimes,
 } from "react-icons/fa";
@@ -72,8 +71,8 @@ export default function Pendientes() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [abiertas, setAbiertas] = useState<string[]>([]);
   const [pagina, setPagina] = useState(1);
-  const [notificaciones, setNotificaciones] = useState<Notificacion[]>([]);
-  const [hayNotificaciones, setHayNotificaciones] = useState(false);
+  const [, setNotificaciones] = useState<Notificacion[]>([]);
+  const [, setHayNotificaciones] = useState(false);
 
   const navigate = useNavigate();
   const categoriasGranja = ["Vacunación", "Alimentación", "Limpieza", "Revisión"];
@@ -241,16 +240,7 @@ export default function Pendientes() {
             <FaHome size={22} />
           </button>
 
-          <div className="relative">
-            <button onClick={() => navigate("/notificaciones")} className="text-black hover:text-blue-300 transition">
-              <FaBell size={22} />
-            </button>
-            {hayNotificaciones && (
-              <span className="absolute -top-2 -right-2 bg-red-600 text-white text-xs font-bold px-1.5 py-0.5 rounded-full animate-pulse">
-                {notificaciones.filter((n) => !n.leido).length}
-              </span>
-            )}
-          </div>
+          
 
           <button
             onClick={handleLogout}
@@ -277,17 +267,7 @@ export default function Pendientes() {
               >
                 <FaHome /> Inicio
               </button>
-              <button
-                onClick={() => { navigate("/notificaciones"); setMenuOpen(false); }}
-                className="w-5/7 py-2 rounded-xl bg-blue-400 hover:bg-blue-500 flex items-center font-semibold justify-center gap-2"
-              >
-                <FaBell /> Notificaciones
-                {hayNotificaciones && (
-                  <span className="ml-2 bg-red-600 text-white text-xs font-bold px-1.5 py-0.5 rounded-full animate-pulse">
-                    {notificaciones.filter((n) => !n.leido).length}
-                  </span>
-                )}
-              </button>
+              
               <button
                 onClick={() => { handleLogout(); setMenuOpen(false); }}
                 className="bg-red-600 hover:bg-red-700 text-white font-semibold px-3 py-1 rounded-xl w-full"

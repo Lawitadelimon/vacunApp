@@ -12,7 +12,7 @@ import {
 } from "firebase/firestore";
 import { db } from "./firebase";
 import { getAuth, signOut } from "firebase/auth";
-import { FaPlus, FaHome, FaBell, FaTimes, FaBars } from "react-icons/fa";
+import { FaPlus, FaHome, FaTimes, FaBars } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import cowsBackground from "./assets/cows2.jpg";
 
@@ -329,9 +329,7 @@ export default function Salud() {
           <button onClick={() => navigate("/home")} className="hover:text-red-600 transition">
             <FaHome size={20} />
           </button>
-          <button onClick={() => navigate("/notificaciones")} className="hover:text-red-600 transition">
-            <FaBell size={20} />
-          </button>
+          
           <button onClick={handleLogout} className="bg-red-600 text-black font-semibold px-3 py-1 rounded-xl hover:bg-red-700">
             Cerrar sesión
           </button>
@@ -346,7 +344,6 @@ export default function Salud() {
             menuAbierto ? "max-h-60 opacity-100" : "max-h-0 opacity-0"
           }`}>
           <button onClick={() => { navigate("/home"); setMenuAbierto(false); }} className="w-5/7 py-2 rounded-lg bg-red-500 hover:bg-red-600 flex items-center font-semibold justify-center gap-2"><FaHome/> Inicio</button>
-          <button onClick={() => { navigate("/notificaciones"); setMenuAbierto(false); }} className="w-5/7 py-2 rounded-xl bg-red-500 hover:bg-red-600 flex items-center font-semibold justify-center gap-2"><FaBell/> Notificaciones</button>
           <button onClick={() => { handleLogout(); setMenuAbierto(false); }} className="w-5/7 py-2 bg-red-600 text-white rounded-xl hover:bg-red-700 flex items-center font-semibold justify-center gap-2">Cerrar sesión</button>
         </div>
       </nav>
@@ -418,7 +415,8 @@ export default function Salud() {
             <button onClick={() => setFiltroVacunas("sinAsignar")} className={`px-4 py-2 rounded-lg font-semibold transition ${filtroVacunas==="sinAsignar"?"bg-gray-600 text-white":"bg-white/60 text-gray-700 hover:bg-white/80"}`}>Sin asignar 🐮 ({totalSinAsignar})</button>
           </div>
 
-          <table className="w-full border-collapse text-left">
+          <div  className="overflow-x-auto">
+            <table className="w-full border-collapse text-left">
             <thead>
               <tr className="bg-red-500 text-white">
                 <th className="p-2 border">Código</th>
@@ -454,6 +452,7 @@ export default function Salud() {
               })}
             </tbody>
           </table>
+          </div>
 
           {/* Vacunas por animal */}
           {animalSeleccionado && (

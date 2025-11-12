@@ -10,26 +10,16 @@ export default function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (!email || !password) {
-      Swal.fire("Error", "❌ Por favor completa todos los campos", "warning");
-      return;
-    }
-
-    setLoading(true);
     try {
       await signInWithEmailAndPassword(auth, email, password);
-      await Swal.fire("Éxito", "✅ Inicio de sesión exitoso", "success");
-      navigate("/home"); // o a la ruta que corresponda
+      Swal.fire("Éxito", "✅ Inicio de sesión exitoso", "success");
+      navigate("/home");
     } catch (error: any) {
-      Swal.fire("Error", `❌ ${error.message}`, "error");
-    } finally {
-      setLoading(false);
+      Swal.fire("Error", "❌ " + error.message, "error");
     }
   };
 
@@ -41,7 +31,7 @@ export default function LoginForm() {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
     >
-      {/* Email */}
+      {/* Correo */}
       <div className="relative">
         <FaEnvelope className="absolute left-3 top-3 text-gray-500" />
         <input
@@ -54,7 +44,7 @@ export default function LoginForm() {
         />
       </div>
 
-      {/* Password con mostrar/ocultar */}
+      {/* Contraseña */}
       <div className="relative">
         <FaLock className="absolute left-3 top-3 text-gray-500" />
         <input
@@ -69,26 +59,21 @@ export default function LoginForm() {
           type="button"
           onClick={() => setShowPassword(!showPassword)}
           className="absolute right-3 top-2.5 text-gray-500 hover:text-[#099757] transition"
-          aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
         >
           {showPassword ? <FaEyeSlash /> : <FaEye />}
         </button>
       </div>
 
-      {/* Botón principal */}
+      {/* Botón */}
       <motion.button
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.98 }}
         type="submit"
-        disabled={loading}
-        className={`${
-          loading ? "opacity-50 cursor-not-allowed" : "hover:bg-[#077848]"
-        } bg-[#099757] text-white font-semibold py-2 sm:py-3 rounded-xl shadow-md transition-all duration-300 text-sm sm:text-base`}
+        className="bg-[#099757] text-white font-semibold py-2 sm:py-3 rounded-xl shadow-md hover:bg-[#077848] transition-all duration-300 text-sm sm:text-base"
       >
-        {loading ? "Iniciando..." : "Iniciar Sesión"}
+        Iniciar Sesión
       </motion.button>
 
-      {/* Recuperar contraseña */}
       <button
         type="button"
         onClick={() => navigate("/forgot-password")}

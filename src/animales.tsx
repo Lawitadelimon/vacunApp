@@ -4,7 +4,7 @@ import { db } from "./firebase";
 import { getAuth, signOut } from "firebase/auth";
 import { 
   FaTrash, FaEdit, FaPlus, FaAppleAlt, FaHeart, FaSkull, FaMoneyBillWave, 
-  FaHome, FaBell, FaTimes, FaBars 
+  FaHome,  FaTimes, FaBars 
 } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import cowsBackground from "./assets/cows2.jpg";
@@ -21,7 +21,7 @@ type Animal = {
   edad: string;
   enReproduccion?: boolean;
   enNutricion?: boolean;
-  estado?: "vivo" | "muerto" | "vendido" | "en nutricion" | "en reproduccion";
+  estado?: "vivo" | "muerto" | "vendido" | "en nutricion" | "en reproduccion" | "en reproduccion y nutricion";
   precio?: number;
   fechaReproduccion?: string;
   fechaNutricion?: string;
@@ -92,26 +92,44 @@ export default function AnimalesPorLote() {
 
   // ---------- FUNCIONES CRUD ----------
   const guardarAnimal = async () => {
-    if (!loteSeleccionado) return;
-    const user = auth.currentUser; if (!user) return;
+  if (!loteSeleccionado) return;
+  const user = auth.currentUser; if (!user) return;
 
-    if (!formData.especie || !formData.codigo || !formData.raza || !formData.sexo || !formData.fechaNacimiento) return showError("Campos incompletos", "Completa todos los campos");
-    if (new Date(formData.fechaNacimiento) > new Date()) return showError("Fecha inválida", "La fecha de nacimiento no puede ser futura");
+  if (!formData.especie || !formData.codigo || !formData.raza || !formData.sexo || !formData.fechaNacimiento) 
+    return showError("Campos incompletos", "Completa todos los campos");
 
-    const edad = calcularEdad(formData.fechaNacimiento);
-    const datos: Animal & { uid: string } = { ...formData, edad, uid: user.uid, estado: formData.estado || "vivo" };
+  if (new Date(formData.fechaNacimiento) > new Date()) 
+    return showError("Fecha inválida", "La fecha de nacimiento no puede ser futura");
 
-    try {
-      if (formData.id) await setDoc(doc(db, "lotes", loteSeleccionado.id!, "animales", formData.id), datos);
-      else await addDoc(collection(db, "lotes", loteSeleccionado.id!, "animales"), datos);
+  const edad = calcularEdad(formData.fechaNacimiento);
+  const datos: Animal & { uid: string } = { ...formData, edad, uid: user.uid, estado: formData.estado || "vivo" };
 
-      setFormData({ especie: "", codigo: "", raza: "", sexo: "macho", fechaNacimiento: "", edad: "", estado: "vivo" });
-      cargarAnimales();
-      showSuccess("¡Animal registrado!", `${datos.codigo} se guardó correctamente`);
-    } catch {
-      showError("Error", "No se pudo guardar el animal");
+  try {
+    // 🔹 Validar que el código no exista
+    const q = query(
+      collection(db, "lotes", loteSeleccionado.id!, "animales"),
+      where("codigo", "==", formData.codigo)
+    );
+    const snap = await getDocs(q);
+
+    if (snap.docs.length > 0 && !formData.id) {
+      return showError("Animal duplicado", `Ya existe un animal con el código ${formData.codigo}`);
     }
-  };
+
+    if (formData.id) {
+      await setDoc(doc(db, "lotes", loteSeleccionado.id!, "animales", formData.id), datos);
+    } else {
+      await addDoc(collection(db, "lotes", loteSeleccionado.id!, "animales"), datos);
+    }
+
+    setFormData({ especie: "", codigo: "", raza: "", sexo: "macho", fechaNacimiento: "", edad: "", estado: "vivo" });
+    cargarAnimales();
+    showSuccess("¡Animal registrado!", `${datos.codigo} se guardó correctamente`);
+  } catch {
+    showError("Error", "No se pudo guardar el animal");
+  }
+};
+
 
   const editarAnimal = (animal: Animal) => setFormData(animal);
 
@@ -161,24 +179,42 @@ export default function AnimalesPorLote() {
 };
 
   const mandarAReproduccion = async (animal: Animal) => {
-    if (!loteSeleccionado || !animal.id) return;
-    if (animal.estado === "muerto" || animal.estado === "vendido") return showError("Operación inválida", "No se puede modificar un animal muerto o vendido");
-    const nuevoEstado: Animal = { ...animal, enReproduccion: true, estado: "en reproduccion", fechaReproduccion: new Date().toISOString().split("T")[0] };
-    await setDoc(doc(db, "lotes", loteSeleccionado.id!, "animales", animal.id), nuevoEstado, { merge: true });
-    setAnimales(prev => prev.map(a => a.id === animal.id ? nuevoEstado : a));
-    showSuccess("Animal en reproducción");
+  if (!loteSeleccionado || !animal.id) return;
+  if (animal.estado === "muerto" || animal.estado === "vendido") 
+    return showError("Operación inválida", "No se puede modificar un animal muerto o vendido");
+  if (animal.sexo !== "hembra") 
+    return showError("Operación inválida", "Solo se puede mandar a reproducción a hembras");
+
+  const nuevoEstado: Animal = {
+    ...animal,
+    enReproduccion: true,
+    fechaReproduccion: new Date().toISOString().split("T")[0],
+    // Mantener la información de nutrición si ya existe
+    estado: animal.enNutricion ? "en reproduccion y nutricion" : "en reproduccion"
   };
+
+  await setDoc(doc(db, "lotes", loteSeleccionado.id!, "animales", animal.id), nuevoEstado, { merge: true });
+  setAnimales(prev => prev.map(a => a.id === animal.id ? nuevoEstado : a));
+  showSuccess("Animal en reproducción");
+};
+
 
   const mandarAAlimentacion = async (animal: Animal) => {
-    if (!loteSeleccionado || !animal.id) return;
-    if (animal.estado === "muerto" || animal.estado === "vendido") return showError("Operación inválida", "No se puede modificar un animal muerto o vendido");
+  if (!loteSeleccionado || !animal.id) return;
+  if (animal.estado === "muerto" || animal.estado === "vendido") 
+    return showError("Operación inválida", "No se puede modificar un animal muerto o vendido");
 
-    const estadoNuevo: Animal["estado"] = "en nutricion";
-    const nuevoEstado: Animal = { ...animal, enNutricion: true, estado: estadoNuevo, fechaNutricion: new Date().toISOString().split("T")[0] };
-    await setDoc(doc(db, "lotes", loteSeleccionado.id!, "animales", animal.id), nuevoEstado, { merge: true });
-    setAnimales(prev => prev.map(a => a.id === animal.id ? nuevoEstado : a));
-    showSuccess("Animal en nutrición");
+  const nuevoEstado: Animal = {
+    ...animal,
+    enNutricion: true,
+    fechaNutricion: new Date().toISOString().split("T")[0],
+    // Mantener la información de reproducción si ya existe
+    estado: animal.enReproduccion ? "en reproduccion y nutricion" : "en nutricion"
   };
+  await setDoc(doc(db, "lotes", loteSeleccionado.id!, "animales", animal.id), nuevoEstado, { merge: true });
+  setAnimales(prev => prev.map(a => a.id === animal.id ? nuevoEstado : a));
+  showSuccess("Animal en nutrición");
+};
 
   // ---------- FILTRADO Y ORDEN ----------
   const toggleOrden = (campo: keyof Animal) => setOrden(prev => ({ campo, asc: prev.campo === campo ? !prev.asc : true }));
@@ -212,7 +248,6 @@ export default function AnimalesPorLote() {
 
         <div className="hidden md:flex items-center gap-4">
           <button onClick={() => navigate("/home")} className="hover:text-teal-300 transition"><FaHome size={20} /></button>
-          <button onClick={() => navigate("/notificaciones")} className="hover:text-teal-300 transition"><FaBell size={20} /></button>
           <button onClick={() => navigate("/estadisticas")} className="bg-teal-400 text-black font-semibold px-3 py-1 rounded-xl shadow-inner hover:bg-teal-600 transition">
             📊 Estadísticas
           </button>
@@ -231,9 +266,7 @@ export default function AnimalesPorLote() {
             <button onClick={() => { navigate("/home"); setMenuAbierto(false); }} className="w-5/7 py-2 rounded-lg bg-teal-300 hover:bg-teal-400 flex items-center font-semibold justify-center gap-2">
               <FaHome /> Inicio
             </button>
-            <button onClick={() => { navigate("/notificaciones"); setMenuAbierto(false); }} className="w-5/7 py-2 rounded-xl bg-teal-300 hover:bg-teal-400 flex items-center font-semibold justify-center gap-2">
-              <FaBell /> Notificaciones
-            </button>
+            
             <button onClick={() => { navigate("/estadisticas"); setMenuAbierto(false); }} className="w-5/7 py-2 rounded-xl bg-teal-300 hover:bg-teal-400 flex items-center font-semibold justify-center gap-2">
               📊 Estadísticas
             </button>

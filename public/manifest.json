@@ -1,0 +1,20 @@
+{
+  "short_name": "ANIMANAGER",
+  "name": "ANIMANAGER - INNOVASYSTEM",
+  "icons": [
+    {
+      "src": "/icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+  "start_url": ".",
+  "display": "standalone",
+  "theme_color": "#37B71A",
+  "background_color": "#ffffff"
+}

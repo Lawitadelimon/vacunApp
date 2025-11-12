@@ -1,6 +1,10 @@
 import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
-import { getFirestore } from "firebase/firestore";
+import {
+  initializeFirestore,
+  persistentLocalCache,
+  persistentMultipleTabManager
+} from "firebase/firestore";
 
 const firebaseConfig = {
   apiKey: "AIzaSyAUgjlIIplU2Mh92HIUKcU-40pdb-ihy2Q",
@@ -12,8 +16,13 @@ const firebaseConfig = {
   measurementId: "G-1DXE1W9QE8"
 };
 
-
+// Inicializa la app
 export const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
-export const db = getFirestore(app);
 
+// 🔥 Inicializa Firestore con persistencia avanzada
+export const db = initializeFirestore(app, {
+  localCache: persistentLocalCache({
+    tabManager: persistentMultipleTabManager()
+  })
+});

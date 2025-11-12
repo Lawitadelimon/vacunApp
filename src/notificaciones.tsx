@@ -12,7 +12,7 @@ import {
   orderBy,
 } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
-import { FaHome, FaBell, FaBars, FaTimes } from "react-icons/fa";
+import { FaHome,  FaBars, FaTimes, FaBell } from "react-icons/fa";
 import { db, auth } from "./firebase";
 import cow2Image from "./assets/cows2.jpg";
 
@@ -56,6 +56,8 @@ export default function Notificaciones() {
   const [openWorkers, setOpenWorkers] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  const [workersConNotificaciones, setWorkersConNotificaciones] = useState<string[]>([]);
+  
 
   // 🔹 Verificar autenticación
   useEffect(() => {
@@ -114,6 +116,44 @@ export default function Notificaciones() {
     return () => unsub();
   }, [rol]);
 
+  // 🔹 Escuchar notificaciones (admin)
+  useEffect(() => {
+    if (rol !== "admin") return;
+    const q = query(
+      collection(db, "notificaciones"),
+      where("para", "==", "admin"),
+      orderBy("creadoEn", "desc")
+    );
+    const unsub = onSnapshot(q, (snap) => {
+      const data = snap.docs.map((d) => ({ id: d.id, ...d.data() } as Notificacion));
+      setNotificaciones(data);
+      setNotificacionesNoLeidas(data.filter((n) => !n.leido).length);
+    });
+    return () => unsub();
+  }, [rol]);
+
+  useEffect(() => {
+  if (rol !== "admin") return;
+
+  const q = query(
+    collection(db, "notificaciones"),
+    where("para", "==", "admin"),
+    where("leido", "==", false)
+  );
+
+  const unsubscribe = onSnapshot(q, (snap) => {
+    const data = snap.docs.map((d) => d.data());
+    const workers = data
+      .map((n) => n.de || n.deNombre) // ← Asegúrate que al crear la notificación guardes quién la envía (worker)
+      .filter((id) => id); // eliminar nulos o undefined
+    setWorkersConNotificaciones(workers);
+  });
+
+  return () => unsubscribe();
+}, [rol]);
+
+
+
   const toggleWorker = (workerId: string) =>
     setOpenWorkers((prev) => ({ ...prev, [workerId]: !prev[workerId] }));
 
@@ -159,7 +199,7 @@ export default function Notificaciones() {
           </button>
 
           <div className="relative">
-            <button
+             <button
               onClick={() => setMenuNotificacionesOpen(!menuNotificacionesOpen)}
               className="relative text-black text-xl hover:text-amber-500 transition"
             >
@@ -170,6 +210,7 @@ export default function Notificaciones() {
                 </span>
               )}
             </button>
+            
 
             {menuNotificacionesOpen && (
               <div className="absolute right-0 mt-2 w-72 max-h-80 overflow-y-auto bg-white text-gray-800 rounded-lg shadow-lg z-50">
@@ -235,6 +276,8 @@ export default function Notificaciones() {
             <FaBell /> Notificaciones
           </button>
 
+          
+
           <button
             onClick={() => {
               handleLogout();
@@ -272,7 +315,7 @@ export default function Notificaciones() {
                       {t.titulo}
                     </h3>
                     {t.reporte && (
-                      <div className="mt-2 bg-black/30 p-3 rounded-lg text-sm text-gray-100 border border-[#FFEB99]/30">
+                      <div className="mt-2 bg-amber-600 p-3 rounded-xl text-sm text-black border border-[#FFEB99]/30">
                         📝 <strong>Reporte del trabajador:</strong>
                         <p className="mt-1 whitespace-pre-line">{t.reporte}</p>
                       </div>
@@ -287,49 +330,64 @@ export default function Notificaciones() {
                         }))
                       }
                       placeholder="Escribe tu reporte aquí..."
-                      className="w-full p-2 rounded-md text-gray-800 text-sm mb-3"
+                      className="w-full p-2 rounded-md text-black text-md mb-3"
                     />
 
                     <div className="flex flex-col sm:flex-row gap-3">
                       <button
-                        onClick={async () => {
-                          await updateDoc(doc(db, "tareas", t.id), {
-                            estado: "realizada",
-                            completada: true,
-                            reporte: reporte[t.id]?.texto || "Sin detalle",
-                          });
-                          await addDoc(collection(db, "notificaciones"), {
-                            para: "admin",
-                            mensaje: `El trabajador completó la tarea "${t.titulo}".`,
-                            tareaId: t.id,
-                            leido: false,
-                            creadoEn: serverTimestamp(),
-                          });
-                        }}
-                        className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded-lg text-sm w-full sm:w-auto"
-                      >
-                        ✅ Completada
-                      </button>
+                          onClick={async () => {
+                            await updateDoc(doc(db, "tareas", t.id), {
+                              estado: "realizada",
+                              completada: true,
+                              reporte: reporte[t.id]?.texto || "Sin detalle",
+                            });
 
-                      <button
-                        onClick={async () => {
-                          await updateDoc(doc(db, "tareas", t.id), {
-                            estado: "no realizada",
-                            completada: false,
-                            reporte: reporte[t.id]?.texto || "Sin detalle",
-                          });
-                          await addDoc(collection(db, "notificaciones"), {
-                            para: "admin",
-                            mensaje: `El trabajador NO realizó la tarea "${t.titulo}".`,
-                            tareaId: t.id,
-                            leido: false,
-                            creadoEn: serverTimestamp(),
-                          });
-                        }}
-                        className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-lg text-sm w-full sm:w-auto"
-                      >
-                        ❌ No realizada
-                      </button>
+                            const user = auth.currentUser;
+                            const userSnap = await getDoc(doc(db, "users", user!.uid));
+                            const userName = userSnap.exists() ? userSnap.data().name : "Trabajador";
+
+                            await addDoc(collection(db, "notificaciones"), {
+                              para: "admin",
+                              de: user!.uid,          // 🔹 quién la envía
+                              deNombre: userName,     // 🔹 nombre del trabajador
+                              mensaje: `El trabajador completó la tarea "${t.titulo}".`,
+                              tareaId: t.id,
+                              leido: false,
+                              creadoEn: serverTimestamp(),
+                            });
+                          }}
+                          className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded-xl text-sm font-semibold w-full sm:w-auto"
+                        >
+                          Completada ✅ 
+                        </button>
+
+                        <button
+                          onClick={async () => {
+                            await updateDoc(doc(db, "tareas", t.id), {
+                              estado: "no realizada",
+                              completada: false,
+                              reporte: reporte[t.id]?.texto || "Sin detalle",
+                            });
+
+                            const user = auth.currentUser;
+                            const userSnap = await getDoc(doc(db, "users", user!.uid));
+                            const userName = userSnap.exists() ? userSnap.data().name : "Trabajador";
+
+                            await addDoc(collection(db, "notificaciones"), {
+                              para: "admin",
+                              de: user!.uid,          // 🔹 quién la envía
+                              deNombre: userName,     // 🔹 nombre del trabajador
+                              mensaje: `El trabajador NO realizó la tarea "${t.titulo}".`,
+                              tareaId: t.id,
+                              leido: false,
+                              creadoEn: serverTimestamp(),
+                            });
+                          }}
+                          className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-xl text-sm font-semibold w-full sm:w-auto"
+                        >
+                          No realizada ❌ 
+                        </button>
+
                     </div>
                   </li>
                 ))}
@@ -349,20 +407,24 @@ export default function Notificaciones() {
             ) : (
               Object.entries(tareasPorTrabajador).map(([workerId, workerTasks]) => (
                 <div key={workerId} className="mb-8">
-                  <button
-                    onClick={() => toggleWorker(workerId)}
-                    className="w-full flex justify-between items-center px-5 py-3 bg-gradient-to-r from-[#B71C1C]/80 to-[#FFB300]/40 hover:from-[#B71C1C]/90 hover:to-[#FFB300]/50 transition rounded-t-2xl font-bold text-[#FFEB99] text-lg"
-                  >
-                    👤 {workerId}
-                    <span
-                      className={`text-sm transform transition-transform ${
-                        openWorkers[workerId] ? "rotate-180" : ""
-                      }`}
+                                    <button
+                      onClick={() => toggleWorker(workerId)}
+                      className="w-full flex justify-between items-center px-5 py-3 bg-gradient-to-r from-[#B71C1C]/80 to-[#FFB300]/40 hover:from-[#B71C1C]/90 hover:to-[#FFB300]/50 transition rounded-t-2xl font-bold text-[#FFEB99] text-lg relative"
                     >
-                      ▼
-                    </span>
-                  </button>
-
+                      <div className="flex items-center gap-2">
+                        👤 {workerId}
+                        {workersConNotificaciones.includes(workerId) && (
+                          <span className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></span>
+                        )}
+                      </div>
+                      <span
+                        className={`text-sm transform transition-transform ${
+                          openWorkers[workerId] ? "rotate-180" : ""
+                        }`}
+                      >
+                        ▼
+                      </span>
+                    </button>
                   {openWorkers[workerId] && (
                     <div className="bg-[#FFF9E6]/10 rounded-b-2xl overflow-hidden border border-[#FFEB99]/20">
                       <table className="w-full text-left border-collapse text-sm md:text-base">

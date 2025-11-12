@@ -25,7 +25,7 @@ import jsPDF from "jspdf";
 import "jspdf-autotable";
 import { useNavigate } from "react-router-dom";
 import { getAuth, signOut } from "firebase/auth";
-import { FaHome, FaBell, FaTimes, FaBars } from "react-icons/fa";
+import { FaHome,  FaTimes, FaBars } from "react-icons/fa";
 import cowsBackground from "./assets/cows2.jpg";
 
 interface Animal {
@@ -210,9 +210,6 @@ export default function Estadisticas() {
           <button onClick={() => navigate("/home")} className="hover:text-orange-300 transition">
             <FaHome size={20} />
           </button>
-          <button onClick={() => navigate("/notificaciones")} className="hover:text-orange-300 transition">
-            <FaBell size={20} />
-          </button>
           <button
             onClick={handleLogout}
             className="bg-orange-600 text-black font-semibold px-3 py-1 rounded-xl hover:bg-orange-300 transition"
@@ -240,15 +237,6 @@ export default function Estadisticas() {
               className="w-4/5 py-2 rounded-xl bg-orange-500 hover:bg-orange-600 flex items-center justify-center gap-2 font-semibold"
             >
               <FaHome /> Inicio
-            </button>
-            <button
-              onClick={() => {
-                navigate("/notificaciones");
-                setMenuAbierto(false);
-              }}
-              className="w-4/5 py-2 rounded-xl bg-orange-500 hover:bg-orange-600 flex items-center justify-center gap-2 font-semibold"
-            >
-              <FaBell /> Notificaciones
             </button>
             <button
               onClick={() => {

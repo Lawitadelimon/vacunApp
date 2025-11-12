@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { collection, addDoc, getDocs, doc, setDoc, deleteDoc } from "firebase/firestore";
 import { db } from "./firebase";
-import { FaTrash, FaEdit, FaPlus, FaHome, FaBell, FaTimes, FaBars } from "react-icons/fa";
+import { FaTrash, FaEdit, FaPlus, FaHome,  FaTimes, FaBars } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import cowsBackground from "./assets/cows2.jpg";
 import { getAuth, signOut } from "firebase/auth";
@@ -42,7 +42,6 @@ export default function NacimientosPorLote() {
   const navigate = useNavigate();
   const [menuAbierto, setMenuAbierto] = useState(false);
   const auth = getAuth();
-  const hayNotificaciones = false; // Set to true when there are notifications
 
   // ---------- SweetAlert2 helpers ----------
   const showError = (title: string, text: string) =>
@@ -198,15 +197,6 @@ export default function NacimientosPorLote() {
     <button onClick={() => navigate("/home")} className="hover:text-pink-300 transition">
       <FaHome size={20} />
     </button>
-
-    <button onClick={() => navigate("/notificaciones")} className="relative hover:text-pink-300 transition">
-      <FaBell size={20} />
-      {/** Si hay notificaciones, se muestra el punto */}
-      {hayNotificaciones && (
-        <span className="absolute -top-1 -right-1 animate-bounce text-sm">🐄</span>
-      )}
-    </button>
-
     <button
       onClick={handleLogout}
       className="bg-pink-600 text-black font-semibold px-3 py-1 rounded-xl hover:bg-pink-300"
@@ -226,12 +216,7 @@ export default function NacimientosPorLote() {
         <button onClick={() => { navigate("/home"); setMenuAbierto(false); }} className="w-5/7 py-2 rounded-xl bg-pink-400 hover:bg-pink-500 flex items-center font-semibold justify-center gap-2"> 
           <FaHome /> Inicio
         </button>
-        <button onClick={() => { navigate("/notificaciones"); setMenuAbierto(false); }} className="w-5/7 py-2 rounded-xl bg-pink-400 hover:bg-pink-500 flex items-center font-semibold justify-center gap-2">
-          <FaBell /> Notificaciones
-          {hayNotificaciones && (
-            <span className="absolute -top-1 -right-2 animate-bounce text-sm">🐄</span>
-          )}
-        </button>
+        
         <button onClick={() => { handleLogout(); setMenuAbierto(false); }} className="w-5/7 py-2 rounded-xl text-white bg-red-500 hover:bg-red-600 flex items-center font-semibold justify-center gap-2">
           Cerrar sesión
         </button>

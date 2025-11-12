@@ -8,13 +8,12 @@ import { useUser } from "./UserContext";
 
 export default function AuthPage() {
   const [isLogin, setIsLogin] = useState(true);
-  const [message, setMessage] = useState("");
   const { user, loading } = useUser();
   const navigate = useNavigate();
 
   useEffect(() => {
     if (!loading && user?.role) {
-      navigate("/home"); // solo redirige si tiene role definido
+      navigate("/home"); // Redirige si el usuario ya tiene un rol
     }
   }, [user, loading, navigate]);
 
@@ -38,7 +37,7 @@ export default function AuthPage() {
         transition={{ duration: 0.5 }}
         className="bg-white rounded-3xl shadow-lg w-[95%] max-w-4xl flex flex-col md:flex-row overflow-hidden"
       >
-        {/* Lado izquierdo */}
+        {/* Panel izquierdo */}
         <div className="w-full md:w-1/2 bg-[#ce8423] text-white p-8 md:p-10 flex flex-col justify-center items-center text-center md:text-left">
           <h2 className="text-2xl md:text-3xl font-bold mb-2">
             {isLogin ? "¡Bienvenido a AniManager!" : "¡Hola!"}
@@ -49,54 +48,26 @@ export default function AuthPage() {
               : "Regístrese con sus datos personales para utilizar todas las funciones del sitio"}
           </p>
           <button
-            onClick={() => {
-              setIsLogin(!isLogin);
-              setMessage("");
-            }}
+            onClick={() => setIsLogin(!isLogin)}
             className="border border-white py-2 px-4 rounded hover:bg-white hover:text-[#813624] transition text-sm md:text-base"
           >
             {isLogin ? "REGISTRARSE" : "INICIAR SESIÓN"}
           </button>
         </div>
 
-        {/* Lado derecho */}
+        {/* Panel derecho */}
         <div className="w-full md:w-1/2 p-6 md:p-10">
           <h2 className="text-xl md:text-2xl font-bold mb-6">
             {isLogin ? "Iniciar Sesión" : "Registro"}
           </h2>
 
-          {message && (
-            <div
-              className={`mb-4 p-3 rounded text-sm font-medium ${
-                message.startsWith("❌")
-                  ? "bg-red-100 text-red-700 border border-red-400"
-                  : "bg-green-100 text-green-700 border border-green-400"
-              }`}
-            >
-              {message}
-            </div>
-          )}
-
           {isLogin ? (
-            <LoginForm
-              onValidation={(msg: string) => {
-                if (
-                  msg === "✅ Inicio de sesión exitoso" &&
-                  user?.role === null
-                ) {
-                  setMessage("⚠️ Usuario creado, solicita acceso a tu admin.");
-                } else {
-                  setMessage(msg);
-                }
-              }}
-            />
+            <LoginForm />
           ) : (
             <RegisterForm
               onRegisterSuccess={() => {
                 setIsLogin(true);
-                setMessage("✅ Registro exitoso. Ahora pide acceso a tu admin.");
               }}
-              onValidation={setMessage}
             />
           )}
         </div>
@@ -104,4 +75,3 @@ export default function AuthPage() {
     </div>
   );
 }
-// Ya es responsivo

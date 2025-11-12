@@ -7,13 +7,12 @@ import {
   where,
   orderBy,
   doc,
-  updateDoc,
 } from "firebase/firestore";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import {
   FaCheckCircle,
   FaTimesCircle,
-  FaBell,
+  
   FaHome,
   FaBars,
   FaTimes,
@@ -33,23 +32,12 @@ interface Reporte {
   creadoEn?: any;
 }
 
-interface Notificacion {
-  id: string;
-  titulo: string;
-  mensaje: string;
-  reporteId?: string;
-  leido: boolean;
-  creadoEn?: any;
-}
 
 export default function Reportes() {
   const [reportes, setReportes] = useState<Reporte[]>([]);
   const [userId, setUserId] = useState<string | null>(null);
   const [userRole, setUserRole] = useState<"worker" | "admin" | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [hayNotificaciones, setHayNotificaciones] = useState(false);
-  const [notificaciones, setNotificaciones] = useState<Notificacion[]>([]);
-  const [menuNotificacionesOpen, setMenuNotificacionesOpen] = useState(false);
   const [filtroCategoria, setFiltroCategoria] = useState<string>("todas");
   const [filtroFechaInicio, setFiltroFechaInicio] = useState<string>("");
   const [filtroFechaFin, setFiltroFechaFin] = useState<string>("");
@@ -72,23 +60,7 @@ export default function Reportes() {
     return () => unsubAuth();
   }, []);
 
-  // 🔹 Notificaciones (solo admin)
-  useEffect(() => {
-    if (userRole !== "admin") return;
-    const q = query(
-      collection(db, "notificaciones"),
-      where("para", "==", "admin"),
-      orderBy("creadoEn", "desc")
-    );
-    const unsub = onSnapshot(q, (snap) => {
-      const data = snap.docs.map(
-        (doc) => ({ id: doc.id, ...doc.data() } as Notificacion)
-      );
-      setNotificaciones(data);
-      setHayNotificaciones(data.some((n) => !n.leido));
-    });
-    return () => unsub();
-  }, [userRole]);
+  
 
   // 🔹 Cargar reportes y tareas
   useEffect(() => {
@@ -195,27 +167,13 @@ export default function Reportes() {
       <ul className="list-disc list-inside space-y-1">
         {entries.map(([k, v]) => (
           <li key={k}>
-            <strong className="capitalize">{k}:</strong> {v}
+            <strong className="capitalize">{k}:</strong> {String(v)}
           </li>
         ))}
       </ul>
     );
   };
 
-  const formatearFecha = (fecha: any) => {
-    if (!fecha) return "Sin fecha";
-    try {
-      if (fecha.toDate) return fecha.toDate().toLocaleString();
-      if (typeof fecha === "string") {
-        const parsed = new Date(fecha);
-        if (!isNaN(parsed.getTime())) return parsed.toLocaleString();
-      }
-      if (typeof fecha === "number") return new Date(fecha).toLocaleString();
-      return "Fecha no válida";
-    } catch {
-      return "Error de fecha";
-    }
-  };
 
   const categorias = Array.from(new Set(reportes.map((r) => r.categoria)));
 
@@ -247,17 +205,7 @@ export default function Reportes() {
           >
             <FaHome size={20} />
           </button>
-          <button
-            onClick={() => navigate("/notificaciones")}
-            className="hover:text-indigo-300 transition relative"
-          >
-            <FaBell size={20} />
-            {hayNotificaciones && (
-              <span className="absolute -top-1 -right-1 text-xs animate-bounce">
-                🐮
-              </span>
-            )}
-          </button>
+         
           <button
             onClick={handleLogout}
             className="bg-indigo-600 text-black font-semibold px-3 py-1 rounded-xl hover:bg-indigo-300"
@@ -289,15 +237,7 @@ export default function Reportes() {
           >
             <FaHome /> Inicio
           </button>
-          <button
-            onClick={() => {
-              navigate("/notificaciones");
-              setMenuOpen(false);
-            }}
-            className="w-5/6 py-2 rounded-lg bg-indigo-400 hover:bg-indigo-500 flex items-center font-semibold justify-center gap-2"
-          >
-            <FaBell /> Notificaciones
-          </button>
+          
           <button
             onClick={() => {
               handleLogout();

@@ -12,7 +12,7 @@ import { auth, db } from "./firebase";
 import { signOut, onAuthStateChanged } from "firebase/auth";
 import {
   collection, query, where, updateDoc, doc,
-  onSnapshot, getDocs, setDoc, getDoc
+  onSnapshot, setDoc, getDoc
 } from "firebase/firestore";
 import cowImage from "./assets/cows.jpg";
 import { useUser } from "./UserContext";
@@ -31,6 +31,7 @@ const cards = [
 
 export default function HomePage() {
   const [hayNotificaciones, setHayNotificaciones] = useState(false);
+  const [numNotificaciones, setNumNotificaciones] = useState(0);
   const [usuariosPendientes, setUsuariosPendientes] = useState<any[]>([]);
   const [menuOpen, setMenuOpen] = useState(false);
   const [mostrarUsuarios, setMostrarUsuarios] = useState(true);
@@ -55,19 +56,28 @@ export default function HomePage() {
     return () => unsubscribe();
   }, []);
 
-  const cargarNotificaciones = async () => {
-    const currentUser = auth.currentUser;
-    if (!currentUser) return;
-    const q = query(collection(db, "tareas"), where("uid", "==", currentUser.uid));
-    const querySnapshot = await getDocs(q);
-    const hoy = new Date().toISOString().split("T")[0];
-    const pendientes = querySnapshot.docs
-      .map(doc => doc.data())
-      .filter((t: any) => t.fecha && t.fecha <= hoy && !t.completada);
-    setHayNotificaciones(pendientes.length > 0);
-  };
 
-  useEffect(() => { cargarNotificaciones(); }, []);
+// 🔹 Escuchar notificaciones en tiempo real
+useEffect(() => {
+  if (!user) return; // Espera a que cargue el contexto
+  const currentUser = auth.currentUser;
+  if (!currentUser) return;
+  
+  const q = query(
+    collection(db, "notificaciones"),
+    where("para", "==", user.role === "admin" ? "admin" : currentUser.uid)
+  );
+
+  const unsubscribe = onSnapshot(q, (snap) => {
+    const data = snap.docs.map((doc) => ({ id: doc.id, ...(doc.data() as any) }));
+    const noLeidas = data.filter((n: any) => !n.leido);
+    setHayNotificaciones(noLeidas.length > 0);
+    setNumNotificaciones(noLeidas.length);
+  });
+
+  return () => unsubscribe();
+}, [user]);
+
 
   useEffect(() => {
     if (user?.role !== "admin") return;
@@ -123,15 +133,19 @@ export default function HomePage() {
       <FaHome size={22} />
     </button>
 
-    <Link
-      to="/notificaciones"
-      className="relative hover:text-blue-500"
-    >
-      <FaBell size={22} />
-      {hayNotificaciones && (
-        <span className="absolute -top-1 -right-2 animate-bounce text-sm">🐄</span>
-      )}
-    </Link>
+   <Link
+  to="/notificaciones"
+  className="relative hover:text-blue-500 transition"
+>
+  <FaBell size={22} />
+  {hayNotificaciones && (
+    <span className="absolute -top-1 -right-2 bg-red-600 text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center border-2 border-white animate-pulse">
+      {numNotificaciones > 9 ? "9+" : numNotificaciones}
+    </span>
+  )}
+</Link>
+
+
 
     <button
       onClick={handleLogout}
@@ -161,15 +175,18 @@ export default function HomePage() {
         </button>
 
         <Link
-          to="/notificaciones"
-          onClick={() => setMenuOpen(false)}
-          className="w-5/7 py-2 rounded-xl bg-blue-400 hover:bg-blue-500 text-blackflex items-center font-semibold justify-center gap-2"
-        >
-          <FaBell /> Notificaciones
-          {hayNotificaciones && (
-            <span className="absolute right-4 -top-1 animate-bounce">🐄</span>
-          )}
-        </Link>
+  to="/notificaciones"
+  onClick={() => setMenuOpen(false)}
+  className="relative w-5/7 py-2 rounded-xl bg-blue-400 hover:bg-blue-500 text-black flex items-center font-semibold justify-center gap-2"
+>
+  <FaBell /> Notificaciones
+  {hayNotificaciones && (
+    <span className="absolute top-1 right-5 bg-red-600 text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center border-2 border-white animate-pulse">
+      {numNotificaciones > 9 ? "9+" : numNotificaciones}
+    </span>
+  )}
+</Link>
+
 
         <button
           onClick={() => { handleLogout(); setMenuOpen(false); }}
@@ -184,57 +201,101 @@ export default function HomePage() {
 
           {/* Bienvenida */}
           <div className="mt-5 md:mt-9 text-white text-center font-semibold md:text-xl max-w-2xl px-5">
-            ¡Bienvenido a AniManager {user?.name || ""}! Donde el bienestar de tus animales es primero. 
-            Explora las opciones disponibles en el carrusel.
+            ¡Bienvenido a AniManager {user?.name || ""}! 
           </div>
 
-          {/* Carrusel */}
-          <div className="relative w-full max-w-4xl mt-6 md:mt-10 flex-1 px-4 md:px-6 transition-all duration-500">
+            {/* Botón scroll izquierdo */}
             <button
               onClick={() => scroll("left")}
               className="absolute -left-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full z-20 hidden md:flex"
             >
               <FaChevronLeft />
             </button>
+            
 
-            <div
-              ref={carouselRef}
-              style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
-              className="flex gap-4 md:gap-6 overflow-x-auto pb-4 scroll-smooth"
-            >
-              {cards.map(
-                (card, idx) =>
-                  card.roles.includes(user?.role || "") && (
-                    <Link
-                      key={idx}
-                      to={card.to}
-                      className={`min-w-[12rem] md:min-w-[15rem] h-56 md:h-80 rounded-2xl shadow-lg flex flex-col items-center justify-center flex-shrink-0 text-white font-bold transform transition-all duration-300 ${card.color} ${card.hover} bg-opacity-70 backdrop-blur-sm hover:-translate-y-2 hover:shadow-2xl`}
-                    >
-                      <card.icon size={120} />
-                      <p className="mt-3 text-md md:text-md text-center">{card.title}</p>
-                    </Link>
-                  )
-              )}
+          {/* Bloque móvil: grid 2 columnas */}
+<div className="md:hidden flex-1 overflow-y-auto pt-6 pb-6 px-3">
+  <div className="grid grid-cols-2 gap-4 justify-center">
+    {cards.map(
+      (card, idx) =>
+        card.roles.includes(user?.role || "") && (
+          <Link
+            key={idx}
+            to={card.to}
+            className={`w-full h-56 sm:h-64 rounded-2xl shadow-lg flex flex-col items-center justify-center text-white font-bold transform transition-all duration-300 
+              ${card.color} ${card.hover} bg-opacity-70 backdrop-blur-sm
+              hover:-translate-y-1 hover:shadow-xl
+              active:translate-y-0.5 active:shadow-2xl`}
+          >
+            <card.icon size={60} />
+            <p className="mt-2 text-sm text-center px-2">{card.title}</p>
+          </Link>
+        )
+    )}
 
-              {user?.role === "admin" && (
-                <Link
-                  to="/usuarios"
-                  className="min-w-[12rem] md:min-w-[15rem] h-56 md:h-80 rounded-2xl shadow-lg flex flex-col items-center justify-center flex-shrink-0 text-white font-bold bg-purple-500 hover:bg-purple-600"
-                >
-                  <FaUserPlus size={120} />
-                  <p className="mt-3 text-md md:text-md text-center">Usuarios (Workers)</p>
-                </Link>
-              )}
-            </div>
+    {user?.role === "admin" && (
+      <Link
+        to="/usuarios"
+        className={`w-full h-56 sm:h-64 rounded-2xl shadow-lg flex flex-col items-center justify-center text-white font-bold 
+          bg-purple-500 hover:bg-purple-600 transform transition-all duration-300
+          hover:-translate-y-1 hover:shadow-xl active:translate-y-0.5 active:shadow-2xl`}
+      >
+        <FaUserPlus size={60} />
+        <p className="mt-2 text-sm text-center px-2">Usuarios (Workers)</p>
+      </Link>
+    )}
+  </div>
+</div>
 
-            <button
-              onClick={() => scroll("right")}
-              className="absolute -right-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full z-20 hidden md:flex"
-            >
-              <FaChevronRight />
-            </button>
-          </div>
+{/* Bloque desktop: carrusel */}
+<div className="hidden md:flex relative w-full max-w-4xl mt-6 md:mt-10 flex-1 px-4 md:px-6 transition-all duration-500">
+  <button
+    onClick={() => scroll("left")}
+    className="absolute -left-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full z-20"
+  >
+    <FaChevronLeft />
+  </button>
+
+  <div
+    ref={carouselRef}
+    style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+    className="flex gap-4 md:gap-6 overflow-x-auto pb-4 scroll-smooth"
+  >
+    {cards.map(
+      (card, idx) =>
+        card.roles.includes(user?.role || "") && (
+          <Link
+            key={idx}
+            to={card.to}
+            className={`min-w-[15rem] h-80 rounded-2xl shadow-lg flex flex-col items-center justify-center flex-shrink-0 text-white font-bold transform transition-all duration-300 ${card.color} ${card.hover} bg-opacity-70 backdrop-blur-sm hover:-translate-y-2 hover:shadow-2xl`}
+          >
+            <card.icon size={120} />
+            <p className="mt-3 text-md text-center">{card.title}</p>
+          </Link>
+        )
+    )}
+
+    {user?.role === "admin" && (
+      <Link
+        to="/usuarios"
+        className="min-w-[15rem] h-80 rounded-2xl shadow-lg flex flex-col items-center justify-center flex-shrink-0 text-white font-bold bg-purple-500 hover:bg-purple-600"
+      >
+        <FaUserPlus size={120} />
+        <p className="mt-3 text-md text-center">Usuarios (Workers)</p>
+      </Link>
+    )}
+  </div>
+
+  <button
+    onClick={() => scroll("right")}
+    className="absolute -right-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full z-20"
+  >
+    <FaChevronRight />
+  </button>
+</div>
+
         </div>
+        
 
         {/* Panel lateral de usuarios pendientes */}
         {user?.role === "admin" && (

@@ -10,13 +10,12 @@ import {
   addDoc,
 } from "firebase/firestore";
 import { db, auth } from "./firebase";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import {
   FaHome,
   FaUserTie,
   FaEdit,
   FaTrash,
-  FaBell,
   FaBars,
   FaTimes,
 } from "react-icons/fa";
@@ -51,7 +50,7 @@ export default function UsuariosPage() {
     emergencyNumber: "",
   });
   const [menuOpen, setMenuOpen] = useState(false);
-  const [hayNotificaciones, setHayNotificaciones] = useState(false);
+  const [] = useState(false);
   const workersPerPage = 8;
   const navigate = useNavigate();
 
@@ -159,14 +158,7 @@ export default function UsuariosPage() {
             <FaHome size={22} />
           </button>
 
-          <Link to="/notificaciones" className="relative hover:text-purple-300">
-            <FaBell size={20} />
-            {hayNotificaciones && (
-              <span className="absolute -top-1 -right-2 bg-red-600 text-white text-xs rounded-full px-1.5 py-0.5 animate-pulse">
-                🐮
-              </span>
-            )}
-          </Link>
+         
 
           <button
             onClick={handleLogout}
@@ -199,13 +191,7 @@ export default function UsuariosPage() {
             >
               <FaHome /> Inicio
             </button>
-            <Link
-              to="/notificaciones"
-              onClick={() => setMenuOpen(false)}
-              className="w-4/5 py-2 rounded-xl bg-purple-400 hover:bg-purple-500 flex items-center font-semibold justify-center gap-2"
-            >
-              <FaBell /> Notificaciones
-            </Link>
+           
             <button
               onClick={() => {
                 handleLogout();

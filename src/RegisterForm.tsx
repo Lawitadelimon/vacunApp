@@ -6,7 +6,11 @@ import { motion } from "framer-motion";
 import { FaUser, FaEnvelope, FaLock, FaEye, FaEyeSlash } from "react-icons/fa";
 import Swal from "sweetalert2";
 
-export function RegisterForm({ onRegisterSuccess }: { onRegisterSuccess: () => void }) {
+interface RegisterFormProps {
+  onRegisterSuccess: () => void;
+}
+
+export function RegisterForm({ onRegisterSuccess }: RegisterFormProps) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
@@ -22,7 +26,7 @@ export function RegisterForm({ onRegisterSuccess }: { onRegisterSuccess: () => v
     }
 
     if (!email || !password) {
-      Swal.fire("Error", "❌ Por favor, completa todos los campos.", "warning");
+      Swal.fire("Error", "❌ Completa todos los campos.", "warning");
       return;
     }
 
@@ -87,7 +91,7 @@ export function RegisterForm({ onRegisterSuccess }: { onRegisterSuccess: () => v
         />
       </div>
 
-      {/* Contraseña con mostrar/ocultar */}
+      {/* Contraseña */}
       <div className="relative">
         <FaLock className="absolute left-3 top-3 text-gray-500" />
         <input
@@ -102,13 +106,12 @@ export function RegisterForm({ onRegisterSuccess }: { onRegisterSuccess: () => v
           type="button"
           onClick={() => setShowPassword(!showPassword)}
           className="absolute right-3 top-2.5 text-gray-500 hover:text-[#099757] transition"
-          aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
         >
           {showPassword ? <FaEyeSlash /> : <FaEye />}
         </button>
       </div>
 
-      {/* Botón principal */}
+      {/* Botón */}
       <motion.button
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.97 }}

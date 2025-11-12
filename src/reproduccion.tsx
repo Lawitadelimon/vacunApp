@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { collection, addDoc, getDocs, doc, setDoc, deleteDoc, getDoc } from "firebase/firestore";
 import { db } from "./firebase";
-import { FaTrash, FaEdit, FaHome, FaBell, FaTimes, FaBars } from "react-icons/fa";
+import { FaTrash, FaEdit, FaHome,  FaTimes, FaBars } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import cowsBackground from "./assets/cows2.jpg";
 import { getAuth, signOut } from "firebase/auth";
@@ -182,9 +182,7 @@ export default function ReproduccionPorHembra() {
           <button onClick={() => navigate("/home")} className="hover:text-amber-300 transition">
             <FaHome size={20} />
           </button>
-          <button onClick={() => navigate("/notificaciones")} className="hover:text-amber-300 transition">
-            <FaBell size={20} />
-          </button>
+          
           <button onClick={handleLogout} className="bg-amber-600 text-black font-semibold px-3 py-1 rounded-xl hover:bg-amber-300">
             Cerrar sesión
           </button>
@@ -199,9 +197,7 @@ export default function ReproduccionPorHembra() {
             <button onClick={() => { navigate("/home"); setMenuAbierto(false); }} className="w-4/5 py-2 rounded-xl bg-amber-400 hover:bg-amber-500 flex items-center font-semibold justify-center gap-2">
               <FaHome /> Inicio
             </button>
-            <button onClick={() => { navigate("/notificaciones"); setMenuAbierto(false); }} className="w-4/5 py-2 rounded-xl bg-amber-400 hover:bg-amber-500 flex items-center font-semibold justify-center gap-2">
-              <FaBell /> Notificaciones
-            </button>
+            
             <button onClick={() => { handleLogout(); setMenuAbierto(false); }} className="w-4/5 py-2 bg-red-600 text-white rounded-xl hover:bg-red-700 flex items-center font-semibold justify-center gap-2">
               Cerrar sesión
             </button>
