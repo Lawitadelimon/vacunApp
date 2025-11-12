@@ -316,13 +316,13 @@ export default function UsuariosPage() {
                 onClick={() =>
                   editingWorker ? setEditingWorker(null) : setAddingWorker(false)
                 }
-                className="px-3 py-1 bg-gray-400 hover:bg-gray-500 text-white rounded-md text-sm sm:text-base"
+                className="px-3 py-1 bg-gray-400 hover:bg-gray-500 text-white rounded-xl font-semibold text-sm sm:text-base"
               >
                 Cancelar
               </button>
               <button
                 onClick={editingWorker ? guardarEdicion : guardarNuevo}
-                className="px-3 py-1 bg-green-500 hover:bg-green-600 text-white rounded-md text-sm sm:text-base"
+                className="px-3 py-1 bg-green-500 hover:bg-green-600 text-white rounded-xl font-semibold text-sm sm:text-base"
               >
                 Guardar
               </button>

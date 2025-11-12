@@ -283,6 +283,7 @@ export default function AnimalesPorLote() {
 <div className="w-full md:w-1/6 bg-white/30 backdrop-blur-md border border-white/40 p-4 rounded-3xl shadow-lg flex flex-col gap-2 overflow-y-auto">
 
   <h2 className="text-black text-xl font-bold mb-4">Lotes </h2>
+  
 
   {lotes.map(lote => (
     <div
@@ -349,9 +350,36 @@ export default function AnimalesPorLote() {
     </div>
   ))}
 
-  <button className="mt-2 bg-green-600 text-white font-semibold px-3 py-1 rounded-xl flex items-center gap-2 hover:bg-green-700 transition">
-    <FaPlus /> Agregar Lote
-  </button>
+  <button
+  onClick={async () => {
+    const { value: nombreLote } = await Swal.fire({
+      title: 'Nuevo Lote',
+      input: 'text',
+      inputLabel: 'Nombre del lote',
+      showCancelButton: true,
+      confirmButtonText: 'Crear',
+      cancelButtonText: 'Cancelar',
+      inputValidator: (value) => !value && 'El nombre no puede estar vacío'
+    });
+
+    if (nombreLote) {
+      const user = auth.currentUser;
+      if (!user) return;
+
+      try {
+        await addDoc(collection(db, "lotes"), { nombre: nombreLote, uid: user.uid });
+        cargarLotes();
+        Swal.fire('¡Creado!', 'El lote se creó correctamente', 'success');
+      } catch (error) {
+        Swal.fire('Error', 'No se pudo crear el lote', 'error');
+      }
+    }
+  }}
+  className="mt-2 bg-green-600 text-white font-semibold px-3 py-1 rounded-xl flex items-center gap-2 hover:bg-green-700 transition"
+>
+  <FaPlus /> Agregar Lote
+</button>
+
 </div>
 
 

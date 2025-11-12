@@ -34,8 +34,7 @@ export default function HomePage() {
   const [numNotificaciones, setNumNotificaciones] = useState(0);
   const [usuariosPendientes, setUsuariosPendientes] = useState<any[]>([]);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [mostrarUsuarios, setMostrarUsuarios] = useState(true);
-  const navigate = useNavigate();
+const [mostrarUsuarios, setMostrarUsuarios] = useState(window.innerWidth >= 768);   const navigate = useNavigate();
   const carouselRef = useRef<HTMLDivElement>(null);
   const { user } = useUser();
 
