@@ -507,6 +507,8 @@ export default function AnimalesPorLote() {
           )}
         </div>
       </div>
+      
+      
     </div>
   );
 }

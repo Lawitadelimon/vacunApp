@@ -209,7 +209,7 @@ export default function ReproduccionPorHembra() {
         {/* Lista de hembras */}
         <div className="w-full md:w-1/4 bg-white/40 backdrop-blur-md border border-white/50 p-4 rounded-xl shadow-lg md:sticky md:top-24 max-h-[60vh] md:max-h-[calc(100vh-8rem)] overflow-y-auto">
           <h2 className="text-xl font-bold mb-4 text-black">Hembras</h2>
-          <div className="mb-4">
+          <div className="overflow-x-auto">
             <select value={filtroEstado} onChange={(e) => { setFiltroEstado(e.target.value as any); setPagina(1); }} className="w-full px-2 py-1 rounded border focus:ring-2 focus:ring-amber-400">
               <option value="todas">Todas</option>
               <option value="vivo">Vivas/Activas</option>
@@ -325,9 +325,7 @@ export default function ReproduccionPorHembra() {
         </div>
       </div>
 
-      <footer className="w-full bg-green-700/90 py-3 md:py-4 text-center text-xs md:text-sm text-white fixed bottom-0 z-50">
-        <p>© 2025 INNOVASYSTEM. Todos los derechos reservados.</p>
-      </footer>
+      
     </div>
   );
 }

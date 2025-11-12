@@ -288,10 +288,7 @@ export default function UsuariosPage() {
         </motion.div>
       </main>
 
-      {/* FOOTER */}
-      <footer className="bg-[#094297dc] text-white text-xs sm:text-sm py-3 text-center w-full z-20">
-        © 2025 INNOVASYSTEM. Todos los derechos reservados.
-      </footer>
+      
 
       {/* MODALES */}
       {(editingWorker || addingWorker) && (

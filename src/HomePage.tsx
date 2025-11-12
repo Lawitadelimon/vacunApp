@@ -56,25 +56,28 @@ export default function HomePage() {
     return () => unsubscribe();
   }, []);
 
-  useEffect(() => {
-    if (!user) return;
-    const currentUser = auth.currentUser;
-    if (!currentUser) return;
 
-    const q = query(
-      collection(db, "notificaciones"),
-      where("para", "==", user.role === "admin" ? "admin" : currentUser.uid)
-    );
+// 🔹 Escuchar notificaciones en tiempo real
+useEffect(() => {
+  if (!user) return; // Espera a que cargue el contexto
+  const currentUser = auth.currentUser;
+  if (!currentUser) return;
+  
+  const q = query(
+    collection(db, "notificaciones"),
+    where("para", "==", user.role === "admin" ? "admin" : currentUser.uid)
+  );
 
-    const unsubscribe = onSnapshot(q, (snap) => {
-      const data = snap.docs.map((doc) => ({ id: doc.id, ...(doc.data() as any) }));
-      const noLeidas = data.filter((n: any) => !n.leido);
-      setHayNotificaciones(noLeidas.length > 0);
-      setNumNotificaciones(noLeidas.length);
-    });
+  const unsubscribe = onSnapshot(q, (snap) => {
+    const data = snap.docs.map((doc) => ({ id: doc.id, ...(doc.data() as any) }));
+    const noLeidas = data.filter((n: any) => !n.leido);
+    setHayNotificaciones(noLeidas.length > 0);
+    setNumNotificaciones(noLeidas.length);
+  });
 
-    return () => unsubscribe();
-  }, [user]);
+  return () => unsubscribe();
+}, [user]);
+
 
   useEffect(() => {
     if (user?.role !== "admin") return;
@@ -106,7 +109,7 @@ export default function HomePage() {
   };
 
   return (
-    <div className="relative min-h-screen flex flex-col overflow-x-hidden">
+    <div className="relative min-h-screen flex flex-col">
       {/* Fondo */}
       <div
         className="absolute inset-0 z-0 bg-cover bg-center"
@@ -115,191 +118,265 @@ export default function HomePage() {
       <div className="absolute inset-0 z-0 bg-black/40 backdrop-blur-[3px]" />
 
       {/* Contenido principal */}
-      <div className="relative z-10 flex-1 flex flex-col md:flex-row w-full min-w-0 transition-all duration-500">
+      <div className="relative z-10 flex-1 flex flex-col md:flex-row w-full transition-all duration-500 min-w-0">
 
         {/* Columna izquierda */}
-        <div className={`flex flex-col items-center transition-all duration-500 flex-1 min-w-0 ${mostrarUsuarios ? "" : "w-full"}`}>
+        <div className={`flex flex-col items-center transition-all duration-500 ${mostrarUsuarios ? "md:flex-1" : "w-full"}`}>
 
           {/* Header */}
           <header className="w-full py-3 px-4 md:py-4 md:px-6 flex justify-between items-center shadow-md bg-black/5 backdrop-blur-md text-white relative z-20">
             <h1 className="text-lg md:text-2xl font-extrabold">AniManager</h1>
 
-            {/* Desktop */}
-            <div className="hidden md:flex items-center gap-4">
-              <button onClick={() => navigate("/home")} className="hover:text-blue-500 transition">
-                <FaHome size={22} />
-              </button>
+            {/* Desktop: íconos fijos */}
+  <div className="hidden md:flex items-center gap-4">
+    <button onClick={() => navigate("/home")} className="hover:text-blue-500 transition">
+      <FaHome size={22} />
+    </button>
 
-              <Link to="/notificaciones" className="relative hover:text-blue-500 transition">
-                <FaBell size={22} />
-                {hayNotificaciones && (
-                  <span className="absolute -top-1 -right-2 bg-red-600 text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center border-2 border-white animate-pulse">
-                    {numNotificaciones > 9 ? "9+" : numNotificaciones}
-                  </span>
-                )}
-              </Link>
+   <Link
+  to="/notificaciones"
+  className="relative hover:text-blue-500 transition"
+>
+  <FaBell size={22} />
+  {hayNotificaciones && (
+    <span className="absolute -top-1 -right-2 bg-red-600 text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center border-2 border-white animate-pulse">
+      {numNotificaciones > 9 ? "9+" : numNotificaciones}
+    </span>
+  )}
+</Link>
 
-              <button onClick={handleLogout} className="bg-red-600 hover:bg-red-700 text-white font-semibold px-3 py-1 rounded-xl transition">
-                Cerrar sesión
-              </button>
-            </div>
 
-            {/* Mobile */}
-            <div className="md:hidden relative">
-              <button
-                className="text-white text-2xl focus:outline-none"
-                onClick={() => setMenuOpen(!menuOpen)}
-              >
-                {menuOpen ? <FaTimes /> : <FaBars />}
-              </button>
 
-              {menuOpen && (
-                <div className="absolute right-0 mt-2 w-48 bg-white/40 backdrop-blur-md rounded-xl shadow-lg py-3 flex flex-col items-center gap-2 z-50">
-                  <button onClick={() => { navigate("/home"); setMenuOpen(false); }}
-                    className="w-5/7 py-2 rounded-xl bg-blue-400 hover:bg-blue-500 text-black flex items-center font-semibold justify-center gap-2">
-                    <FaHome /> Inicio
-                  </button>
+    <button
+      onClick={handleLogout}
+      className="bg-red-600 hover:bg-red-700 text-white font-semibold px-3 py-1 rounded-xl transition"
+    >
+      Cerrar sesión
+    </button>
+  </div>
 
-                  <Link to="/notificaciones" onClick={() => setMenuOpen(false)}
-                    className="relative w-5/7 py-2 rounded-xl bg-blue-400 hover:bg-blue-500 text-black flex items-center font-semibold justify-center gap-2">
-                    <FaBell /> Notificaciones
-                    {hayNotificaciones && (
-                      <span className="absolute top-1 right-5 bg-red-600 text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center border-2 border-white animate-pulse">
-                        {numNotificaciones > 9 ? "9+" : numNotificaciones}
-                      </span>
-                    )}
-                  </Link>
+  {/* Mobile */}
+<div className="md:hidden relative">
+  <button
+    className="text-white text-2xl focus:outline-none"
+    onClick={() => setMenuOpen(!menuOpen)}
+  >
+    {menuOpen ? <FaTimes /> : <FaBars />}
+  </button>
 
-                  <button onClick={() => { handleLogout(); setMenuOpen(false); }}
-                    className="bg-red-600 hover:bg-red-700 text-white font-semibold px-3 py-1 rounded-xl w-5/7 flex items-center justify-center gap-2">
-                    Cerrar sesión
-                  </button>
+  {menuOpen && (
+    <div className="absolute right-0 mt-2 w-48 bg-white/40 backdrop-blur-md rounded-xl shadow-lg py-3 flex flex-col items-center gap-2 z-50">
+      
+      <button
+        onClick={() => { navigate("/home"); setMenuOpen(false); }}
+        className="w-5/7 py-2 rounded-xl bg-blue-400 hover:bg-blue-500 text-black flex items-center font-semibold justify-center gap-2"
+      >
+        <FaHome /> Inicio
+      </button>
 
-                  {/* Mostrar usuarios solo en mobile */}
-                  {user?.role === "admin" && !mostrarUsuarios && (
-                    <button onClick={() => { setMostrarUsuarios(true); setMenuOpen(false); }}
-                      className="bg-green-600 hover:bg-green-700 text-white font-semibold px-3 py-1 rounded-xl w-5/7 flex items-center justify-center gap-2">
-                      <FaUserPlus /> Mostrar usuarios
-                    </button>
-                  )}
-                </div>
-              )}
-            </div>
+      <Link
+        to="/notificaciones"
+        onClick={() => setMenuOpen(false)}
+        className="relative w-5/7 py-2 rounded-xl bg-blue-400 hover:bg-blue-500 text-black flex items-center font-semibold justify-center gap-2"
+      >
+        <FaBell /> Notificaciones
+        {hayNotificaciones && (
+          <span className="absolute top-1 right-5 bg-red-600 text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center border-2 border-white animate-pulse">
+            {numNotificaciones > 9 ? "9+" : numNotificaciones}
+          </span>
+        )}
+      </Link>
 
-            {/* Botón para volver a mostrar usuarios en desktop */}
-            {user?.role === "admin" && !mostrarUsuarios && (
-              <button
-                onClick={() => setMostrarUsuarios(true)}
-                className="hidden md:block fixed top-20 right-4 bg-white/40 text-white px-3 py-1 rounded-xl hover:bg-white/30 z-50 transition-all duration-500"
-              >
-                Mostrar usuarios
-              </button>
-            )}
-          </header>
+      <button
+        onClick={() => { handleLogout(); setMenuOpen(false); }}
+        className="bg-red-600 hover:bg-red-700 text-white font-semibold px-3 py-1 rounded-xl w-5/7 flex items-center justify-center gap-2"
+      >
+        Cerrar sesión
+      </button>
+
+      {/* Mostrar usuarios solo en mobile */}
+      {user?.role === "admin" && !mostrarUsuarios && (
+        <button
+          onClick={() => { setMostrarUsuarios(true); setMenuOpen(false); }}
+          className="bg-green-600 hover:bg-green-700 text-white font-semibold px-3 py-1 rounded-xl w-5/7 flex items-center justify-center gap-2"
+        >
+          <FaUserPlus /> Mostrar usuarios
+        </button>
+      )}
+
+    </div>
+  )}
+</div>
+{/* Botón para volver a mostrar usuarios en desktop */}
+{user?.role === "admin" && !mostrarUsuarios && (
+  <button
+    onClick={() => setMostrarUsuarios(true)}
+    className="hidden md:block fixed top-20 right-4 bg-white/40 text-white px-3 py-1 rounded-xl hover:bg-white/30 z-50 transition-all duration-500"
+  >
+    Mostrar usuarios
+  </button>
+)}
+
+
+
+</header>
 
           {/* Bienvenida */}
           <div className="mt-5 md:mt-9 text-white text-center font-semibold md:text-xl max-w-2xl px-5">
-            ¡Bienvenido a AniManager {user?.name || ""}!
+            ¡Bienvenido a AniManager {user?.name || ""}! 
           </div>
 
-          {/* Bloque móvil: grid 2 columnas */}
-          <div className="md:hidden flex-1 overflow-y-auto pt-6 pb-6 px-3">
-            <div className="grid grid-cols-2 gap-4 justify-center">
-              {cards.map((card, idx) =>
-                card.roles.includes(user?.role || "") && (
-                  <Link key={idx} to={card.to}
-                    className={`w-full h-56 sm:h-64 rounded-2xl shadow-lg flex flex-col items-center justify-center text-white font-bold transform transition-all duration-300 
-                    ${card.color} ${card.hover} bg-opacity-70 backdrop-blur-sm hover:-translate-y-1 hover:shadow-xl active:translate-y-0.5 active:shadow-2xl`}>
-                    <card.icon size={60} />
-                    <p className="mt-2 text-sm text-center px-2">{card.title}</p>
-                  </Link>
-                )
-              )}
-              {user?.role === "admin" && (
-                <Link to="/usuarios"
-                  className={`w-full h-56 sm:h-64 rounded-2xl shadow-lg flex flex-col items-center justify-center text-white font-bold 
-                  bg-purple-500 hover:bg-purple-600 transform transition-all duration-300
-                  hover:-translate-y-1 hover:shadow-xl active:translate-y-0.5 active:shadow-2xl`}>
-                  <FaUserPlus size={60} />
-                  <p className="mt-2 text-sm text-center px-2">Usuarios (Workers)</p>
-                </Link>
-              )}
-            </div>
-          </div>
-
-          {/* Bloque desktop: carrusel */}
-          <div className="hidden md:flex relative w-full max-w-6xl mt-6 md:mt-10 flex-1 px-4 md:px-6 transition-all duration-500 overflow-hidden">
-            <button onClick={() => scroll("left")}
-              className="absolute left-0 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full z-20">
+            {/* Botón scroll izquierdo */}
+            <button
+              onClick={() => scroll("left")}
+              className="absolute -left-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full z-20 hidden md:flex"
+            >
               <FaChevronLeft />
             </button>
+            
 
-            <div ref={carouselRef} className="flex gap-6 overflow-x-auto pb-4 scroll-smooth min-w-0">
-              {cards.map((card, idx) =>
-                card.roles.includes(user?.role || "") && (
-                  <Link key={idx} to={card.to}
-                    className={`flex-shrink-0 w-60 h-80 rounded-2xl shadow-lg flex flex-col items-center justify-center text-white font-bold transform transition-all duration-300 ${card.color} ${card.hover} bg-opacity-70 backdrop-blur-sm hover:-translate-y-2 hover:shadow-2xl`}>
-                    <card.icon size={120} />
-                    <p className="mt-3 text-md text-center">{card.title}</p>
-                  </Link>
-                )
-              )}
-              {user?.role === "admin" && (
-                <Link to="/usuarios"
-                  className="flex-shrink-0 w-60 h-80 rounded-2xl shadow-lg flex flex-col items-center justify-center text-white font-bold bg-purple-500 hover:bg-purple-600">
-                  <FaUserPlus size={120} />
-                  <p className="mt-3 text-md text-center">Usuarios (Workers)</p>
-                </Link>
-              )}
-            </div>
+          {/* Bloque móvil: grid 2 columnas */}
+<div className="md:hidden flex-1 overflow-y-auto pt-6 pb-6 px-3">
+  <div className="grid grid-cols-2 gap-4 justify-center">
+    {cards.map(
+      (card, idx) =>
+        card.roles.includes(user?.role || "") && (
+          <Link
+            key={idx}
+            to={card.to}
+            className={`w-full h-56 sm:h-64 rounded-2xl shadow-lg flex flex-col items-center justify-center text-white font-bold transform transition-all duration-300 
+              ${card.color} ${card.hover} bg-opacity-70 backdrop-blur-sm
+              hover:-translate-y-1 hover:shadow-xl
+              active:translate-y-0.5 active:shadow-2xl`}
+          >
+            <card.icon size={60} />
+            <p className="mt-2 text-sm text-center px-2">{card.title}</p>
+          </Link>
+        )
+    )}
 
-            <button onClick={() => scroll("right")}
-              className="absolute right-0 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full z-20">
-              <FaChevronRight />
-            </button>
-          </div>
+    {user?.role === "admin" && (
+      <Link
+        to="/usuarios"
+        className={`w-full h-56 sm:h-64 rounded-2xl shadow-lg flex flex-col items-center justify-center text-white font-bold 
+          bg-purple-500 hover:bg-purple-600 transform transition-all duration-300
+          hover:-translate-y-1 hover:shadow-xl active:translate-y-0.5 active:shadow-2xl`}
+      >
+        <FaUserPlus size={60} />
+        <p className="mt-2 text-sm text-center px-2">Usuarios (Workers)</p>
+      </Link>
+    )}
+  </div>
+</div>
+
+{/* Bloque desktop: carrusel */}
+<div className="hidden md:flex relative w-full max-w-4xl mt-6 md:mt-10 flex-1 px-4 md:px-6 transition-all duration-500">
+  <button
+    onClick={() => scroll("left")}
+    className="absolute -left-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full z-20"
+  >
+    <FaChevronLeft />
+  </button>
+
+  <div 
+    ref={carouselRef}
+    style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+    className="flex gap-4 md:gap-6 overflow-x-auto pb-4 scroll-smooth"
+  >
+    {cards.map(
+      (card, idx) =>
+        card.roles.includes(user?.role || "") && (
+          <Link
+            key={idx}
+            to={card.to}
+            className={`min-w-[15rem] h-80 rounded-2xl shadow-lg flex flex-col items-center justify-center flex-shrink-0 text-white font-bold transform transition-all duration-300 ${card.color} ${card.hover} bg-opacity-70 backdrop-blur-sm hover:-translate-y-2 hover:shadow-2xl`}
+          >
+            <card.icon size={120} />
+            <p className="mt-3 text-md text-center">{card.title}</p>
+          </Link>
+        )
+    )}
+
+    {user?.role === "admin" && (
+      <Link
+        to="/usuarios"
+        className="min-w-[15rem] h-80 rounded-2xl shadow-lg flex flex-col items-center justify-center flex-shrink-0 text-white font-bold bg-purple-500 hover:bg-purple-600"
+      >
+        <FaUserPlus size={120} />
+        <p className="mt-3 text-md text-center">Usuarios (Workers)</p>
+      </Link>
+    )}
+  </div>
+
+  <button
+    onClick={() => scroll("right")}
+    className="absolute -right-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full z-20"
+  >
+    <FaChevronRight />
+  </button>
+</div>
+
         </div>
+        
 
         {/* Panel lateral de usuarios pendientes */}
         {user?.role === "admin" && (
-          <aside className={`transition-all duration-500 md:w-72 flex-shrink-0 ${mostrarUsuarios ? "block" : "hidden"} bg-white/10 backdrop-blur-md text-white border-t md:border-t-0 md:border-l border-white/30`}>
-            {mostrarUsuarios && (
-              <>
-                <div className="flex justify-between items-center mb-3">
-                  <h2 className="text-base md:text-lg font-bold flex items-center gap-2">
-                    <FaUserPlus /> Usuarios en espera
-                  </h2>
-                  <button onClick={() => setMostrarUsuarios(false)}
-                    className="text-sm md:text-base px-2 py-1 bg-white/40 rounded-xl hover:bg-white/30">
-                    Ocultar
+  <aside
+    className={`transition-all duration-500 
+      ${mostrarUsuarios 
+        ? "fixed inset-0 md:relative md:w-72 p-4 z-50" 
+        : "fixed left-full md:relative md:w-0 p-0 overflow-hidden"} 
+      bg-white/20 md:bg-white/10 backdrop-blur-md text-white border-t md:border-t-0 md:border-l border-white/30`}
+  >
+    {mostrarUsuarios && (
+      <>
+        <div className="flex justify-between items-center mb-3">
+          <h2 className="text-base md:text-lg font-bold flex items-center gap-2">
+            <FaUserPlus /> Usuarios en espera
+          </h2>
+          <button
+            onClick={() => setMostrarUsuarios(false)}
+            className="text-sm md:text-base px-2 py-1 bg-white/40 rounded-xl hover:bg-white/30"
+          >
+            Ocultar
+          </button>
+        </div>
+        {usuariosPendientes.length === 0 ? (
+          <p className="text-sm text-gray-200">No hay usuarios en espera</p>
+        ) : (
+          <ul className="space-y-3">
+            {usuariosPendientes.map((u) => (
+              <li key={u.id} className="bg-white/20 rounded-lg p-3 flex flex-col">
+                <span className="font-semibold text-sm md:text-base">{u.name}</span>
+                <span className="text-xs text-gray-200">{u.email}</span>
+                <div className="flex gap-2 mt-2">
+                  <button
+                    onClick={() => asignarRol(u.id, "worker")}
+                    className="flex-1 bg-green-600 hover:bg-green-700 text-white text-xs py-1 rounded-xl"
+                  >
+                    Worker
+                  </button>
+                  <button
+                    onClick={() => asignarRol(u.id, "admin")}
+                    className="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-xs py-1 rounded-xl"
+                  >
+                    Admin
                   </button>
                 </div>
-                {usuariosPendientes.length === 0 ? (
-                  <p className="text-sm text-gray-200">No hay usuarios en espera</p>
-                ) : (
-                  <ul className="space-y-3">
-                    {usuariosPendientes.map((u) => (
-                      <li key={u.id} className="bg-white/20 rounded-lg p-3 flex flex-col">
-                        <span className="font-semibold text-sm md:text-base">{u.name}</span>
-                        <span className="text-xs text-gray-200">{u.email}</span>
-                        <div className="flex gap-2 mt-2">
-                          <button onClick={() => asignarRol(u.id, "worker")}
-                            className="flex-1 bg-green-600 hover:bg-green-700 text-white text-xs py-1 rounded-xl">Worker</button>
-                          <button onClick={() => asignarRol(u.id, "admin")}
-                            className="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-xs py-1 rounded-xl">Admin</button>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </>
-            )}
-          </aside>
+              </li>
+            ))}
+          </ul>
         )}
+      </>
+    )}
+  </aside>
+)}
+
       </div>
 
-      {/* Footer */}
-      <footer className="w-full bg-blue-900 py-3 md:py-4 text-center text-xs md:text-sm text-white fixed bottom-0 z-50">
+      
+
+      <footer className="w-full bg-blue-900 py-3 md:py-4 text-center text-xs md:text-sm text-white  bottom-0 z-50">
         <p>© 2025 INNOVASYSTEM. Todos los derechos reservados.</p>
       </footer>
     </div>

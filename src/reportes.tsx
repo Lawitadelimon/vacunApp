@@ -366,10 +366,7 @@ export default function Reportes() {
         )}
       </main>
 
-      {/* Footer */}
-      <footer className="w-full bg-[#099757dc] py-3 md:py-4 text-center text-xs md:text-sm text-white fixed bottom-0 z-50">
-        <p>© 2025 INNOVASYSTEM. Todos los derechos reservados.</p>
-      </footer>
+      
     </div>
   );
 }

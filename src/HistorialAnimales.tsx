@@ -317,12 +317,11 @@ export default function Estadisticas() {
             </div>
           </div>
         </div>
+         
+      
       </main>
-
-      {/* Footer */}
-      <footer className="w-full bg-[#099757dc] py-3 md:py-4 text-center text-xs md:text-sm text-white">
-        © 2025 INNOVASYSTEM. Todos los derechos reservados.
-      </footer>
+                
+     
     </div>
   );
 }
