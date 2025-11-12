@@ -9,8 +9,8 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'robots.txt'],
       manifest: {
-        name: 'Gestión de Granja - INNOVASYSTEM',
-        short_name: 'GranjaApp',
+        name: 'ANIMANAGER - INNOVASYSTEM',
+        short_name: 'AniManager',
         start_url: '/',
         display: 'standalone',
         background_color: '#ffffff',
@@ -42,7 +42,9 @@ export default defineConfig({
             }
           }
         ]
+        
       }
     })
   ]
+  
 })
