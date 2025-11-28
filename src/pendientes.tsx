@@ -244,7 +244,7 @@ export default function Pendientes() {
 
           <button
             onClick={handleLogout}
-            className="bg-blue-400 hover:bg-blue-700 text-white font-semibold px-3 py-1 rounded-xl"
+            className="bg-blue-400 hover:bg-blue-700 text-black font-semibold px-3 py-1 rounded-xl"
           >
             Cerrar sesión
           </button>
@@ -399,7 +399,7 @@ export default function Pendientes() {
 
           {/* Formulario */}
           <section className="bg-white/90 rounded-2xl shadow-lg p-4 sm:p-6 w-full md:w-1/2 border border-blue-500 transition-all hover:shadow-2xl">
-            <h2 className="text-lg sm:text-xl font-bold text-blue-800 mb-4 border-b border-blue-500 pb-2">
+            <h2 className="text-lg sm:text-xl font-bold text-black mb-4 border-b border-blue-500 pb-2">
               {editandoId ? "✏️ Editar tarea" : "🧾 Añadir nueva tarea"}
             </h2>
             <form className="space-y-4" onSubmit={handleSubmit}>

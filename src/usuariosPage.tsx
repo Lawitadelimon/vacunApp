@@ -147,10 +147,10 @@ export default function UsuariosPage() {
 
       {/* HEADER */}
       <header className="fixed top-0 left-0 w-full py-3 px-4 sm:px-6 flex justify-between items-center bg-purple-600 text-white shadow-md z-30">
-        <h1 className="text-2xl text-black md:text-2xl font-extrabold">Lista de Trabajadores</h1>
+        <h1 className="text-2xl text-white md:text-2xl font-extrabold">Lista de Trabajadores</h1>
 
         {/* Desktop menu */}
-        <div className="hidden sm:flex text-black items-center gap-4">
+        <div className="hidden sm:flex text-white items-center gap-4">
           <button
             onClick={() => navigate("/home")}
             className="hover:text-purple-300 transition"
@@ -162,7 +162,7 @@ export default function UsuariosPage() {
 
           <button
             onClick={handleLogout}
-            className="bg-purple-400 hover:bg-purple-500 text-black font-semibold px-3 py-1.5 rounded-lg transition"
+            className="bg-purple-400 hover:bg-purple-500 text-white font-semibold px-3 py-1.5 rounded-lg transition"
           >
             Cerrar sesión
           </button>

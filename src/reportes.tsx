@@ -192,7 +192,7 @@ export default function Reportes() {
       <div className="absolute inset-0 z-0 bg-black/40 backdrop-blur-[2px]" />
 
       {/* Header */}
-      <header className="w-screen py-3 px-4 md:py-4 md:px-6 flex justify-between items-center shadow-md bg-indigo-500 text-black relative z-20">
+      <header className="w-screen py-3 px-4 md:py-4 md:px-6 flex justify-between items-center shadow-md bg-indigo-500 text-white relative z-20">
         <h1 className="text-xl md:text-2xl font-extrabold">
           Reportes de tareas
         </h1>
@@ -208,7 +208,7 @@ export default function Reportes() {
          
           <button
             onClick={handleLogout}
-            className="bg-indigo-600 text-black font-semibold px-3 py-1 rounded-xl hover:bg-indigo-300"
+            className="bg-indigo-600 text-white font-semibold px-3 py-1 rounded-xl hover:bg-indigo-300"
           >
             Cerrar sesión
           </button>

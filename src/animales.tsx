@@ -243,7 +243,7 @@ export default function AnimalesPorLote() {
       <div className="absolute inset-0 bg-white/20" />
 
       {/* Barra de navegación */}
-      <nav className="sticky top-0 z-50 bg-teal-500 text-black flex items-center justify-between px-4 py-3 shadow-lg">
+      <nav className="sticky top-0 z-50 bg-teal-500 text-black  flex items-center justify-between px-4 py-3 shadow-lg">
         <h1 className="text-lg md:text-2xl font-extrabold">Gestión de Animales por Lote</h1>
 
         <div className="hidden md:flex items-center gap-4">

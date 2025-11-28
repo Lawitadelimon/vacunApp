@@ -186,14 +186,14 @@ export default function Notificaciones() {
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm z-0" />
 
       {/* HEADER */}
-      <header className="relative z-20 w-full py-3 px-4 md:px-6 flex justify-between items-center bg-amber-700 text-black shadow-lg">
+      <header className="relative z-20 w-full py-3 px-4 md:px-6 flex justify-between items-center bg-amber-700 text-white shadow-lg">
         <h1 className="text-lg md:text-2xl font-extrabold">Notificaciones</h1>
 
         {/* Menú escritorio */}
         <div className="hidden md:flex items-center gap-4">
           <button
             onClick={() => navigate("/home")}
-            className="text-black hover:text-amber-500 transition"
+            className="text-white hover:text-amber-500 transition"
           >
             <FaHome size={22} />
           </button>
@@ -201,7 +201,7 @@ export default function Notificaciones() {
           <div className="relative">
              <button
               onClick={() => setMenuNotificacionesOpen(!menuNotificacionesOpen)}
-              className="relative text-black text-xl hover:text-amber-500 transition"
+              className="relative text-white text-xl hover:text-amber-500 transition"
             >
               <FaBell />
               {notificacionesNoLeidas > 0 && (
@@ -236,7 +236,7 @@ export default function Notificaciones() {
 
           <button
             onClick={handleLogout}
-            className="bg-amber-600 hover:bg-amber-800 text-black font-semibold px-3 py-1 rounded-xl"
+            className="bg-amber-600 hover:bg-amber-800 text-white font-semibold px-3 py-1 rounded-xl"
           >
             Cerrar sesión
           </button>
@@ -309,9 +309,9 @@ export default function Notificaciones() {
                 {tareas.map((t) => (
                   <li
                     key={t.id}
-                    className="group p-4 md:p-6 rounded-3xl border border-[#FFEB99]/40 bg-[#FFF9E6]/10 shadow-lg hover:shadow-[#FFEB99]/30 transition-all hover:scale-[1.02]"
+                    className="group p-4 md:p-6 rounded-3xl border border-[#FFEB99]/40 bg-amber-100 shadow-lg hover:shadow-[#FFEB99]/30 transition-all hover:scale-[1.02]"
                   >
-                    <h3 className="font-bold text-[#FFEB99] text-lg mb-2">
+                    <h3 className="font-bold text-black text-lg mb-2">
                       {t.titulo}
                     </h3>
                     {t.reporte && (
