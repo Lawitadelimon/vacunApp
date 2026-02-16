@@ -1,3 +1,4 @@
+// === HomePage.tsx ===
 import { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
@@ -14,6 +15,7 @@ import {
   collection, query, where, updateDoc, doc,
   onSnapshot, setDoc, getDoc
 } from "firebase/firestore";
+
 import cowImage from "./assets/cows.jpg";
 import { useUser } from "./UserContext";
 
@@ -34,15 +36,20 @@ export default function HomePage() {
   const [numNotificaciones, setNumNotificaciones] = useState(0);
   const [usuariosPendientes, setUsuariosPendientes] = useState<any[]>([]);
   const [menuOpen, setMenuOpen] = useState(false);
-const [mostrarUsuarios, setMostrarUsuarios] = useState(window.innerWidth >= 768);   const navigate = useNavigate();
+  const [mostrarUsuarios, setMostrarUsuarios] = useState(window.innerWidth >= 768);
+
+  const navigate = useNavigate();
   const carouselRef = useRef<HTMLDivElement>(null);
   const { user } = useUser();
 
+  // Crear usuario si no existe
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       if (!currentUser) return;
+
       const ref = doc(db, "users", currentUser.uid);
       const snap = await getDoc(ref);
+
       if (!snap.exists()) {
         await setDoc(ref, {
           name: currentUser.displayName || "Usuario",
@@ -55,36 +62,50 @@ const [mostrarUsuarios, setMostrarUsuarios] = useState(window.innerWidth >= 768)
     return () => unsubscribe();
   }, []);
 
+  // 🔥 LIMPIAR NOTIFICACIONES SI CAMBIA USUARIO
+  useEffect(() => {
+    setHayNotificaciones(false);
+    setNumNotificaciones(0);
+  }, [user]);
 
-// 🔹 Escuchar notificaciones en tiempo real
-useEffect(() => {
-  if (!user) return; // Espera a que cargue el contexto
-  const currentUser = auth.currentUser;
-  if (!currentUser) return;
-  
-  const q = query(
-    collection(db, "notificaciones"),
-    where("para", "==", user.role === "admin" ? "admin" : currentUser.uid)
-  );
+  // ==============================
+  // 🔥 LISTENER REAL DE NOTIFICACIONES
+  // ==============================
+  useEffect(() => {
+    if (!user) return;
+    const currentUser = auth.currentUser;
+    if (!currentUser) return;
 
-  const unsubscribe = onSnapshot(q, (snap) => {
-    const data = snap.docs.map((doc) => ({ id: doc.id, ...(doc.data() as any) }));
-    const noLeidas = data.filter((n: any) => !n.leido);
-    setHayNotificaciones(noLeidas.length > 0);
-    setNumNotificaciones(noLeidas.length);
-  });
+    const destino = user.role === "admin" ? "admin" : currentUser.uid;
 
-  return () => unsubscribe();
-}, [user]);
+    const q = query(
+      collection(db, "notificaciones"),
+      where("para", "==", destino)
+    );
 
+    const unsub = onSnapshot(q, (snap) => {
+      const data = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+      const noLeidas = data.filter((n: any) => !n.leido);
+      setHayNotificaciones(noLeidas.length > 0);
+      setNumNotificaciones(noLeidas.length);
+    });
 
+    return () => unsub();
+  }, [user]);
+
+  // ==============================
+  // LISTENER DE USUARIOS PENDIENTES (ADMIN)
+  // ==============================
   useEffect(() => {
     if (user?.role !== "admin") return;
+
     const q = query(collection(db, "users"), where("role", "==", "pending"));
+
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const lista = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setUsuariosPendientes(lista);
     });
+
     return () => unsubscribe();
   }, [user]);
 
@@ -99,9 +120,9 @@ useEffect(() => {
 
   const scroll = (direction: "left" | "right") => {
     if (carouselRef.current) {
-      const scrollAmount = 200;
+      const amount = 200;
       carouselRef.current.scrollBy({
-        left: direction === "left" ? -scrollAmount : scrollAmount,
+        left: direction === "left" ? -amount : amount,
         behavior: "smooth",
       });
     }
@@ -109,274 +130,182 @@ useEffect(() => {
 
   return (
     <div className="relative min-h-screen flex flex-col">
-      {/* Fondo */}
-      <div
-        className="absolute inset-0 z-0 bg-cover bg-center"
-        style={{ backgroundImage: `url(${cowImage})` }}
-      />
+
+      {/* FONDO */}
+      <div className="absolute inset-0 z-0 bg-cover bg-center"
+        style={{ backgroundImage: `url(${cowImage})` }} />
       <div className="absolute inset-0 z-0 bg-black/40 backdrop-blur-[3px]" />
 
-      {/* Contenido principal */}
-      <div className="relative z-10 flex-1 flex flex-col md:flex-row w-full transition-all duration-500 min-w-0">
-
-        {/* Columna izquierda */}
+      {/* CONTENIDO */}
+      <div className="relative z-10 flex flex-1">
+        {/* IZQUIERDA */}
         <div className={`flex flex-col items-center transition-all duration-500 ${mostrarUsuarios ? "md:flex-1" : "w-full"}`}>
 
-          {/* Header */}
-          <header className="w-full py-3 px-4 md:py-4 md:px-6 flex justify-between items-center shadow-md bg-black/5 backdrop-blur-md text-white relative z-20">
+          {/* HEADER */}
+          <header className="w-full py-3 px-4 md:py-4 md:px-6 flex justify-between items-center bg-black/5 backdrop-blur-md text-white shadow-md">
             <h1 className="text-lg md:text-2xl font-extrabold">AniManager</h1>
 
-            {/* Desktop: íconos fijos */}
-  <div className="hidden md:flex items-center gap-4">
-    <button onClick={() => navigate("/home")} className="hover:text-blue-500 transition">
-      <FaHome size={22} />
-    </button>
+            {/* DESKTOP ICONS */}
+            <div className="hidden md:flex items-center gap-4">
+              <button onClick={() => navigate("/home")}><FaHome size={22} /></button>
 
-   <Link
-  to="/notificaciones"
-  className="relative hover:text-blue-500 transition"
->
-  <FaBell size={22} />
-  {hayNotificaciones && (
-    <span className="absolute -top-1 -right-2 bg-red-600 text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center border-2 border-white animate-pulse">
-      {numNotificaciones > 9 ? "9+" : numNotificaciones}
-    </span>
-  )}
-</Link>
+              <Link to="/notificaciones" className="relative">
+                <FaBell size={22} />
+                {hayNotificaciones && (
+                  <span className="absolute -top-1 -right-2 bg-red-600 text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
+                    {numNotificaciones > 9 ? "9+" : numNotificaciones}
+                  </span>
+                )}
+              </Link>
 
+              <button onClick={handleLogout}
+                className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded-xl">
+                Cerrar sesión
+              </button>
+            </div>
 
+            {/* MOBILE */}
+            <div className="md:hidden relative">
+              <button onClick={() => setMenuOpen(!menuOpen)} className="text-2xl">
+                {menuOpen ? <FaTimes /> : <FaBars />}
+              </button>
 
-    <button
-      onClick={handleLogout}
-      className="bg-red-600 hover:bg-red-700 text-white font-semibold px-3 py-1 rounded-xl transition"
-    >
-      Cerrar sesión
-    </button>
-  </div>
+              {menuOpen && (
+                <div className="absolute right-0 mt-2 w-48 bg-white/40 backdrop-blur-md rounded-xl shadow-lg py-3">
 
-  {/* Mobile */}
-<div className="md:hidden relative">
-  <button
-    className="text-white text-2xl focus:outline-none"
-    onClick={() => setMenuOpen(!menuOpen)}
-  >
-    {menuOpen ? <FaTimes /> : <FaBars />}
-  </button>
-
-  {menuOpen && (
-    <div className="absolute right-0 mt-2 w-48 bg-white/40 backdrop-blur-md rounded-xl shadow-lg py-3 flex flex-col items-center gap-2 z-50">
-      
-      <button
-        onClick={() => { navigate("/home"); setMenuOpen(false); }}
-        className="w-5/7 py-2 rounded-xl bg-blue-400 hover:bg-blue-500 text-black flex items-center font-semibold justify-center gap-2"
-      >
-        <FaHome /> Inicio
-      </button>
-
-      <Link
-        to="/notificaciones"
-        onClick={() => setMenuOpen(false)}
-        className="relative w-5/7 py-2 rounded-xl bg-blue-400 hover:bg-blue-500 text-black flex items-center font-semibold justify-center gap-2"
-      >
-        <FaBell /> Notificaciones
-        {hayNotificaciones && (
-          <span className="absolute top-1 right-5 bg-red-600 text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center border-2 border-white animate-pulse">
-            {numNotificaciones > 9 ? "9+" : numNotificaciones}
-          </span>
-        )}
-      </Link>
-
-      <button
-        onClick={() => { handleLogout(); setMenuOpen(false); }}
-        className="bg-red-600 hover:bg-red-700 text-white font-semibold px-3 py-1 rounded-xl w-5/7 flex items-center justify-center gap-2"
-      >
-        Cerrar sesión
-      </button>
-
-      {/* Mostrar usuarios solo en mobile */}
-      {user?.role === "admin" && !mostrarUsuarios && (
-        <button
-          onClick={() => { setMostrarUsuarios(true); setMenuOpen(false); }}
-          className="bg-green-600 hover:bg-green-700 text-white font-semibold px-3 py-1 rounded-xl w-5/7 flex items-center justify-center gap-2"
-        >
-          <FaUserPlus /> Mostrar usuarios
-        </button>
-      )}
-
-    </div>
-  )}
-</div>
-{/* Botón para volver a mostrar usuarios en desktop */}
-{user?.role === "admin" && !mostrarUsuarios && (
-  <button
-    onClick={() => setMostrarUsuarios(true)}
-    className="hidden md:block fixed top-20 right-4 bg-white/40 text-white px-3 py-1 rounded-xl hover:bg-white/30 z-50 transition-all duration-500"
-  >
-    Mostrar usuarios
-  </button>
-)}
-
-
-
-</header>
-
-          {/* Bienvenida */}
-          <div className="mt-5 md:mt-9 text-white text-center font-semibold md:text-xl max-w-2xl px-5">
-            ¡Bienvenido a AniManager {user?.name || ""}! 
-          </div>
-
-            {/* Botón scroll izquierdo */}
-            <button
-              onClick={() => scroll("left")}
-              className="absolute -left-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full z-20 hidden md:flex"
-            >
-              <FaChevronLeft />
-            </button>
-            
-
-          {/* Bloque móvil: grid 2 columnas */}
-<div className="md:hidden flex-1 overflow-y-auto pt-6 pb-6 px-3">
-  <div className="grid grid-cols-2 gap-4 justify-center">
-    {cards.map(
-      (card, idx) =>
-        card.roles.includes(user?.role || "") && (
-          <Link
-            key={idx}
-            to={card.to}
-            className={`w-full h-56 sm:h-64 rounded-2xl shadow-lg flex flex-col items-center justify-center text-white font-bold transform transition-all duration-300 
-              ${card.color} ${card.hover} bg-opacity-70 backdrop-blur-sm
-              hover:-translate-y-1 hover:shadow-xl
-              active:translate-y-0.5 active:shadow-2xl`}
-          >
-            <card.icon size={60} />
-            <p className="mt-2 text-sm text-center px-2">{card.title}</p>
-          </Link>
-        )
-    )}
-
-    {user?.role === "admin" && (
-      <Link
-        to="/usuarios"
-        className={`w-full h-56 sm:h-64 rounded-2xl shadow-lg flex flex-col items-center justify-center text-white font-bold 
-          bg-purple-500 hover:bg-purple-600 transform transition-all duration-300
-          hover:-translate-y-1 hover:shadow-xl active:translate-y-0.5 active:shadow-2xl`}
-      >
-        <FaUserPlus size={60} />
-        <p className="mt-2 text-sm text-center px-2">Usuarios (Workers)</p>
-      </Link>
-    )}
-  </div>
-</div>
-
-{/* Bloque desktop: carrusel */}
-<div className="hidden md:flex relative w-full max-w-4xl mt-6 md:mt-10 flex-1 px-4 md:px-6 transition-all duration-500">
-  <button
-    onClick={() => scroll("left")}
-    className="absolute -left-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full z-20"
-  >
-    <FaChevronLeft />
-  </button>
-
-  <div 
-    ref={carouselRef}
-    style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
-    className="flex gap-4 md:gap-6 overflow-x-auto pb-4 scroll-smooth"
-  >
-    {cards.map(
-      (card, idx) =>
-        card.roles.includes(user?.role || "") && (
-          <Link
-            key={idx}
-            to={card.to}
-            className={`min-w-[15rem] h-80 rounded-2xl shadow-lg flex flex-col items-center justify-center flex-shrink-0 text-white font-bold transform transition-all duration-300 ${card.color} ${card.hover} bg-opacity-70 backdrop-blur-sm hover:-translate-y-2 hover:shadow-2xl`}
-          >
-            <card.icon size={120} />
-            <p className="mt-3 text-md text-center">{card.title}</p>
-          </Link>
-        )
-    )}
-
-    {user?.role === "admin" && (
-      <Link
-        to="/usuarios"
-        className="min-w-[15rem] h-80 rounded-2xl shadow-lg flex flex-col items-center justify-center flex-shrink-0 text-white font-bold bg-purple-500 hover:bg-purple-600"
-      >
-        <FaUserPlus size={120} />
-        <p className="mt-3 text-md text-center">Usuarios (Workers)</p>
-      </Link>
-    )}
-  </div>
-
-  <button
-    onClick={() => scroll("right")}
-    className="absolute -right-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full z-20"
-  >
-    <FaChevronRight />
-  </button>
-</div>
-
-        </div>
-        
-
-        {/* Panel lateral de usuarios pendientes */}
-        {user?.role === "admin" && (
-  <aside
-    className={`transition-all duration-500 
-      ${mostrarUsuarios 
-        ? "fixed inset-0 md:relative md:w-72 p-4 z-50" 
-        : "fixed left-full md:relative md:w-0 p-0 overflow-hidden"} 
-      bg-white/20 md:bg-white/10 backdrop-blur-md text-white border-t md:border-t-0 md:border-l border-white/30`}
-  >
-    {mostrarUsuarios && (
-      <>
-        <div className="flex justify-between items-center mb-3">
-          <h2 className="text-base md:text-lg font-bold flex items-center gap-2">
-            <FaUserPlus /> Usuarios en espera
-          </h2>
-          <button
-            onClick={() => setMostrarUsuarios(false)}
-            className="text-sm md:text-base px-2 py-1 bg-white/40 rounded-xl hover:bg-white/30"
-          >
-            Ocultar
-          </button>
-        </div>
-        {usuariosPendientes.length === 0 ? (
-          <p className="text-sm text-gray-200">No hay usuarios en espera</p>
-        ) : (
-          <ul className="space-y-3">
-            {usuariosPendientes.map((u) => (
-              <li key={u.id} className="bg-white/20 rounded-lg p-3 flex flex-col">
-                <span className="font-semibold text-sm md:text-base">{u.name}</span>
-                <span className="text-xs text-gray-200">{u.email}</span>
-                <div className="flex gap-2 mt-2">
-                  <button
-                    onClick={() => asignarRol(u.id, "worker")}
-                    className="flex-1 bg-green-600 hover:bg-green-700 text-white text-xs py-1 rounded-xl"
-                  >
-                    Worker
+                  <button onClick={() => { navigate("/home"); setMenuOpen(false); }}
+                    className="w-full py-2 bg-blue-400 rounded-xl text-black font-semibold flex gap-2 justify-center">
+                    <FaHome /> Inicio
                   </button>
-                  <button
-                    onClick={() => asignarRol(u.id, "admin")}
-                    className="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-xs py-1 rounded-xl"
-                  >
-                    Admin
+
+                  <Link to="/notificaciones" onClick={() => setMenuOpen(false)}
+                    className="relative w-full py-2 bg-blue-400 rounded-xl text-black font-semibold flex gap-2 justify-center">
+                    <FaBell /> Notificaciones
+
+                    {hayNotificaciones && (
+                      <span className="absolute right-4 top-1 bg-red-600 text-white text-[10px] rounded-full w-4 h-4 flex justify-center items-center">
+                        {numNotificaciones > 9 ? "9+" : numNotificaciones}
+                      </span>
+                    )}
+                  </Link>
+
+                  <button onClick={() => { handleLogout(); setMenuOpen(false); }}
+                    className="bg-red-600 text-white px-3 py-1 rounded-xl w-full mt-2">
+                    Cerrar sesión
                   </button>
                 </div>
-              </li>
-            ))}
-          </ul>
-        )}
-      </>
-    )}
-  </aside>
-)}
+              )}
+            </div>
+          </header>
 
+          {/* BIENVENIDA */}
+          <div className="mt-5 text-white text-center font-semibold md:text-xl">
+            ¡Bienvenido a AniManager {user?.name}!
+          </div>
+
+          {/* GRID MOBILE */}
+          <div className="md:hidden grid grid-cols-2 gap-4 px-3 mt-6">
+            {cards.map(
+              (card, i) =>
+                card.roles.includes(user?.role || "") && (
+                  <Link key={i} to={card.to}
+                    className={`h-56 rounded-2xl shadow-lg flex flex-col items-center justify-center text-white font-bold ${card.color}`}>
+                    <card.icon size={60} />
+                    <p className="mt-2 text-sm">{card.title}</p>
+                  </Link>
+                )
+            )}
+
+            {user?.role === "admin" && (
+              <Link to="/usuarios"
+                className="h-56 rounded-2xl shadow-lg flex flex-col items-center justify-center text-white font-bold bg-purple-500">
+                <FaUserPlus size={60} />
+                <p className="mt-2 text-sm">Usuarios</p>
+              </Link>
+            )}
+          </div>
+
+          {/* CARRUSEL DESKTOP */}
+          <div className="hidden md:flex w-full max-w-4xl mt-10 px-6 relative">
+            <button onClick={() => scroll("left")}
+              className="absolute left-0 top-1/2 -translate-y-1/2 text-white bg-black/50 p-2 rounded-full">
+              <FaChevronLeft />
+            </button>
+
+            <div ref={carouselRef} className="flex gap-6 overflow-x-auto scroll-smooth pb-4">
+              {cards.map(
+                (card, i) =>
+                  card.roles.includes(user?.role || "") && (
+                    <Link key={i} to={card.to}
+                      className={`min-w-[15rem] h-80 rounded-2xl shadow-lg text-white flex flex-col items-center justify-center ${card.color}`}>
+                      <card.icon size={120} />
+                      <p className="mt-3 text-md">{card.title}</p>
+                    </Link>
+                  )
+              )}
+
+              {user?.role === "admin" && (
+                <Link to="/usuarios"
+                  className="min-w-[15rem] h-80 rounded-2xl shadow-lg bg-purple-500 text-white flex flex-col items-center justify-center">
+                  <FaUserPlus size={120} />
+                  <p className="mt-3 text-md">Usuarios</p>
+                </Link>
+              )}
+            </div>
+
+            <button onClick={() => scroll("right")}
+              className="absolute right-0 top-1/2 -translate-y-1/2 text-white bg-black/50 p-2 rounded-full">
+              <FaChevronRight />
+            </button>
+          </div>
+        </div>
+
+        {/* PANEL DE USUARIOS (ADMIN) */}
+        {user?.role === "admin" && (
+          <aside className={`transition-all duration-500 ${mostrarUsuarios ? "fixed inset-0 md:relative md:w-72 p-4" : "fixed left-full md:w-0"} bg-white/20 backdrop-blur-md text-white`}>
+            {mostrarUsuarios && (
+              <>
+                <div className="flex justify-between items-center mb-3">
+                  <h2 className="text-lg font-bold flex items-center gap-2">
+                    <FaUserPlus /> Usuarios en espera
+                  </h2>
+                  <button onClick={() => setMostrarUsuarios(false)}
+                    className="bg-white/40 px-2 py-1 rounded-xl">
+                    Ocultar
+                  </button>
+                </div>
+
+                {usuariosPendientes.length === 0 ? (
+                  <p className="text-gray-200">No hay usuarios en espera</p>
+                ) : (
+                  <ul className="space-y-3">
+                    {usuariosPendientes.map((u) => (
+                      <li key={u.id} className="bg-white/20 rounded-lg p-3">
+                        <span className="font-semibold">{u.name}</span>
+                        <span className="text-xs text-gray-200">{u.email}</span>
+
+                        <div className="flex gap-2 mt-2">
+                          <button onClick={() => asignarRol(u.id, "worker")}
+                            className="flex-1 bg-green-600 py-1 rounded-xl text-white text-xs">
+                            Worker
+                          </button>
+                          <button onClick={() => asignarRol(u.id, "admin")}
+                            className="flex-1 bg-blue-600 py-1 rounded-xl text-white text-xs">
+                            Admin
+                          </button>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </>
+            )}
+          </aside>
+        )}
       </div>
 
-      
-
-      <footer className="w-full bg-blue-900 py-3 md:py-4 text-center text-xs md:text-sm text-white  bottom-0 z-50">
-        <p>© 2025 INNOVASYSTEM. Todos los derechos reservados.</p>
+      <footer className="w-full bg-blue-900 py-3 text-center text-white text-sm">
+        © 2025 INNOVASYSTEM
       </footer>
     </div>
   );

@@ -116,22 +116,26 @@ export default function Notificaciones() {
     return () => unsub();
   }, [rol]);
 
-  // 🔹 Escuchar notificaciones (admin)
-  useEffect(() => {
-    if (rol !== "admin") return;
-    const q = query(
-      collection(db, "notificaciones"),
-      where("para", "==", "admin"),
-      orderBy("creadoEn", "desc")
-    );
-    const unsub = onSnapshot(q, (snap) => {
-      const data = snap.docs.map((d) => ({ id: d.id, ...d.data() } as Notificacion));
-      setNotificaciones(data);
-      setNotificacionesNoLeidas(data.filter((n) => !n.leido).length);
-    });
-    return () => unsub();
-  }, [rol]);
+  // 🔹 Escuchar notificaciones (worker)
+useEffect(() => {
+  if (rol !== "worker" || !userId) return;
 
+  const q = query(
+    collection(db, "notificaciones"),
+    where("para", "==", userId),
+    orderBy("creadoEn", "desc")
+  );
+
+  const unsub = onSnapshot(q, (snap) => {
+    const data = snap.docs.map((d) => ({ id: d.id, ...d.data() } as Notificacion));
+    setNotificaciones(data);
+    setNotificacionesNoLeidas(data.filter((n) => !n.leido).length);
+  });
+
+  return () => unsub();
+}, [rol, userId]);
+
+  
   useEffect(() => {
   if (rol !== "admin") return;
 
@@ -141,7 +145,7 @@ export default function Notificaciones() {
     where("leido", "==", false)
   );
 
-  const unsubscribe = onSnapshot(q, (snap) => {
+  const unsub = onSnapshot(q, (snap) => {
     const data = snap.docs.map((d) => d.data());
     const workers = data
       .map((n) => n.de || n.deNombre) // ← Asegúrate que al crear la notificación guardes quién la envía (worker)
@@ -149,7 +153,7 @@ export default function Notificaciones() {
     setWorkersConNotificaciones(workers);
   });
 
-  return () => unsubscribe();
+  return () => unsub();
 }, [rol]);
 
 
@@ -289,6 +293,7 @@ export default function Notificaciones() {
           </button>
         </div>
       </header>
+      
 
       {/* MAIN */}
       <main className="relative z-10 flex-1 flex flex-col items-center w-full px-4 py-8 md:px-10 mb-16">
