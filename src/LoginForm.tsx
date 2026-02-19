@@ -47,6 +47,14 @@ export default function LoginForm({ onValidation }: LoginFormProps) {
         style={{ backgroundColor: "#099757dc" }}
       >
         Iniciar Sesión
+      </motion.button>
+
+      <button
+        type="button"
+        onClick={() => navigate("/forgot-password")}
+        className="text-xs sm:text-sm text-blue-700 hover:underline mt-1 self-center"
+      >
+        ¿Olvidaste tu contraseña?
       </button>
 
       {/* Redirigir a pantalla de recuperación */}

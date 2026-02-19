@@ -9,6 +9,7 @@ import { signOut } from "firebase/auth";
 import { auth } from "./firebase"; 
 
 interface Worker {
+  hireDate?: any;
   id?: string;
   name: string;
   email: string;
@@ -38,6 +39,11 @@ export default function UsuariosPage() {
   const navigate = useNavigate();
 
   useEffect(() => {
+    const cargarWorkers = async () => {
+      const q = query(collection(db, "users"), where("role", "==", "worker"));
+      const snapshot = await getDocs(q);
+      setWorkers(snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() } as Worker)));
+    };
     cargarWorkers();
   }, []);
 
@@ -57,49 +63,66 @@ export default function UsuariosPage() {
 };
 
   const eliminarWorker = async (id: string) => {
-    if (confirm("¿Seguro que quieres eliminar este trabajador?")) {
+    const result = await Swal.fire({
+      title: '¿Seguro que quieres eliminar este trabajador?',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#3085d6',
+      confirmButtonText: 'Sí, eliminar',
+      cancelButtonText: 'Cancelar',
+    });
+
+    if (result.isConfirmed) {
       await deleteDoc(doc(db, "users", id));
-      setWorkers(prev => prev.filter(worker => worker.id !== id));
+      setWorkers((prev) => prev.filter((w) => w.id !== id));
+      Swal.fire({
+        icon: 'success',
+        title: 'Trabajador eliminado',
+        showConfirmButton: false,
+        timer: 1500
+      });
     }
   };
 
   const guardarEdicion = async () => {
     if (editingWorker) {
       const ref = doc(db, "users", editingWorker.id!);
-      await updateDoc(ref, formData);
-      setWorkers(prev =>
-        prev.map(worker =>
-          worker.id === editingWorker.id ? { ...worker, ...formData } : worker
-        )
+      const { id, ...dataToUpdate } = formData;
+      const cleanData = Object.fromEntries(
+        Object.entries(dataToUpdate).filter(([, value]) => value !== undefined && value !== "")
+      );
+      await updateDoc(ref, cleanData);
+      setWorkers((prev) =>
+        prev.map((w) => (w.id === editingWorker.id ? { ...w, ...formData } : w))
       );
       setEditingWorker(null);
-      setFormData({
-        name: "",
-        email: "",
-        phone: "",
-        position: "",
-        salary: "",
-        emergencyNumber: "",
+      Swal.fire({
+        icon: 'success',
+        title: 'Trabajador actualizado',
+        showConfirmButton: false,
+        timer: 1500
       });
     }
   };
 
   const guardarNuevo = async () => {
     if (!formData.name || !formData.email) {
-      alert("El nombre y el correo son obligatorios.");
-      return;
+      return Swal.fire({
+        icon: 'warning',
+        title: 'Campos incompletos',
+        text: 'El nombre y el correo son obligatorios',
+      });
     }
     const nuevo = { ...formData, role: "worker" };
     const docRef = await addDoc(collection(db, "users"), nuevo);
-    setWorkers(prev => [...prev, { id: docRef.id, ...nuevo }]);
+    setWorkers((prev) => [...prev, { id: docRef.id, ...nuevo }]);
     setAddingWorker(false);
-    setFormData({
-      name: "",
-      email: "",
-      phone: "",
-      position: "",
-      salary: "",
-      emergencyNumber: "",
+    Swal.fire({
+      icon: 'success',
+      title: 'Trabajador añadido',
+      showConfirmButton: false,
+      timer: 1500
     });
   };
 
@@ -132,6 +155,20 @@ export default function UsuariosPage() {
               <FaBell />
             </Link>
 
+        {/* Mobile menu */}
+        <button
+          className="sm:hidden text-black hover:text-purple-300 text-2xl"
+          onClick={() => setMenuOpen(!menuOpen)}
+        >
+          {menuOpen ? <FaTimes /> : <FaBars />}
+        </button>
+
+        {menuOpen && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="absolute top-full right-0 bg-white/40 text-black w-48 rounded-b-2xl shadow-lg flex flex-col items-center py-2 gap-2 md:hidden animate-fadeIn"
+          >
             <button
                 onClick={handleLogout}
                 className="bg-red-500 hover:bg-red-700 text-white px-3 py-1 rounded text-sm"
@@ -145,6 +182,9 @@ export default function UsuariosPage() {
             <button onClick={() => setMenuOpen(!menuOpen)}>
               {menuOpen ? <FaTimes size={22} /> : <FaBars size={22} />}
             </button>
+          </motion.div>
+        )}
+      </header>
 
             {menuOpen && (
               <motion.div
@@ -221,12 +261,9 @@ export default function UsuariosPage() {
             </>
           )}
         </motion.div>
-      </div>
+      </main>
 
-      {/* Footer */}
-      <footer className="relative z-10 w-full bg-[#094297dc] py-2 sm:py-3 md:py-4 text-center text-[10px] sm:text-xs md:text-sm text-white">
-        <p>© 2025 INNOVASYSTEM. Todos los derechos reservados.</p>
-      </footer>
+      
 
       {/* Modales */}
       {editingWorker && (

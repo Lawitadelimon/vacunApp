@@ -1,10 +1,8 @@
-import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import cows from './assets/cows.jpg';
 import logo from './assets/logo.jpg';
 
 export default function Inicio() {
-  const [description, setDescription] = useState('');
   const navigate = useNavigate();
 
   return (

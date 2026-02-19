@@ -33,6 +33,7 @@ export default function Notificaciones() {
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
+  // 🔹 Verificar autenticación
   useEffect(() => {
     const unsub = auth.onAuthStateChanged(async (user) => {
       if (user) {
@@ -238,6 +239,7 @@ export default function Notificaciones() {
 )}
 
       </header>
+      
 
       {/* MAIN */}
       <main className="relative z-10 flex-1 flex flex-col items-center w-full px-4 py-8 md:px-10">

@@ -158,6 +158,12 @@ export default function Pendientes() {
     if (editandoId) {
       await updateDoc(doc(db, "tareas", editandoId), datosTarea);
       setEditandoId(null);
+      Swal.fire({
+        icon: 'success',
+        title: 'Tarea actualizada',
+        showConfirmButton: false,
+        timer: 1500
+      });
     } else {
       await addDoc(collection(db, "tareas"), datosTarea);
     }

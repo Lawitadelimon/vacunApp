@@ -1,3 +1,4 @@
+// === HomePage.tsx ===
 import { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
@@ -5,23 +6,29 @@ import {
   FaBook, FaChevronLeft, FaChevronRight, FaVenusMars, FaUserPlus,
   FaBars, FaTimes
 } from "react-icons/fa";
+import { GiBabyBottle } from "react-icons/gi";
+import { BsFileEarmarkBarGraph } from "react-icons/bs";
+
 import { auth, db } from "./firebase";
-import { signOut } from "firebase/auth";
+import { signOut, onAuthStateChanged } from "firebase/auth";
 import {
   collection, query, where, updateDoc, doc,
-  onSnapshot, getDocs
+  onSnapshot, setDoc, getDoc
 } from "firebase/firestore";
+
 import cowImage from "./assets/cows.jpg";
 import { useUser } from "./UserContext";
 
 const cards = [
   { title: "Registros de animales", to: "/animales", icon: FaPaw, color: "bg-teal-500", hover: "hover:bg-teal-600", roles: ["admin"] },
+  { title: "Nacidos en el rancho", to: "/nacimientos", icon: GiBabyBottle, color: "bg-pink-500", hover: "hover:bg-pink-600", roles: ["admin"] },
   { title: "Reproducción", to: "/reproduccion", icon: FaVenusMars, color: "bg-amber-400", hover: "hover:bg-amber-500", roles: ["admin"] },
-  { title: "Alimentación", to: "/alimentacion", icon: FaLeaf, color: "bg-green-500", hover: "hover:bg-green-600", roles: ["admin"] },
-  { title: "Salud", to: "/salud", icon: FaStethoscope, color: "bg-red-500", hover: "hover:bg-red-600", roles: ["admin"] },
-  { title: "Reportes", to: "/reportes", icon: FaClipboardList, color: "bg-indigo-500", hover: "hover:bg-indigo-600", roles: ["admin", "worker"] },
-  { title: "Tareas del personal", to: "/pendientes", icon: FaBook, color: "bg-yellow-500", hover: "hover:bg-yellow-600", roles: ["admin"] },
+  { title: "Alimentación y Salud", to: "/alimentacion", icon: FaLeaf, color: "bg-green-500", hover: "hover:bg-green-600", roles: ["admin"] },
+  { title: "Vacunas", to: "/salud", icon: FaStethoscope, color: "bg-red-500", hover: "hover:bg-red-600", roles: ["admin"] },
+  { title: "Estadísticas decesos", to: "/estadisticas", icon: BsFileEarmarkBarGraph, color: "bg-orange-500", hover: "hover:bg-orange-600", roles: ["admin"] },
+  { title: "Reportes de tareas", to: "/reportes", icon: FaClipboardList, color: "bg-indigo-500", hover: "hover:bg-indigo-600", roles: ["admin", "worker"] },
   { title: "Notificaciones", to: "/notificaciones", icon: FaBell, color: "bg-amber-700", hover: "hover:bg-amber-800", roles: ["admin", "worker"] },
+  { title: "Tareas del personal", to: "/pendientes", icon: FaBook, color: "bg-blue-500", hover: "hover:bg-blue-600", roles: ["admin"] },
 ];
 
 export default function HomePage() {
@@ -29,6 +36,8 @@ export default function HomePage() {
   const [notificaciones, setNotificaciones] = useState<any[]>([]);
   const [usuariosPendientes, setUsuariosPendientes] = useState<any[]>([]);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [mostrarUsuarios, setMostrarUsuarios] = useState(window.innerWidth >= 768);
+
   const navigate = useNavigate();
   const carouselRef = useRef<HTMLDivElement>(null);
   const { user } = useUser();
@@ -52,11 +61,17 @@ export default function HomePage() {
     return () => unsubscribe();
   }, [user]);
 
-  // 👥 Escuchar usuarios en espera en tiempo real
+    return () => unsub();
+  }, [user]);
+
+  // ==============================
+  // LISTENER DE USUARIOS PENDIENTES (ADMIN)
+  // ==============================
   useEffect(() => {
     if (user?.role !== "admin") return;
 
-    const q = query(collection(db, "users"), where("role", "==", ""));
+    const q = query(collection(db, "users"), where("role", "==", "pending"));
+
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const lista = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setUsuariosPendientes(lista);
@@ -65,7 +80,6 @@ export default function HomePage() {
     return () => unsubscribe();
   }, [user]);
 
-  // ✅ Asignar rol
   const asignarRol = async (id: string, rol: "admin" | "worker") => {
     await updateDoc(doc(db, "users", id), { role: rol });
   };
@@ -77,9 +91,9 @@ export default function HomePage() {
 
   const scroll = (direction: "left" | "right") => {
     if (carouselRef.current) {
-      const scrollAmount = 200;
+      const amount = 200;
       carouselRef.current.scrollBy({
-        left: direction === "left" ? -scrollAmount : scrollAmount,
+        left: direction === "left" ? -amount : amount,
         behavior: "smooth",
       });
     }
@@ -87,11 +101,10 @@ export default function HomePage() {
 
   return (
     <div className="relative min-h-screen flex flex-col">
-      {/* Fondo */}
-      <div
-        className="absolute inset-0 z-0 bg-cover bg-center"
-        style={{ backgroundImage: `url(${cowImage})` }}
-      />
+
+      {/* FONDO */}
+      <div className="absolute inset-0 z-0 bg-cover bg-center"
+        style={{ backgroundImage: `url(${cowImage})` }} />
       <div className="absolute inset-0 z-0 bg-black/40 backdrop-blur-[3px]" />
 
       {/* Contenido */}
@@ -102,21 +115,17 @@ export default function HomePage() {
             <h1 className="text-lg md:text-2xl font-extrabold">AniManager</h1>
 
             <div className="hidden md:flex items-center gap-4">
-              <button onClick={() => navigate("/home")} className="text-white hover:text-yellow-400 transition">
-                <FaHome size={22} />
-              </button>
+              <button onClick={() => navigate("/home")}><FaHome size={22} /></button>
 
-              <Link to="/notificaciones" className="text-white text-xl relative">
-                <FaBell />
+              <Link to="/notificaciones" className="relative">
+                <FaBell size={22} />
                 {hayNotificaciones && (
                   <span className="absolute -top-2 -right-2 w-3 h-3 rounded-full bg-red-500 animate-pulse" />
                 )}
               </Link>
 
-              <button
-                onClick={handleLogout}
-                className="bg-red-500 hover:bg-red-700 text-white px-3 py-1 rounded text-sm"
-              >
+              <button onClick={handleLogout}
+                className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded-xl">
                 Cerrar sesión
               </button>
             </div>
@@ -148,19 +157,29 @@ export default function HomePage() {
                   )}
                 </Link>
 
-                <button
-                  onClick={() => { handleLogout(); setMenuOpen(false); }}
-                  className="flex items-center gap-2 text-red-400 hover:text-red-600"
-                >
-                  🚪 Cerrar sesión
-                </button>
-              </div>
-            )}
+                  <Link to="/notificaciones" onClick={() => setMenuOpen(false)}
+                    className="relative w-full py-2 bg-blue-400 rounded-xl text-black font-semibold flex gap-2 justify-center">
+                    <FaBell /> Notificaciones
+
+                    {hayNotificaciones && (
+                      <span className="absolute right-4 top-1 bg-red-600 text-white text-[10px] rounded-full w-4 h-4 flex justify-center items-center">
+                        {numNotificaciones > 9 ? "9+" : numNotificaciones}
+                      </span>
+                    )}
+                  </Link>
+
+                  <button onClick={() => { handleLogout(); setMenuOpen(false); }}
+                    className="bg-red-600 text-white px-3 py-1 rounded-xl w-full mt-2">
+                    Cerrar sesión
+                  </button>
+                </div>
+              )}
+            </div>
           </header>
 
-          {/* Bienvenida */}
-          <div className="mt-4 md:mt-6 text-white text-center text-base md:text-xl max-w-2xl px-3">
-            ¡Bienvenido {user?.name || "a AniManager"}! Explora las opciones disponibles en el carrusel.
+          {/* BIENVENIDA */}
+          <div className="mt-5 text-white text-center font-semibold md:text-xl">
+            ¡Bienvenido a AniManager {user?.name}!
           </div>
 
           {/* Carrusel */}
@@ -172,34 +191,23 @@ export default function HomePage() {
               <FaChevronLeft />
             </button>
 
-            <div
-              ref={carouselRef}
-              style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
-              className="flex gap-4 md:gap-6 overflow-x-auto pb-4 scroll-smooth"
-            >
+            <div ref={carouselRef} className="flex gap-6 overflow-x-auto scroll-smooth pb-4">
               {cards.map(
-                (card, idx) =>
+                (card, i) =>
                   card.roles.includes(user?.role || "") && (
-                    <Link
-                      key={idx}
-                      to={card.to}
-                      className={`min-w-[12rem] md:min-w-[15rem] h-56 md:h-80 rounded-2xl shadow-lg flex flex-col items-center justify-center flex-shrink-0 text-white font-bold transform transition-all duration-300 ${card.color} ${card.hover} bg-opacity-70 backdrop-blur-sm hover:-translate-y-2 hover:shadow-2xl`}
-                    >
-                      <card.icon size={50} className="md:size-30" />
-                      <p className="mt-2 text-xs md:text-sm text-center">
-                        {card.title}
-                      </p>
+                    <Link key={i} to={card.to}
+                      className={`min-w-[15rem] h-80 rounded-2xl shadow-lg text-white flex flex-col items-center justify-center ${card.color}`}>
+                      <card.icon size={120} />
+                      <p className="mt-3 text-md">{card.title}</p>
                     </Link>
                   )
               )}
 
               {user?.role === "admin" && (
-                <Link
-                  to="/usuarios"
-                  className="min-w-[12rem] md:min-w-[15rem] h-56 md:h-80 rounded-2xl shadow-lg flex flex-col items-center justify-center flex-shrink-0 text-white font-bold bg-purple-500 hover:bg-purple-600"
-                >
-                  <FaUserPlus size={50} className="md:size-30" />
-                  <p className="mt-2 text-xs md:text-sm text-center">Usuarios (Workers)</p>
+                <Link to="/usuarios"
+                  className="min-w-[15rem] h-80 rounded-2xl shadow-lg bg-purple-500 text-white flex flex-col items-center justify-center">
+                  <FaUserPlus size={120} />
+                  <p className="mt-3 text-md">Usuarios</p>
                 </Link>
               )}
             </div>
@@ -213,37 +221,45 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* Columna derecha: usuarios pendientes */}
+        {/* PANEL DE USUARIOS (ADMIN) */}
         {user?.role === "admin" && (
-          <aside className="w-full md:w-72 bg-white/10 backdrop-blur-md text-white p-4 border-t md:border-t-0 md:border-l border-white/30">
-            <h2 className="text-base md:text-lg font-bold mb-3 flex items-center gap-2">
-              <FaUserPlus /> Usuarios en espera
-            </h2>
-            {usuariosPendientes.length === 0 ? (
-              <p className="text-sm text-gray-200">No hay usuarios en espera</p>
-            ) : (
-              <ul className="space-y-3">
-                {usuariosPendientes.map((u) => (
-                  <li key={u.id} className="bg-white/20 rounded-lg p-3 flex flex-col">
-                    <span className="font-semibold text-sm md:text-base">{u.name}</span>
-                    <span className="text-xs text-gray-200">{u.email}</span>
-                    <div className="flex gap-2 mt-2">
-                      <button
-                        onClick={() => asignarRol(u.id, "worker")}
-                        className="flex-1 bg-green-600 hover:bg-green-700 text-white text-xs py-1 rounded"
-                      >
-                        Worker
-                      </button>
-                      <button
-                        onClick={() => asignarRol(u.id, "admin")}
-                        className="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-xs py-1 rounded"
-                      >
-                        Admin
-                      </button>
-                    </div>
-                  </li>
-                ))}
-              </ul>
+          <aside className={`transition-all duration-500 ${mostrarUsuarios ? "fixed inset-0 md:relative md:w-72 p-4" : "fixed left-full md:w-0"} bg-white/20 backdrop-blur-md text-white`}>
+            {mostrarUsuarios && (
+              <>
+                <div className="flex justify-between items-center mb-3">
+                  <h2 className="text-lg font-bold flex items-center gap-2">
+                    <FaUserPlus /> Usuarios en espera
+                  </h2>
+                  <button onClick={() => setMostrarUsuarios(false)}
+                    className="bg-white/40 px-2 py-1 rounded-xl">
+                    Ocultar
+                  </button>
+                </div>
+
+                {usuariosPendientes.length === 0 ? (
+                  <p className="text-gray-200">No hay usuarios en espera</p>
+                ) : (
+                  <ul className="space-y-3">
+                    {usuariosPendientes.map((u) => (
+                      <li key={u.id} className="bg-white/20 rounded-lg p-3">
+                        <span className="font-semibold">{u.name}</span>
+                        <span className="text-xs text-gray-200">{u.email}</span>
+
+                        <div className="flex gap-2 mt-2">
+                          <button onClick={() => asignarRol(u.id, "worker")}
+                            className="flex-1 bg-green-600 py-1 rounded-xl text-white text-xs">
+                            Worker
+                          </button>
+                          <button onClick={() => asignarRol(u.id, "admin")}
+                            className="flex-1 bg-blue-600 py-1 rounded-xl text-white text-xs">
+                            Admin
+                          </button>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </>
             )}
           </aside>
         )}
@@ -255,3 +271,4 @@ export default function HomePage() {
     </div>
   );
 }
+
