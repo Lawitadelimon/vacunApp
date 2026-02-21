@@ -7,13 +7,13 @@ import {
 } from "firebase/firestore";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyAUgjlIIplU2Mh92HIUKcU-40pdb-ihy2Q",
-  authDomain: "animanager-805bc.firebaseapp.com",
-  projectId: "animanager-805bc",
-  storageBucket: "animanager-805bc.firebasestorage.app",
-  messagingSenderId: "178608959958",
-  appId: "1:178608959958:web:3129244895b32ab53df477",
-  measurementId: "G-1DXE1W9QE8"
+  apiKey: "AIzaSyD7cItB12a8gw4qquKVv_pkjwinYmWGumw",
+  authDomain: "animanager-29dee.firebaseapp.com",
+  projectId: "animanager-29dee",
+  storageBucket: "animanager-29dee.firebasestorage.app",
+  messagingSenderId: "379128864512",
+  appId: "1:379128864512:web:8c027e32ae39e236d35de5",
+  measurementId: "G-F0E7XHKVKR"
 };
 
 // Inicializa la app

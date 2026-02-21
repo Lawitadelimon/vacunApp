@@ -103,6 +103,7 @@ export default function AnimalesPorLote() {
       sexo: animal.sexo, 
       fechaNacimiento: animal.fechaNacimiento 
     });
+  };
 
   const eliminarAnimal = async (animal: Animal) => {
     if (!loteSeleccionado || !animal.id) return;
@@ -255,4 +256,3 @@ export default function AnimalesPorLote() {
     </div>
   );
   }
-}

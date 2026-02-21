@@ -33,7 +33,7 @@ const cards = [
 
 export default function HomePage() {
   const [hayNotificaciones, setHayNotificaciones] = useState(false);
-  const [notificaciones, setNotificaciones] = useState<any[]>([]);
+  const [numNotificaciones, setNumNotificaciones] = useState(0);
   const [usuariosPendientes, setUsuariosPendientes] = useState<any[]>([]);
   const [menuOpen, setMenuOpen] = useState(false);
   const [mostrarUsuarios, setMostrarUsuarios] = useState(window.innerWidth >= 768);
@@ -42,24 +42,53 @@ export default function HomePage() {
   const carouselRef = useRef<HTMLDivElement>(null);
   const { user } = useUser();
 
-  // 🔔 Escuchar notificaciones en tiempo real
+  // Crear usuario si no existe
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      if (!currentUser) return;
+
+      const ref = doc(db, "users", currentUser.uid);
+      const snap = await getDoc(ref);
+
+      if (!snap.exists()) {
+        await setDoc(ref, {
+          name: currentUser.displayName || "Usuario",
+          email: currentUser.email,
+          role: "pending",
+          createdAt: new Date().toISOString(),
+        });
+      }
+    });
+    return () => unsubscribe();
+  }, []);
+
+  // 🔥 LIMPIAR NOTIFICACIONES SI CAMBIA USUARIO
+  useEffect(() => {
+    setHayNotificaciones(false);
+    setNumNotificaciones(0);
+  }, [user]);
+
+  // ==============================
+  // 🔥 LISTENER REAL DE NOTIFICACIONES
+  // ==============================
   useEffect(() => {
     if (!user) return;
+    const currentUser = auth.currentUser;
+    if (!currentUser) return;
+
+    const destino = user.role === "admin" ? "admin" : currentUser.uid;
 
     const q = query(
       collection(db, "notificaciones"),
-      where("para", "==", user.role === "admin" ? "admin" : user.uid)
+      where("para", "==", destino)
     );
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      setNotificaciones(data);
-      // Solo contar las no leídas
-      setHayNotificaciones(data.filter(n => !n.leido).length > 0);
+    const unsub = onSnapshot(q, (snap) => {
+      const data = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+      const noLeidas = data.filter((n: any) => !n.leido);
+      setHayNotificaciones(noLeidas.length > 0);
+      setNumNotificaciones(noLeidas.length);
     });
-
-    return () => unsubscribe();
-  }, [user]);
 
     return () => unsub();
   }, [user]);
@@ -107,20 +136,25 @@ export default function HomePage() {
         style={{ backgroundImage: `url(${cowImage})` }} />
       <div className="absolute inset-0 z-0 bg-black/40 backdrop-blur-[3px]" />
 
-      {/* Contenido */}
-      <div className="relative z-10 flex-1 flex flex-col md:flex-row w-full">
-        <div className="flex-1 flex flex-col items-center">
-          {/* Header */}
-          <header className="w-full py-3 px-4 md:py-4 md:px-6 flex justify-between items-center shadow-md bg-black/5 backdrop-blur-md text-white relative z-20">
+      {/* CONTENIDO */}
+      <div className="relative z-10 flex flex-1">
+        {/* IZQUIERDA */}
+        <div className={`flex flex-col items-center transition-all duration-500 ${mostrarUsuarios ? "md:flex-1" : "w-full"}`}>
+
+          {/* HEADER */}
+          <header className="w-full py-3 px-4 md:py-4 md:px-6 flex justify-between items-center bg-black/5 backdrop-blur-md text-white shadow-md">
             <h1 className="text-lg md:text-2xl font-extrabold">AniManager</h1>
 
+            {/* DESKTOP ICONS */}
             <div className="hidden md:flex items-center gap-4">
               <button onClick={() => navigate("/home")}><FaHome size={22} /></button>
 
               <Link to="/notificaciones" className="relative">
                 <FaBell size={22} />
                 {hayNotificaciones && (
-                  <span className="absolute -top-2 -right-2 w-3 h-3 rounded-full bg-red-500 animate-pulse" />
+                  <span className="absolute -top-1 -right-2 bg-red-600 text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
+                    {numNotificaciones > 9 ? "9+" : numNotificaciones}
+                  </span>
                 )}
               </Link>
 
@@ -130,32 +164,19 @@ export default function HomePage() {
               </button>
             </div>
 
-            <button
-              className="md:hidden text-white text-2xl"
-              onClick={() => setMenuOpen(!menuOpen)}
-            >
-              {menuOpen ? <FaTimes /> : <FaBars />}
-            </button>
+            {/* MOBILE */}
+            <div className="md:hidden relative">
+              <button onClick={() => setMenuOpen(!menuOpen)} className="text-2xl">
+                {menuOpen ? <FaTimes /> : <FaBars />}
+              </button>
 
-            {menuOpen && (
-              <div className="absolute top-full right-2 mt-2 w-48 bg-black/90 backdrop-blur-md rounded-lg shadow-lg flex flex-col p-3 space-y-2 md:hidden">
-                <button
-                  onClick={() => { navigate("/home"); setMenuOpen(false); }}
-                  className="flex items-center gap-2 text-white hover:text-gray-300"
-                >
-                  <FaHome /> Inicio
-                </button>
+              {menuOpen && (
+                <div className="absolute right-0 mt-2 w-48 bg-white/40 backdrop-blur-md rounded-xl shadow-lg py-3">
 
-                <Link
-                  to="/notificaciones"
-                  onClick={() => setMenuOpen(false)}
-                  className="flex items-center gap-2 text-white hover:text-gray-300 relative"
-                >
-                  <FaBell /> Notificaciones
-                  {hayNotificaciones && (
-                    <span className="absolute right-2 w-3 h-3 rounded-full bg-red-500 animate-pulse" />
-                  )}
-                </Link>
+                  <button onClick={() => { navigate("/home"); setMenuOpen(false); }}
+                    className="w-full py-2 bg-blue-400 rounded-xl text-black font-semibold flex gap-2 justify-center">
+                    <FaHome /> Inicio
+                  </button>
 
                   <Link to="/notificaciones" onClick={() => setMenuOpen(false)}
                     className="relative w-full py-2 bg-blue-400 rounded-xl text-black font-semibold flex gap-2 justify-center">
@@ -182,12 +203,32 @@ export default function HomePage() {
             ¡Bienvenido a AniManager {user?.name}!
           </div>
 
-          {/* Carrusel */}
-          <div className="relative w-full max-w-4xl mt-6 md:mt-10 flex-1 px-4 md:px-6">
-            <button
-              onClick={() => scroll("left")}
-              className="absolute -left-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full z-20 hidden md:flex"
-            >
+          {/* GRID MOBILE */}
+          <div className="md:hidden grid grid-cols-2 gap-4 px-3 mt-6">
+            {cards.map(
+              (card, i) =>
+                card.roles.includes(user?.role || "") && (
+                  <Link key={i} to={card.to}
+                    className={`h-56 rounded-2xl shadow-lg flex flex-col items-center justify-center text-white font-bold ${card.color}`}>
+                    <card.icon size={60} />
+                    <p className="mt-2 text-sm">{card.title}</p>
+                  </Link>
+                )
+            )}
+
+            {user?.role === "admin" && (
+              <Link to="/usuarios"
+                className="h-56 rounded-2xl shadow-lg flex flex-col items-center justify-center text-white font-bold bg-purple-500">
+                <FaUserPlus size={60} />
+                <p className="mt-2 text-sm">Usuarios</p>
+              </Link>
+            )}
+          </div>
+
+          {/* CARRUSEL DESKTOP */}
+          <div className="hidden md:flex w-full max-w-4xl mt-10 px-6 relative">
+            <button onClick={() => scroll("left")}
+              className="absolute left-0 top-1/2 -translate-y-1/2 text-white bg-black/50 p-2 rounded-full">
               <FaChevronLeft />
             </button>
 
@@ -212,10 +253,8 @@ export default function HomePage() {
               )}
             </div>
 
-            <button
-              onClick={() => scroll("right")}
-              className="absolute -right-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full z-20 hidden md:flex"
-            >
+            <button onClick={() => scroll("right")}
+              className="absolute right-0 top-1/2 -translate-y-1/2 text-white bg-black/50 p-2 rounded-full">
               <FaChevronRight />
             </button>
           </div>
@@ -265,10 +304,9 @@ export default function HomePage() {
         )}
       </div>
 
-      <footer className="w-full bg-[#094297dc] py-3 md:py-4 text-center text-xs md:text-sm text-white relative z-10">
-        <p>© 2025 INNOVASYSTEM. Todos los derechos reservados.</p>
+      <footer className="w-full bg-blue-900 py-3 text-center text-white text-sm">
+        © 2025 INNOVASYSTEM
       </footer>
     </div>
   );
 }
-

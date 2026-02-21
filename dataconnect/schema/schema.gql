@@ -1,0 +1,53 @@
+type User @table {
+  displayName: String!
+  createdAt: Timestamp!
+  email: String
+  photoUrl: String
+}
+
+type Anime @table {
+  title: String!
+  releaseYear: Int!
+  episodeCount: Int!
+  status: String!
+  createdAt: Timestamp!
+  synopsis: String
+  genres: [String]
+  posterUrl: String
+  averageRating: Float
+}
+
+type UserAnimeListEntry @table {
+  user: User!
+  anime: Anime!
+  listStatus: String!
+  createdAt: Timestamp!
+  currentEpisode: Int
+  lastUpdated: Timestamp
+}
+
+type Review @table {
+  user: User!
+  anime: Anime!
+  rating: Int!
+  createdAt: Timestamp!
+  updatedAt: Timestamp!
+  reviewText: String
+  isPublic: Boolean
+}
+
+type CustomList @table {
+  user: User!
+  name: String!
+  isPublic: Boolean!
+  createdAt: Timestamp!
+  updatedAt: Timestamp!
+  description: String
+}
+
+type CustomListAnime @table(key: ["customList", "anime"]) {
+  customList: CustomList!
+  anime: Anime!
+  positionInList: Int!
+  note: String
+}

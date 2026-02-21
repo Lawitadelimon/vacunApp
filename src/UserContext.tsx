@@ -39,7 +39,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
             uid: firebaseUser.uid,
             email: firebaseUser.email,
             name: data.name || "Usuario",
-            role: data.role ?? null, // conserva role existente
+            role: data.role ? data.role.toLowerCase().trim() : null,
           });
         } else {
           // Usuario nuevo: role null hasta aprobación del admin
