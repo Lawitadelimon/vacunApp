@@ -11,7 +11,8 @@ import {
   FaTimes,
 } from "react-icons/fa";
 import { useState, useEffect } from "react";
-import { db, auth } from "./firebase";
+import { db
+  , auth } from "./firebase";
 import {
   collection,
   addDoc,

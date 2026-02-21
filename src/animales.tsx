@@ -36,6 +36,11 @@ export default function AnimalesPorLote() {
   const [formData, setFormData] = useState<Animal>({
     especie: "", codigo: "", raza: "", sexo: "macho", fechaNacimiento: "", edad: "", estado: "vivo"
   });
+  const [errores, setErrores] = useState({
+  codigo: "",
+  raza: "",
+  fechaNacimiento: ""
+});
   const [pagina, setPagina] = useState(1);
   const [busqueda, setBusqueda] = useState("");
   const [orden, setOrden] = useState<{ campo: keyof Animal | null; asc: boolean }>({ campo: null, asc: true });
@@ -45,6 +50,66 @@ export default function AnimalesPorLote() {
   const auth = getAuth();
   const navigate = useNavigate();
   const ITEMS_PAGINA = 40;
+
+  const validarCampos = (campo: string, valor: string) => {
+  let error = "";
+
+  if (campo === "codigo") {
+    if (!valor) {
+      error = "El código es obligatorio";
+    } else if (!/^[A-Za-z0-9-]+$/.test(valor)) {
+      error = "Solo letras, números y guion medio";
+    }
+  }
+
+  if (campo === "raza") {
+    if (!valor) {
+      error = "La raza es obligatoria";
+    } else if (!/^[A-Za-zÁÉÍÓÚáéíóúñÑ\s]+$/.test(valor)) {
+      error = "Solo letras permitidas";
+    }
+  }
+
+  if (campo === "fechaNacimiento") {
+    if (!valor) {
+      error = "La fecha es obligatoria";
+    } else if (new Date(valor) > new Date()) {
+      error = "No puede ser futura";
+    }
+  }
+
+  setErrores(prev => ({ ...prev, [campo]: error }));
+};
+
+const formularioInvalido = () => {
+  if (
+    !formData.especie ||
+    !formData.codigo ||
+    !formData.raza ||
+    !formData.fechaNacimiento
+  ) {
+    return true;
+  }
+
+  if (Object.values(Error).some(e => e !== "")) {
+    return true;
+  }
+
+  if (formData.id) {
+    const original = animales.find(a => a.id === formData.id);
+
+    if (original) {
+      const originalComparable = { ...original, edad: undefined };
+      const formComparable = { ...formData, edad: undefined };
+
+      if (JSON.stringify(originalComparable) === JSON.stringify(formComparable)) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+};
 
   const handleLogout = async () => {
     await signOut(auth);
@@ -353,13 +418,21 @@ export default function AnimalesPorLote() {
   <button
   onClick={async () => {
     const { value: nombreLote } = await Swal.fire({
-      title: 'Nuevo Lote',
-      input: 'text',
-      inputLabel: 'Nombre del lote',
+      title: "Nuevo Lote",
+      input: "text",
+      inputLabel: "Nombre del lote",
       showCancelButton: true,
-      confirmButtonText: 'Crear',
-      cancelButtonText: 'Cancelar',
-      inputValidator: (value) => !value && 'El nombre no puede estar vacío'
+      confirmButtonText: "Crear",
+      cancelButtonText: "Cancelar",
+      inputValidator: (value) => {
+        if (!value) return "El nombre no puede estar vacío";
+
+        if (!/^[A-Za-z0-9]+$/.test(value)) {
+          return "Solo letras y números permitidos (sin espacios ni símbolos)";
+        }
+
+        return null;
+      }
     });
 
     if (nombreLote) {
@@ -367,11 +440,15 @@ export default function AnimalesPorLote() {
       if (!user) return;
 
       try {
-        await addDoc(collection(db, "lotes"), { nombre: nombreLote, uid: user.uid });
+        await addDoc(collection(db, "lotes"), {
+          nombre: nombreLote,
+          uid: user.uid
+        });
+
         cargarLotes();
-        Swal.fire('¡Creado!', 'El lote se creó correctamente', 'success');
-      } catch (error) {
-        Swal.fire('Error', 'No se pudo crear el lote', 'error');
+        Swal.fire("¡Creado!", "El lote se creó correctamente", "success");
+      } catch {
+        Swal.fire("Error", "No se pudo crear el lote", "error");
       }
     }
   }}
@@ -379,7 +456,6 @@ export default function AnimalesPorLote() {
 >
   <FaPlus /> Agregar Lote
 </button>
-
 </div>
 
 
@@ -398,16 +474,79 @@ export default function AnimalesPorLote() {
                   <option value="Porcino">Porcino</option>
                   <option value="Equino">Equino</option>
                 </select>
-                <input type="text" placeholder="Código" value={formData.codigo} onChange={e => setFormData(f => ({ ...f, codigo: e.target.value }))} className="border border-white/50 bg-white/50 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-teal-400"/>
-                <input type="text" placeholder="Raza" value={formData.raza} onChange={e => setFormData(f => ({ ...f, raza: e.target.value }))} className="border border-white/50 bg-white/50 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-teal-400"/>
-                <select value={formData.sexo} onChange={e => setFormData(f => ({ ...f, sexo: e.target.value as "macho" | "hembra" }))} className="border border-white/50 bg-white/50 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-teal-400">
+<input
+  type="text"
+  placeholder="Código"
+  value={formData.codigo}
+  onChange={e => {
+    const valor = e.target.value
+      .replace(/\s/g, "")
+      .replace(/[^A-Za-z0-9-]/g, "");
+
+    setFormData(f => ({ ...f, codigo: valor }));
+    validarCampos("codigo", valor);
+  }}
+  className={`border rounded-lg px-4 py-2 bg-white/50 focus:outline-none focus:ring-2 ${
+    errores.codigo
+      ? "border-red-500 focus:ring-red-400"
+      : "border-white/50 focus:ring-teal-400"
+  }`}
+/>
+{errores.codigo && (
+  <p className="text-red-600 text-sm mt-1">{errores.codigo}</p>
+)}                
+<input
+  type="text"
+  placeholder="Raza"
+  value={formData.raza}
+  onChange={e => {
+    const valor = e.target.value.replace(/[^A-Za-zÁÉÍÓÚáéíóúñÑ\s]/g, "");
+    setFormData(f => ({ ...f, raza: valor }));
+    validarCampos("raza", valor);
+  }}
+  className={`border rounded-lg px-4 py-2 bg-white/50 focus:outline-none focus:ring-2 ${
+    errores.raza
+      ? "border-red-500 focus:ring-red-400"
+      : "border-white/50 focus:ring-teal-400"
+  }`}
+/>
+{errores.raza && (
+  <p className="text-red-600 text-sm mt-1">{errores.raza}</p>
+)}                <select value={formData.sexo} onChange={e => setFormData(f => ({ ...f, sexo: e.target.value as "macho" | "hembra" }))} className="border border-white/50 bg-white/50 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-teal-400">
                   <option value="macho">Macho</option>
                   <option value="hembra">Hembra</option>
                 </select>
-                <input type="date" max={new Date().toISOString().split("T")[0]} value={formData.fechaNacimiento} onChange={e => setFormData(f => ({ ...f, fechaNacimiento: e.target.value }))} className="border border-white/50 bg-white/50 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-teal-400"/>
-              </div>
-              <button onClick={guardarAnimal} className="mt-4 bg-teal-500 text-white px-6 py-2 rounded-2xl font-semibold hover:bg-teal-700 transition-shadow shadow-md hover:shadow-xl">Guardar</button>
-            </div>
+<input
+  type="date"
+  placeholder="Fecha de Nacimiento"
+  max={new Date().toISOString().split("T")[0]}
+  value={formData.fechaNacimiento}
+  onChange={e => {
+    setFormData(f => ({ ...f, fechaNacimiento: e.target.value }));
+    validarCampos("fechaNacimiento", e.target.value);
+  }}
+  className={`border rounded-lg px-4 py-2 bg-white/50 focus:outline-none focus:ring-2 ${
+    errores.fechaNacimiento
+      ? "border-red-500 focus:ring-red-400"
+      : "border-white/50 focus:ring-teal-400"
+  }`}
+/>
+{errores.fechaNacimiento && (
+  <p className="text-red-600 text-sm mt-1">
+    {errores.fechaNacimiento}
+  </p>
+)}              </div>
+<button
+  onClick={guardarAnimal}
+  disabled={formularioInvalido()}
+  className={`mt-4 px-6 py-2 rounded-2xl font-semibold transition-shadow shadow-md
+    ${formularioInvalido()
+      ? "bg-gray-400 cursor-not-allowed text-white"
+      : "bg-teal-500 hover:bg-teal-700 text-white hover:shadow-xl"
+    }`}
+>
+  {formData.id ? "Actualizar" : "Guardar"}
+</button>            </div>
           )}
 
           {/* Filtro y tabla */}
@@ -540,3 +679,5 @@ export default function AnimalesPorLote() {
     </div>
   );
 }
+
+

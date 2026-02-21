@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { auth, db } from "./firebase";
 import { createUserWithEmailAndPassword, signOut } from "firebase/auth";
-import { doc, setDoc } from "firebase/firestore";
+import { collection, doc, getDocs, setDoc } from "firebase/firestore";
 import { motion } from "framer-motion";
 import { FaUser, FaEnvelope, FaLock, FaEye, FaEyeSlash } from "react-icons/fa";
 import Swal from "sweetalert2";
@@ -34,11 +34,13 @@ export function RegisterForm({ onRegisterSuccess }: RegisterFormProps) {
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const newUser = userCredential.user;
+      const usersSnapshot = await getDocs(collection(db, "users"));
+      const isFirstUser = usersSnapshot.empty;
 
       await setDoc(doc(db, "users", newUser.uid), {
         name,
         email,
-        role: "pending",
+        role: isFirstUser ? "admin" : "pending",
         createdAt: new Date().toISOString(),
       });
 
