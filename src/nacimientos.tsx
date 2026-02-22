@@ -36,6 +36,15 @@ export default function NacimientosPorLote() {
     peso: "",
     estadoSalud: "",
   });
+  const [errores, setErrores] = useState({
+  codigo: "",
+  codigoMadre: "",
+  codigoPadre: "",
+  fechaNacimiento: "",
+  raza: "",
+  peso: "",
+  estadoSalud: ""
+});
   const [pagina, setPagina] = useState(1);
   const [busqueda, setBusqueda] = useState("");
   const ITEMS_PAGINA = 40;
@@ -61,6 +70,35 @@ export default function NacimientosPorLote() {
     });
     return result.isConfirmed;
   };
+  const formularioInvalido = () => {
+  // Campos obligatorios vacíos
+  if (
+    !formData.codigo ||
+    !formData.codigoMadre ||
+    !formData.codigoPadre ||
+    !formData.fechaNacimiento ||
+    !formData.raza ||
+    !formData.peso ||
+    !formData.estadoSalud
+  ) {
+    return true;
+  }
+
+  // Si hay errores activos
+  if (Object.values(errores).some(e => e !== "")) {
+    return true;
+  }
+
+  // Si está editando y no hubo cambios
+  if (formData.id) {
+    const original = nacimientos.find(n => n.id === formData.id);
+    if (original && JSON.stringify(original) === JSON.stringify(formData)) {
+      return true;
+    }
+  }
+
+  return false;
+};
   const showInput = async (title: string, inputLabel: string, inputValue: string = "") => {
     const { value } = await Swal.fire({
       title,
@@ -82,56 +120,137 @@ export default function NacimientosPorLote() {
   };
 
   // ---------- Carga de lotes y nacimientos ----------
-  const cargarLotes = async () => {
-    const snaps = await getDocs(collection(db, "lotes_nuevos"));
-    const lista: Lote[] = snaps.docs.map((doc) => ({ id: doc.id, ...(doc.data() as Lote) }));
-    setLotes(lista);
-    if (lista.length > 0 && !loteSeleccionado) setLoteSeleccionado(lista[0]);
-  };
+ const cargarLotes = async () => {
+  const user = auth.currentUser;
+  if (!user) return;
+
+  const snaps = await getDocs(
+    collection(db, "usuarios", user.uid, "lotes")
+  );
+
+  const lista: Lote[] = snaps.docs.map(doc => ({
+    id: doc.id,
+    ...(doc.data() as Lote),
+  }));
+
+  setLotes(lista);
+
+  if (lista.length > 0 && !loteSeleccionado)
+    setLoteSeleccionado(lista[0]);
+};
 
   const cargarNacimientos = async () => {
-    if (!loteSeleccionado?.id) return;
-    const snaps = await getDocs(collection(db, "lotes_nuevos", loteSeleccionado.id, "nacimientos"));
-    const lista: Nacimiento[] = snaps.docs.map((doc) => ({ id: doc.id, ...(doc.data() as Nacimiento) }));
-    setNacimientos(lista);
-  };
+  const user = auth.currentUser;
+  if (!user || !loteSeleccionado?.id) return;
 
+  const snaps = await getDocs(
+    collection(
+      db,
+      "usuarios",
+      user.uid,
+      "lotes",
+      loteSeleccionado.id,
+      "nacimientos"
+    )
+  );
+
+  setNacimientos(
+    snaps.docs.map(doc => ({
+      id: doc.id,
+      ...(doc.data() as Nacimiento),
+    }))
+  );
+};
   useEffect(() => { cargarLotes(); }, []);
   useEffect(() => { cargarNacimientos(); setPagina(1); }, [loteSeleccionado]);
 
+  const validarCampo = (campo: string, valor: string) => {
+  let error = "";
+
+  // Solo letras, números y guiones, sin espacios
+  if (campo === "codigo" || campo === "codigoMadre" || campo === "codigoPadre") {
+    if (!valor) error = "Campo obligatorio";
+    else if (!/^[A-Za-z0-9-]+$/.test(valor))
+      error = "Solo letras, números y guion medio (sin espacios)";
+  }
+
+  // Solo letras
+  if (campo === "raza" || campo === "estadoSalud") {
+    if (!valor) error = "Campo obligatorio";
+    else if (!/^[A-Za-zÁÉÍÓÚáéíóúñÑ\s]+$/.test(valor))
+      error = "Solo letras permitidas";
+  }
+
+  // Solo números
+  if (campo === "peso") {
+    if (!valor) error = "Campo obligatorio";
+    else if (!/^[0-9]+$/.test(valor))
+      error = "Solo números permitidos";
+  }
+
+  // Fecha no futura
+  if (campo === "fechaNacimiento") {
+    if (!valor) error = "Campo obligatorio";
+    else if (new Date(valor) > new Date())
+      error = "No puede ser una fecha futura";
+  }
+
+  setErrores(prev => ({ ...prev, [campo]: error }));
+};
   // ---------- CRUD Nacimientos ----------
   const guardarNacimiento = async () => {
-    if (!loteSeleccionado?.id) return;
+  const user = auth.currentUser;
+  if (!user || !loteSeleccionado?.id) return;
 
-    const campos = Object.values(formData);
-    if (campos.some((c) => c === "")) return showError("Campos incompletos", "Completa todos los campos");
+  if (Object.values(formData).some(v => v === ""))
+    return showError("Campos incompletos", "Completa todos los campos");
 
-    try {
-      if (formData.id) {
-        await setDoc(doc(db, "lotes_nuevos", loteSeleccionado.id, "nacimientos", formData.id), formData);
-        showSuccess("¡Nacimiento actualizado!", `Código: ${formData.codigo}`);
-      } else {
-        await addDoc(collection(db, "lotes_nuevos", loteSeleccionado.id, "nacimientos"), formData);
-        showSuccess("¡Nacimiento registrado!", `Código: ${formData.codigo}`);
-      }
-
-      setFormData({
-        codigo: "",
-        codigoMadre: "",
-        codigoPadre: "",
-        fechaNacimiento: "",
-        raza: "",
-        sexo: "Macho",
-        peso: "",
-        estadoSalud: "",
-      });
-
-      cargarNacimientos();
-    } catch {
-      showError("Error", "No se pudo guardar el nacimiento");
+  try {
+    if (formData.id) {
+      await setDoc(
+        doc(
+          db,
+          "usuarios",
+          user.uid,
+          "lotes",
+          loteSeleccionado.id,
+          "nacimientos",
+          formData.id
+        ),
+        formData
+      );
+    } else {
+      await addDoc(
+        collection(
+          db,
+          "usuarios",
+          user.uid,
+          "lotes",
+          loteSeleccionado.id,
+          "nacimientos"
+        ),
+        formData
+      );
     }
-  };
 
+    setFormData({
+      codigo: "",
+      codigoMadre: "",
+      codigoPadre: "",
+      fechaNacimiento: "",
+      raza: "",
+      sexo: "Macho",
+      peso: "",
+      estadoSalud: "",
+    });
+
+    cargarNacimientos();
+    showSuccess("Guardado correctamente");
+
+  } catch {
+    showError("Error", "No se pudo guardar");
+  }
+};
   const editarNacimiento = (nac: Nacimiento) => setFormData(nac);
 
   const eliminarNacimiento = async (nac: Nacimiento) => {
@@ -144,34 +263,93 @@ export default function NacimientosPorLote() {
   };
 
   // ---------- CRUD Lotes ----------
-  const agregarLote = async () => {
-    const nombre = await showInput("Agregar lote", "Nombre del lote");
-    if (!nombre) return;
-    const ref = await addDoc(collection(db, "lotes_nuevos"), { nombre });
-    const nuevoLote = { id: ref.id, nombre };
-    setLotes((prev) => [...prev, nuevoLote]);
-    setLoteSeleccionado(nuevoLote);
-    showSuccess("¡Lote agregado!", nombre);
-  };
+const agregarLote = async () => {
+  const user = auth.currentUser;
+  if (!user) return;
 
+  const { value: nombre } = await Swal.fire({
+    title: "Agregar lote",
+    input: "text",
+    confirmButtonText: "Guardar",
+    inputValidator: value => {
+      if (!value) return "Nombre obligatorio";
+
+      if (!/^[AZaz09]+$/.test(value))
+        return "Solo letras y números";
+
+      if (lotes.some(l =>
+        l.nombre.toLowerCase() === value.toLowerCase()
+      ))
+        return "Ya existe ese lote";
+
+      return null;
+    }
+  });
+
+  if (!nombre) return;
+
+  const ref = await addDoc(
+    collection(db, "usuarios", user.uid, "lotes"),
+    { nombre }
+  );
+
+  setLotes(prev => [...prev, { id: ref.id, nombre }]);
+};
   const editarLote = async (lote: Lote) => {
-    const nombre = await showInput("Editar lote", "Nuevo nombre del lote", lote.nombre);
-    if (!nombre || !lote.id) return;
-    await setDoc(doc(db, "lotes_nuevos", lote.id), { nombre });
-    setLotes((prev) => prev.map((l) => (l.id === lote.id ? { ...l, nombre } : l)));
-    if (loteSeleccionado?.id === lote.id) setLoteSeleccionado({ ...lote, nombre });
-    showSuccess("¡Lote editado!", nombre);
-  };
+  const user = auth.currentUser;
+  if (!user || !lote.id) return;
+
+  const { value: nombre } = await Swal.fire({
+    title: "Editar lote",
+    input: "text",
+    inputValue: lote.nombre,
+    confirmButtonText: "Guardar",
+    inputValidator: value => {
+      if (!value) return "Nombre obligatorio";
+
+      if (value === lote.nombre)
+        return "No hubo cambios";
+
+      return null;
+    }
+  });
+
+  if (!nombre) return;
+
+  await setDoc(
+    doc(db, "usuarios", user.uid, "lotes", lote.id),
+    { nombre }
+  );
+
+  setLotes(prev =>
+    prev.map(l =>
+      l.id === lote.id ? { ...l, nombre } : l
+    )
+  );
+
+  showSuccess("Lote actualizado");
+};
 
   const eliminarLote = async (lote: Lote) => {
-    if (!lote.id) return;
-    const confirmado = await showConfirm("Eliminar lote", `¿Eliminar lote ${lote.nombre}?`);
-    if (!confirmado) return;
-    await deleteDoc(doc(db, "lotes_nuevos", lote.id));
-    setLotes((prev) => prev.filter((l) => l.id !== lote.id));
-    if (loteSeleccionado?.id === lote.id) setLoteSeleccionado(null);
-    showSuccess("¡Lote eliminado!", lote.nombre);
-  };
+  const user = auth.currentUser;
+  if (!user || !lote.id) return;
+
+  const confirm = await showConfirm(
+    "Eliminar lote",
+    "¿Seguro?"
+  );
+
+  if (!confirm) return;
+
+  await deleteDoc(
+    doc(db, "usuarios", user.uid, "lotes", lote.id)
+  );
+
+  setLotes(prev => prev.filter(l => l.id !== lote.id));
+
+  if (loteSeleccionado?.id === lote.id)
+    setLoteSeleccionado(null);
+};
 
   // ---------- Filtrado y paginación ----------
   const nacimientosFiltrados = nacimientos.filter((n) =>
@@ -252,23 +430,163 @@ export default function NacimientosPorLote() {
         <div className="w-full md:w-5/6 flex flex-col gap-6">
           {/* Formulario */}
           {loteSeleccionado && (
-            <div className="bg-white/30 backdrop-blur-md border border-white/50 p-6 rounded-xl shadow-xl">
-              <h2 className="text-black text-xl font-bold mb-4">Registrar Nacimiento - {loteSeleccionado.nombre}</h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-                <input type="text" placeholder="Código" value={formData.codigo} onChange={(e) => setFormData(f => ({ ...f, codigo: e.target.value }))} className={inputClasses} />
-                <input type="text" placeholder="Código madre" value={formData.codigoMadre} onChange={(e) => setFormData(f => ({ ...f, codigoMadre: e.target.value }))} className={inputClasses} />
-                <input type="text" placeholder="Código padre" value={formData.codigoPadre} onChange={(e) => setFormData(f => ({ ...f, codigoPadre: e.target.value }))} className={inputClasses} />
-                <input type="date" max={new Date().toISOString().split("T")[0]} value={formData.fechaNacimiento} onChange={(e) => setFormData(f => ({ ...f, fechaNacimiento: e.target.value }))} className={inputClasses} />
-                <input type="text" placeholder="Raza" value={formData.raza} onChange={(e) => setFormData(f => ({ ...f, raza: e.target.value }))} className={inputClasses} />
-                <select value={formData.sexo} onChange={(e) => setFormData(f => ({ ...f, sexo: e.target.value as "Macho" | "Hembra" }))} className={inputClasses}>
-                  <option value="Macho">Macho</option>
-                  <option value="Hembra">Hembra</option>
-                </select>
-                <input type="text" placeholder="Peso al nacer" value={formData.peso} onChange={(e) => setFormData(f => ({ ...f, peso: e.target.value }))} className={inputClasses} />
-                <input type="text" placeholder="Estado de salud" value={formData.estadoSalud} onChange={(e) => setFormData(f => ({ ...f, estadoSalud: e.target.value }))} className={inputClasses} />
-              </div>
-              <button onClick={guardarNacimiento} className="mt-4 bg-pink-500 text-white px-6 py-2 rounded-2xl font-semibold hover:bg-pink-600 transition">Guardar</button>
-            </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+
+  <div className="flex flex-col">
+    <label className="text-sm font-semibold text-black mb-1">Código</label>
+    <input
+  type="text"
+  value={formData.codigo}
+  onChange={(e) => {
+    const valor = e.target.value
+      .replace(/\s/g, "")
+      .replace(/[^A-Za-z0-9-]/g, "");
+
+    setFormData(f => ({ ...f, codigo: valor }));
+    validarCampo("codigo", valor);
+  }}
+  className={`${inputClasses} ${errores.codigo ? "border-red-500" : ""}`}
+/>
+{errores.codigo && <p className="text-red-600 text-sm">{errores.codigo}</p>}
+  </div>
+
+  <div className="flex flex-col">
+    <label className="text-sm font-semibold text-black mb-1">Código Madre</label>
+    <input
+  type="text"
+  value={formData.codigoMadre}
+  onChange={(e) => {
+    const valor = e.target.value
+      .replace(/\s/g, "")
+      .replace(/[^A-Za-z0-9-]/g, "");
+
+    setFormData(f => ({ ...f, codigoMadre: valor }));
+    validarCampo("codigoMadre", valor);
+  }}
+  className={`${inputClasses} ${errores.codigoMadre ? "border-red-500" : ""}`}
+/>
+{errores.codigoMadre && <p className="text-red-600 text-sm">{errores.codigoMadre}</p>}
+  </div>
+
+  <div className="flex flex-col">
+    <label className="text-sm font-semibold text-black mb-1">Código Padre</label>
+    <input
+  type="text"
+  value={formData.codigoPadre}
+  onChange={(e) => {
+    const valor = e.target.value
+      .replace(/\s/g, "")
+      .replace(/[^A-Za-z0-9-]/g, "");
+
+    setFormData(f => ({ ...f, codigoPadre: valor }));
+    validarCampo("codigoPadre", valor);
+  }}
+  className={`${inputClasses} ${errores.codigoPadre ? "border-red-500" : ""}`}
+/>
+{errores.codigoPadre && <p className="text-red-600 text-sm">{errores.codigoPadre}</p>}
+  </div>
+
+  <div className="flex flex-col">
+    <label className="text-sm font-semibold text-black mb-1">
+      Fecha de Nacimiento
+    </label>
+    <input
+  type="date"
+  max={new Date().toISOString().split("T")[0]}
+  value={formData.fechaNacimiento}
+  onChange={(e) => {
+    setFormData(f => ({ ...f, fechaNacimiento: e.target.value }));
+    validarCampo("fechaNacimiento", e.target.value);
+  }}
+  className={`${inputClasses} ${errores.fechaNacimiento ? "border-red-500" : ""}`}
+/>
+{errores.fechaNacimiento && (
+  <p className="text-red-600 text-sm">{errores.fechaNacimiento}</p>
+)}
+  </div>
+
+  <div className="flex flex-col">
+    <label className="text-sm font-semibold text-black mb-1">Raza</label>
+    <input
+  type="text"
+  value={formData.raza}
+  onChange={(e) => {
+    const valor = e.target.value.replace(/[^A-Za-zÁÉÍÓÚáéíóúñÑ\s]/g, "");
+    setFormData(f => ({ ...f, raza: valor }));
+    validarCampo("raza", valor);
+  }}
+  className={`${inputClasses} ${errores.raza ? "border-red-500" : ""}`}
+/>
+{errores.raza && <p className="text-red-600 text-sm">{errores.raza}</p>}
+  </div>
+
+  <div className="flex flex-col">
+    <label className="text-sm font-semibold text-black mb-1">Sexo</label>
+    <select
+      value={formData.sexo}
+      onChange={(e) =>
+        setFormData(f => ({ ...f, sexo: e.target.value as "Macho" | "Hembra" }))
+      }
+      className={inputClasses}
+    >
+      <option value="Macho">Macho</option>
+      <option value="Hembra">Hembra</option>
+    </select>
+  </div>
+
+  <div className="flex flex-col">
+    <label className="text-sm font-semibold text-black mb-1">
+      Peso al Nacer (kg)
+    </label>
+    <input
+  type="text"
+  value={formData.peso}
+  onChange={(e) => {
+    const valor = e.target.value.replace(/[^0-9]/g, "");
+    setFormData(f => ({ ...f, peso: valor }));
+    validarCampo("peso", valor);
+  }}
+  className={`${inputClasses} ${errores.peso ? "border-red-500" : ""}`}
+/>
+{errores.peso && <p className="text-red-600 text-sm">{errores.peso}</p>}
+  </div>
+
+  <div className="flex flex-col">
+    <label className="text-sm font-semibold text-black mb-1">
+      Estado de Salud
+    </label>
+    <input
+  type="text"
+  value={formData.estadoSalud}
+  onChange={(e) => {
+    const valor = e.target.value.replace(/[^A-Za-zÁÉÍÓÚáéíóúñÑ\s]/g, "");
+    setFormData(f => ({ ...f, estadoSalud: valor }));
+    validarCampo("estadoSalud", valor);
+  }}
+  className={`${inputClasses} ${errores.estadoSalud ? "border-red-500" : ""}`}
+/>
+{errores.estadoSalud && (
+  <p className="text-red-600 text-sm">{errores.estadoSalud}</p>
+)}
+  </div>
+ <button
+  onClick={guardarNacimiento}
+  disabled={formularioInvalido()}
+  className={`
+    mt-4 px-6 py-2 rounded-2xl font-semibold transition-all shadow-md
+    ${
+      formularioInvalido()
+        ? "bg-gray-400 cursor-not-allowed text-white"
+        : "bg-pink-600 hover:bg-pink-700 text-white hover:shadow-xl"
+    }
+  `}
+>
+  {formData.id ? "Actualizar Nacimiento" : "Guardar Nacimiento"}
+</button>
+    
+  
+
+</div>
           )}
 
           {/* Tabla */}

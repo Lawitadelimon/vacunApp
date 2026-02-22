@@ -466,76 +466,126 @@ const formularioInvalido = () => {
             <div className="bg-white/30 backdrop-blur-md border border-white/40 p-6 rounded-3xl shadow-lg">
               <h2 className="text-xl font-bold mb-4 text-black">Registrar Animal</h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4">
-                <select value={formData.especie} onChange={e => setFormData(f => ({ ...f, especie: e.target.value }))} className="border border-white/50 bg-white/50 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-teal-400">
-                  <option value="">Selecciona especie</option>
-                  <option value="Bovino">Bovino</option>
-                  <option value="Ovino">Ovino</option>
-                  <option value="Caprino">Caprino</option>
-                  <option value="Porcino">Porcino</option>
-                  <option value="Equino">Equino</option>
-                </select>
-<input
-  type="text"
-  placeholder="Código"
-  value={formData.codigo}
-  onChange={e => {
-    const valor = e.target.value
-      .replace(/\s/g, "")
-      .replace(/[^A-Za-z0-9-]/g, "");
 
-    setFormData(f => ({ ...f, codigo: valor }));
-    validarCampos("codigo", valor);
-  }}
-  className={`border rounded-lg px-4 py-2 bg-white/50 focus:outline-none focus:ring-2 ${
-    errores.codigo
-      ? "border-red-500 focus:ring-red-400"
-      : "border-white/50 focus:ring-teal-400"
-  }`}
-/>
-{errores.codigo && (
-  <p className="text-red-600 text-sm mt-1">{errores.codigo}</p>
-)}                
-<input
-  type="text"
-  placeholder="Raza"
-  value={formData.raza}
-  onChange={e => {
-    const valor = e.target.value.replace(/[^A-Za-zÁÉÍÓÚáéíóúñÑ\s]/g, "");
-    setFormData(f => ({ ...f, raza: valor }));
-    validarCampos("raza", valor);
-  }}
-  className={`border rounded-lg px-4 py-2 bg-white/50 focus:outline-none focus:ring-2 ${
-    errores.raza
-      ? "border-red-500 focus:ring-red-400"
-      : "border-white/50 focus:ring-teal-400"
-  }`}
-/>
-{errores.raza && (
-  <p className="text-red-600 text-sm mt-1">{errores.raza}</p>
-)}                <select value={formData.sexo} onChange={e => setFormData(f => ({ ...f, sexo: e.target.value as "macho" | "hembra" }))} className="border border-white/50 bg-white/50 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-teal-400">
-                  <option value="macho">Macho</option>
-                  <option value="hembra">Hembra</option>
-                </select>
-<input
-  type="date"
-  placeholder="Fecha de Nacimiento"
-  max={new Date().toISOString().split("T")[0]}
-  value={formData.fechaNacimiento}
-  onChange={e => {
-    setFormData(f => ({ ...f, fechaNacimiento: e.target.value }));
-    validarCampos("fechaNacimiento", e.target.value);
-  }}
-  className={`border rounded-lg px-4 py-2 bg-white/50 focus:outline-none focus:ring-2 ${
-    errores.fechaNacimiento
-      ? "border-red-500 focus:ring-red-400"
-      : "border-white/50 focus:ring-teal-400"
-  }`}
-/>
-{errores.fechaNacimiento && (
-  <p className="text-red-600 text-sm mt-1">
-    {errores.fechaNacimiento}
-  </p>
-)}              </div>
+  {/* ESPECIE */}
+  <div className="flex flex-col">
+    <label className="text-sm font-semibold text-black mb-1">
+      Especie 
+    </label>
+    <select
+      value={formData.especie}
+      onChange={e => setFormData(f => ({ ...f, especie: e.target.value }))}
+      className="border border-white/50 bg-white/50 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-teal-400"
+    >
+      <option value="">Selecciona especie</option>
+      <option value="Bovino">Bovino</option>
+      <option value="Ovino">Ovino</option>
+      <option value="Caprino">Caprino</option>
+      <option value="Porcino">Porcino</option>
+      <option value="Equino">Equino</option>
+    </select>
+  </div>
+
+  {/* CÓDIGO */}
+  <div className="flex flex-col">
+    <label className="text-sm font-semibold text-black mb-1">
+      Código 
+    </label>
+    <input
+      type="text"
+      value={formData.codigo}
+      onChange={e => {
+        const valor = e.target.value
+          .replace(/\s/g, "")
+          .replace(/[^A-Za-z0-9-]/g, "");
+
+        setFormData(f => ({ ...f, codigo: valor }));
+        validarCampos("codigo", valor);
+      }}
+      className={`border rounded-lg px-4 py-2 bg-white/50 focus:outline-none focus:ring-2 ${
+        errores.codigo
+          ? "border-red-500 focus:ring-red-400"
+          : "border-white/50 focus:ring-teal-400"
+      }`}
+    />
+    {errores.codigo && (
+      <p className="text-red-600 text-sm mt-1">{errores.codigo}</p>
+    )}
+  </div>
+
+  {/* RAZA */}
+  <div className="flex flex-col">
+    <label className="text-sm font-semibold text-black mb-1">
+      Raza 
+    </label>
+    <input
+      
+      type="text"
+      value={formData.raza}
+      onChange={e => {
+        const valor = e.target.value.replace(/[^A-Za-zÁÉÍÓÚáéíóúñÑ\s]/g, "");
+        setFormData(f => ({ ...f, raza: valor }));
+        validarCampos("raza", valor);
+      }}
+      className={`border rounded-lg px-4 py-2 bg-white/50 focus:outline-none focus:ring-2 ${
+        errores.raza
+          ? "border-red-500 focus:ring-red-400"
+          : "border-white/50 focus:ring-teal-400"
+      }`}
+    />
+    {errores.raza && (
+      <p className="text-red-600 text-sm mt-1">{errores.raza}</p>
+    )}
+  </div>
+
+  {/* SEXO */}
+  <div className="flex flex-col">
+    <label className="text-sm font-semibold text-black mb-1">
+      Sexo 
+    </label>
+    <select
+      value={formData.sexo}
+      onChange={e =>
+        setFormData(f => ({
+          ...f,
+          sexo: e.target.value as "macho" | "hembra"
+        }))
+      }
+      className="border border-white/50 bg-white/50 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-teal-400"
+    >
+      <option value="macho">Macho</option>
+      <option value="hembra">Hembra</option>
+    </select>
+  </div>
+
+  {/* FECHA */}
+  <div className="flex flex-col">
+    <label className="text-sm font-semibold text-black mb-1">
+      Fecha de Nacimiento 
+    </label>
+    <input
+    placeholder="21/02/2026"
+      type="date"
+      max={new Date().toISOString().split("T")[0]}
+      value={formData.fechaNacimiento}
+      onChange={e => {
+        setFormData(f => ({ ...f, fechaNacimiento: e.target.value }));
+        validarCampos("fechaNacimiento", e.target.value);
+      }}
+      className={`border rounded-lg px-4 py-2 bg-white/50 focus:outline-none focus:ring-2 ${
+        errores.fechaNacimiento
+          ? "border-red-500 focus:ring-red-400"
+          : "border-white/50 focus:ring-teal-400"
+      }`}
+    />
+    {errores.fechaNacimiento && (
+      <p className="text-red-600 text-sm mt-1">
+        {errores.fechaNacimiento}
+      </p>
+    )}
+  </div>
+
+</div>
 <button
   onClick={guardarAnimal}
   disabled={formularioInvalido()}
